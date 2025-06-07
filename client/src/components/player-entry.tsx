@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { playersSchema, type Players } from "@shared/schema";
+import type { Players } from "@shared/schema";
 
 interface PlayerEntryProps {
   playersCount: number;
@@ -18,10 +17,10 @@ export function PlayerEntry({ playersCount, onComplete, onBack }: PlayerEntryPro
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
   const form = useForm<Players>({
-    resolver: zodResolver(playersSchema),
     defaultValues: {
       players: Array(playersCount).fill(""),
     },
+    mode: "onChange",
   });
 
   const validatePlayers = (players: string[]) => {
@@ -109,7 +108,7 @@ export function PlayerEntry({ playersCount, onComplete, onBack }: PlayerEntryPro
                 <Button
                   type="submit"
                   className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
-                  disabled={!!duplicateError || !form.formState.isValid}
+                  disabled={!!duplicateError || watchedPlayers.filter(name => name.trim().length > 0).length < playersCount}
                 >
                   Generate Schedule
                 </Button>
