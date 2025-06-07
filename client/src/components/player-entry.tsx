@@ -52,6 +52,14 @@ export function PlayerEntry({ playersCount, onComplete, onBack }: PlayerEntryPro
   const filledCount = watchedPlayers.filter(name => name.trim().length > 0).length;
   const isButtonDisabled = !!duplicateError || filledCount < playersCount;
 
+  console.log('Debug:', { 
+    watchedPlayers, 
+    filledCount, 
+    playersCount, 
+    duplicateError, 
+    isButtonDisabled 
+  });
+
   useEffect(() => {
     if (watchedPlayers.some(player => player.length > 0)) {
       validatePlayers(watchedPlayers);
