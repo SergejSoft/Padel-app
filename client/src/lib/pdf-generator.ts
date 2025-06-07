@@ -97,13 +97,13 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
   
   rounds.forEach((round) => {
     round.matches.forEach((match, matchIndex) => {
-      // Check if we need a new page
-      if (yPosition + 12 > pageHeight - margin - 20) {
+      // Check if we need a new page - more generous threshold to keep on single page
+      if (yPosition + 8 > pageHeight - margin - 10) {
         pdf.addPage();
         yPosition = margin + 20;
       }
       
-      const rowHeight = 12;
+      const rowHeight = 8;
       currentX = tableStartX;
       
       // Round number (only show for first match of round)
@@ -111,14 +111,14 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
       pdf.rect(currentX, yPosition, colWidths[0], rowHeight, 'S');
       if (matchIndex === 0) {
         pdf.setFont('helvetica', 'bold');
-        pdf.text(`${round.round}`, currentX + colWidths[0]/2, yPosition + 7.5, { align: 'center' });
+        pdf.text(`${round.round}`, currentX + colWidths[0]/2, yPosition + 5.5, { align: 'center' });
         pdf.setFont('helvetica', 'normal');
       }
       currentX += colWidths[0];
       
       // Court
       pdf.rect(currentX, yPosition, colWidths[1], rowHeight, 'S');
-      pdf.text(`${match.court}`, currentX + colWidths[1]/2, yPosition + 7.5, { align: 'center' });
+      pdf.text(`${match.court}`, currentX + colWidths[1]/2, yPosition + 5.5, { align: 'center' });
       currentX += colWidths[1];
       
       // Match details
@@ -132,12 +132,12 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
       const displayText = matchText.length > maxMatchLength ? 
         matchText.substring(0, maxMatchLength - 3) + '...' : matchText;
       
-      pdf.text(displayText, currentX + 2, yPosition + 7.5);
+      pdf.text(displayText, currentX + 2, yPosition + 5.5);
       currentX += colWidths[2];
       
       // Score column (empty for filling in)
       pdf.rect(currentX, yPosition, colWidths[3], rowHeight, 'S');
-      pdf.text('___ - ___', currentX + colWidths[3]/2, yPosition + 7.5, { align: 'center' });
+      pdf.text('___ - ___', currentX + colWidths[3]/2, yPosition + 5.5, { align: 'center' });
       
       yPosition += rowHeight;
     });
