@@ -244,7 +244,9 @@ function generateScorecardPDF(pdf: jsPDF, { tournamentName, playersCount, courts
 
 export function generatePDFPreviewHTML({ tournamentName, playersCount, courtsCount, rounds }: PDFConfig): string {
   const totalGames = rounds.reduce((sum, round) => sum + round.matches.length, 0);
-  const estimatedMinutes = totalGames * 20 + (rounds.length - 1) * 5;
+  // Calculate average game length: 1.5 hours total / 7 rounds = ~13 minutes per game
+  const totalMinutes = 90; // 1.5 hours
+  const avgGameMinutes = Math.round(totalMinutes / rounds.length);
 
   // Extract all unique players for scorecard
   const allPlayers = new Set<string>();

@@ -84,7 +84,9 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
 
   const totalGames = schedule.reduce((sum, round) => sum + round.matches.length, 0);
   const gamesPerPlayer = Math.floor(totalGames * 4 / tournamentSetup.playersCount);
-  const estimatedMinutes = totalGames * 30 + (schedule.length - 1) * 10;
+  // Calculate average game length: 1.5 hours total / 7 rounds = ~13 minutes per game
+  const totalMinutes = 90; // 1.5 hours
+  const avgGameMinutes = Math.round(totalMinutes / schedule.length);
 
   if (isGenerating) {
     return (
@@ -231,9 +233,9 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-foreground">
-              {Math.floor(estimatedMinutes / 60)}h {estimatedMinutes % 60}m
+              {avgGameMinutes}m
             </div>
-            <div className="text-sm text-muted-foreground">Est. Duration</div>
+            <div className="text-sm text-muted-foreground">Avg. Game Length</div>
           </div>
         </div>
       </div>
