@@ -61,13 +61,14 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
   
   // Table headers
   const tableStartY = yPosition;
-  const colWidths = [20, 25, 65, 65]; // Round, Court, Team 1 vs Team 2, Score
+  const colWidths = [15, 18, 85, 55]; // Round, Court, Team 1 vs Team 2, Score - adjusted widths
   const totalTableWidth = colWidths.reduce((sum, width) => sum + width, 0);
   const tableStartX = (pageWidth - totalTableWidth) / 2;
   
-  pdf.setFontSize(11);
+  pdf.setFontSize(10);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFillColor(240, 240, 240);
+  pdf.setFillColor(0, 0, 0); // Black background for headers
+  pdf.setTextColor(255, 255, 255); // White text
   pdf.setDrawColor(0, 0, 0);
   
   let currentX = tableStartX;
@@ -94,6 +95,7 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
   // Table rows
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
+  pdf.setTextColor(0, 0, 0); // Reset to black text for table body
   
   rounds.forEach((round) => {
     round.matches.forEach((match, matchIndex) => {
@@ -127,8 +129,8 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
       const team2Text = `${match.team2[0]} & ${match.team2[1]}`;
       const matchText = `${team1Text} vs ${team2Text}`;
       
-      // Truncate if too long
-      const maxMatchLength = 35;
+      // Truncate if too long - increased length for wider column
+      const maxMatchLength = 50;
       const displayText = matchText.length > maxMatchLength ? 
         matchText.substring(0, maxMatchLength - 3) + '...' : matchText;
       
@@ -200,13 +202,14 @@ function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tour
 
   // Create scorecard table
   const totalRounds = rounds.length;
-  const colWidths = [40, ...Array(totalRounds).fill(15), 20]; // Player name, rounds, total
+  const colWidths = [50, ...Array(totalRounds).fill(12), 18]; // Player name, rounds, total - wider names, narrower rounds
   const totalTableWidth = colWidths.reduce((sum, width) => sum + width, 0);
   const tableStartX = (pageWidth - totalTableWidth) / 2;
   
   pdf.setFontSize(10);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFillColor(240, 240, 240);
+  pdf.setFillColor(0, 0, 0); // Black background for headers
+  pdf.setTextColor(255, 255, 255); // White text
   pdf.setDrawColor(0, 0, 0);
   
   let currentX = tableStartX;
@@ -233,6 +236,7 @@ function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tour
   // Player rows
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
+  pdf.setTextColor(0, 0, 0); // Reset to black text for table body
   
   players.forEach(player => {
     // Check if we need a new page
