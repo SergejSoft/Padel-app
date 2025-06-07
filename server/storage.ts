@@ -1,4 +1,6 @@
 import { tournaments, type Tournament, type InsertTournament } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getTournament(id: number): Promise<Tournament | undefined>;
@@ -6,29 +8,23 @@ export interface IStorage {
   getAllTournaments(): Promise<Tournament[]>;
 }
 
-export class MemStorage implements IStorage {
-  private tournaments: Map<number, Tournament>;
-  private currentId: number;
-
-  constructor() {
-    this.tournaments = new Map();
-    this.currentId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   async getTournament(id: number): Promise<Tournament | undefined> {
-    return this.tournaments.get(id);
+    const [tournament] = await db.select().from(tournaments).where(eq(tournaments.id, id));
+    return tournament || undefined;
   }
 
   async createTournament(insertTournament: InsertTournament): Promise<Tournament> {
-    const id = this.currentId++;
-    const tournament: Tournament = { ...insertTournament, id };
-    this.tournaments.set(id, tournament);
+    const [tournament] = await db
+      .insert(tournaments)
+      .values(insertTournament)
+      .returning();
     return tournament;
   }
 
   async getAllTournaments(): Promise<Tournament[]> {
-    return Array.from(this.tournaments.values());
+    return await db.select().from(tournaments);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
