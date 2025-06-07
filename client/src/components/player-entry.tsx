@@ -23,50 +23,29 @@ export function PlayerEntry({ playersCount, onComplete, onBack }: PlayerEntryPro
     mode: "onChange",
   });
 
-  const validatePlayers = (players: string[]) => {
-    const filledPlayers = players.filter(name => name.trim().length > 0);
-    const uniqueNames = new Set(filledPlayers.map(name => name.trim().toLowerCase()));
-    
-    if (filledPlayers.length < playersCount) {
-      setDuplicateError(`Please enter all ${playersCount} player names`);
-      return false;
-    }
+  const watchedPlayers = form.watch("players");
+  const filledPlayers = watchedPlayers.filter(name => name.trim().length > 0);
+  const uniqueNames = new Set(filledPlayers.map(name => name.trim().toLowerCase()));
+  
+  // Calculate validation state directly without useEffect
+  let currentError: string | null = null;
+  if (filledPlayers.length > 0 && filledPlayers.length < playersCount) {
+    currentError = `Please enter all ${playersCount} player names`;
+  } else if (filledPlayers.length === playersCount && uniqueNames.size !== filledPlayers.length) {
+    currentError = "All player names must be unique";
+  }
 
-    if (uniqueNames.size !== filledPlayers.length) {
-      setDuplicateError("All player names must be unique");
-      return false;
-    }
+  // Update error state only when it changes
+  if (currentError !== duplicateError) {
+    setDuplicateError(currentError);
+  }
 
-    setDuplicateError(null);
-    return true;
-  };
+  const isButtonDisabled = !!currentError || filledPlayers.length < playersCount;
 
   const onSubmit = (data: Players) => {
     const trimmedPlayers = data.players.map(name => name.trim());
-    if (validatePlayers(trimmedPlayers)) {
-      onComplete(trimmedPlayers);
-    }
+    onComplete(trimmedPlayers);
   };
-
-  const watchedPlayers = form.watch("players");
-  const filledCount = watchedPlayers.filter(name => name.trim().length > 0).length;
-  const isButtonDisabled = !!duplicateError || filledCount < playersCount;
-
-  console.log('Debug:', { 
-    watchedPlayers, 
-    filledCount, 
-    playersCount, 
-    duplicateError, 
-    isButtonDisabled 
-  });
-
-  useEffect(() => {
-    if (watchedPlayers.some(player => player.length > 0)) {
-      validatePlayers(watchedPlayers);
-    } else {
-      setDuplicateError(null);
-    }
-  }, [watchedPlayers, playersCount]);
 
   return (
     <CardContent className="p-8">
@@ -102,9 +81,9 @@ export function PlayerEntry({ playersCount, onComplete, onBack }: PlayerEntryPro
                 ))}
               </div>
 
-              {duplicateError && (
+              {currentError && (
                 <Alert variant="destructive">
-                  <AlertDescription>{duplicateError}</AlertDescription>
+                  <AlertDescription>{currentError}</AlertDescription>
                 </Alert>
               )}
 
