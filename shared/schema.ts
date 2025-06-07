@@ -5,8 +5,8 @@ import { z } from "zod";
 export const tournaments = pgTable("tournaments", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  date: text("date").notNull(),
-  location: text("location").notNull(),
+  date: text("date"),
+  location: text("location"),
   playersCount: integer("players_count").notNull(),
   courtsCount: integer("courts_count").notNull(),
   players: json("players").$type<string[]>().notNull(),

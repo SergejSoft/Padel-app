@@ -36,6 +36,18 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
   
   yPosition += 8;
   pdf.setFontSize(10);
+  
+  // Format and display the date
+  const formattedDate = tournamentDate ? new Date(tournamentDate).toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  }) : 'Date TBD';
+  
+  pdf.text(`${formattedDate} • ${tournamentLocation || 'Location TBD'}`, pageWidth / 2, yPosition, { align: 'center' });
+  
+  yPosition += 6;
   pdf.text(`${playersCount} Players • ${courtsCount} Courts`, pageWidth / 2, yPosition, { align: 'center' });
   
   yPosition += 5;
@@ -142,7 +154,7 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
   return pdf;
 }
 
-function generateScorecardPDF(pdf: jsPDF, { tournamentName, playersCount, courtsCount, rounds }: PDFConfig): void {
+function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, rounds }: PDFConfig): void {
   // Add new page for scorecard
   pdf.addPage();
   

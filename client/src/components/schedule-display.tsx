@@ -76,6 +76,8 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
   const handleDownloadPDF = () => {
     const pdf = generateTournamentPDF({
       tournamentName: tournamentSetup.name,
+      tournamentDate: tournamentSetup.date,
+      tournamentLocation: tournamentSetup.location,
       playersCount: tournamentSetup.playersCount,
       courtsCount: tournamentSetup.courtsCount,
       rounds: schedule,
@@ -253,6 +255,8 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
         isOpen={showPDFPreview}
         onClose={() => setShowPDFPreview(false)}
         tournamentName={tournamentSetup.name}
+        tournamentDate={tournamentSetup.date}
+        tournamentLocation={tournamentSetup.location}
         playersCount={tournamentSetup.playersCount}
         courtsCount={tournamentSetup.courtsCount}
         rounds={schedule}

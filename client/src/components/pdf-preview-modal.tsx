@@ -8,6 +8,8 @@ interface PDFPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   tournamentName: string;
+  tournamentDate: string;
+  tournamentLocation: string;
   playersCount: number;
   courtsCount: number;
   rounds: Round[];
@@ -18,6 +20,8 @@ export function PDFPreviewModal({
   isOpen,
   onClose,
   tournamentName,
+  tournamentDate,
+  tournamentLocation,
   playersCount,
   courtsCount,
   rounds,
@@ -25,6 +29,8 @@ export function PDFPreviewModal({
 }: PDFPreviewModalProps) {
   const previewHTML = generatePDFPreviewHTML({
     tournamentName,
+    tournamentDate,
+    tournamentLocation,
     playersCount,
     courtsCount,
     rounds,
