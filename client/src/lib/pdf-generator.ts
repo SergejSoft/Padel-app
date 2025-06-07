@@ -174,7 +174,22 @@ function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tour
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(100, 100, 100);
   pdf.text('Player Scorecard', pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 15;
+  yPosition += 6;
+  
+  // Format and display the date
+  const formattedDate = tournamentDate ? new Date(tournamentDate).toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  }) : 'Date TBD';
+  
+  pdf.setFontSize(10);
+  pdf.text(`${formattedDate} • ${tournamentLocation || 'Location TBD'}`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 5;
+  
+  pdf.text(`${playersCount} Players • ${courtsCount} Courts`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 10;
 
   // Extract all unique players
   const allPlayers = new Set<string>();
@@ -256,7 +271,7 @@ function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tour
 
 }
 
-export function generatePDFPreviewHTML({ tournamentName, playersCount, courtsCount, rounds }: PDFConfig): string {
+export function generatePDFPreviewHTML({ tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, rounds }: PDFConfig): string {
   const totalGames = rounds.reduce((sum, round) => sum + round.matches.length, 0);
   // Calculate average game length: 1.5 hours total / 7 rounds = ~13 minutes per game
   const totalMinutes = 90; // 1.5 hours
@@ -278,8 +293,8 @@ export function generatePDFPreviewHTML({ tournamentName, playersCount, courtsCou
       <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #000;">
         <h1 style="font-size: 24px; font-weight: bold; margin: 0; color: #000;">${tournamentName}</h1>
         <p style="font-size: 14px; color: #666; margin: 5px 0;">Americano Format Tournament Schedule</p>
+        <p style="font-size: 12px; color: #666; margin: 5px 0;">${tournamentDate ? new Date(tournamentDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Date TBD'} • ${tournamentLocation || 'Location TBD'}</p>
         <p style="font-size: 12px; color: #666; margin: 5px 0;">${playersCount} Players • ${courtsCount} Courts</p>
-        <p style="font-size: 10px; color: #666; margin: 5px 0;">Generated on ${new Date().toLocaleDateString()}</p>
       </div>
 
       <!-- Tournament Schedule Table -->
