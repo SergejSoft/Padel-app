@@ -9,6 +9,13 @@ export interface PDFConfig {
 }
 
 export function generateTournamentPDF({ tournamentName, playersCount, courtsCount, rounds }: PDFConfig): jsPDF {
+  // Generate both schedule and scorecard pages
+  const pdf = generateSchedulePDF({ tournamentName, playersCount, courtsCount, rounds });
+  generateScorecardPDF(pdf, { tournamentName, playersCount, courtsCount, rounds });
+  return pdf;
+}
+
+function generateSchedulePDF({ tournamentName, playersCount, courtsCount, rounds }: PDFConfig): jsPDF {
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.width;
   const pageHeight = pdf.internal.pageSize.height;
@@ -178,10 +185,139 @@ export function generateTournamentPDF({ tournamentName, playersCount, courtsCoun
   return pdf;
 }
 
+function generateScorecardPDF(pdf: jsPDF, { tournamentName, playersCount, courtsCount, rounds }: PDFConfig): void {
+  // Add new page for scorecard
+  pdf.addPage();
+  
+  const pageWidth = pdf.internal.pageSize.width;
+  const pageHeight = pdf.internal.pageSize.height;
+  const margin = 20;
+  let yPosition = margin;
+
+  // Header
+  pdf.setFontSize(18);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(0, 0, 0);
+  pdf.text(tournamentName, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 8;
+
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(100, 100, 100);
+  pdf.text('Player Scorecard', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 15;
+
+  // Extract all unique players
+  const allPlayers = new Set<string>();
+  rounds.forEach(round => {
+    round.matches.forEach(match => {
+      match.team1.forEach(player => allPlayers.add(player));
+      match.team2.forEach(player => allPlayers.add(player));
+    });
+  });
+  const players = Array.from(allPlayers).sort();
+
+  // Create scorecard table
+  const totalRounds = rounds.length;
+  const colWidths = [40, ...Array(totalRounds).fill(15), 20]; // Player name, rounds, total
+  const totalTableWidth = colWidths.reduce((sum, width) => sum + width, 0);
+  const tableStartX = (pageWidth - totalTableWidth) / 2;
+  
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFillColor(240, 240, 240);
+  pdf.setDrawColor(0, 0, 0);
+  
+  let currentX = tableStartX;
+  const headerHeight = 8;
+  
+  // Draw headers
+  pdf.rect(currentX, yPosition, colWidths[0], headerHeight, 'FD');
+  pdf.text('Player', currentX + colWidths[0]/2, yPosition + 5.5, { align: 'center' });
+  currentX += colWidths[0];
+  
+  // Round headers
+  for (let i = 1; i <= totalRounds; i++) {
+    pdf.rect(currentX, yPosition, colWidths[i], headerHeight, 'FD');
+    pdf.text(`R${i}`, currentX + colWidths[i]/2, yPosition + 5.5, { align: 'center' });
+    currentX += colWidths[i];
+  }
+  
+  // Total header
+  pdf.rect(currentX, yPosition, colWidths[colWidths.length - 1], headerHeight, 'FD');
+  pdf.text('Total', currentX + colWidths[colWidths.length - 1]/2, yPosition + 5.5, { align: 'center' });
+  
+  yPosition += headerHeight;
+  
+  // Player rows
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  
+  players.forEach(player => {
+    // Check if we need a new page
+    if (yPosition + 12 > pageHeight - margin - 20) {
+      pdf.addPage();
+      yPosition = margin + 20;
+    }
+    
+    const rowHeight = 12;
+    currentX = tableStartX;
+    
+    // Player name
+    pdf.setDrawColor(200, 200, 200);
+    pdf.rect(currentX, yPosition, colWidths[0], rowHeight, 'S');
+    pdf.text(player, currentX + 2, yPosition + 7.5);
+    currentX += colWidths[0];
+    
+    // Round scores (empty for manual entry)
+    for (let i = 1; i <= totalRounds; i++) {
+      pdf.rect(currentX, yPosition, colWidths[i], rowHeight, 'S');
+      pdf.text('___', currentX + colWidths[i]/2, yPosition + 7.5, { align: 'center' });
+      currentX += colWidths[i];
+    }
+    
+    // Total column
+    pdf.rect(currentX, yPosition, colWidths[colWidths.length - 1], rowHeight, 'S');
+    pdf.text('___', currentX + colWidths[colWidths.length - 1]/2, yPosition + 7.5, { align: 'center' });
+    
+    yPosition += rowHeight;
+  });
+
+  // Scoring instructions
+  yPosition += 15;
+  pdf.setLineWidth(0.5);
+  pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+  yPosition += 15;
+
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Scoring Instructions', margin, yPosition);
+  yPosition += 12;
+
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('• Record points scored by each player in each round', margin, yPosition);
+  yPosition += 6;
+  pdf.text('• In Americano format, track individual contribution to team score', margin, yPosition);
+  yPosition += 6;
+  pdf.text('• Add up total points at the end to determine winner', margin, yPosition);
+  yPosition += 6;
+  pdf.text('• Typical winning scores range from 80-120 points total', margin, yPosition);
+}
+
 export function generatePDFPreviewHTML({ tournamentName, playersCount, courtsCount, rounds }: PDFConfig): string {
   const totalGames = rounds.reduce((sum, round) => sum + round.matches.length, 0);
-  const gamesPerPlayer = Math.floor(totalGames * 4 / playersCount);
-  const estimatedMinutes = totalGames * 30 + (rounds.length - 1) * 10;
+  const estimatedMinutes = totalGames * 20 + (rounds.length - 1) * 5;
+
+  // Extract all unique players for scorecard
+  const allPlayers = new Set<string>();
+  rounds.forEach(round => {
+    round.matches.forEach(match => {
+      match.team1.forEach(player => allPlayers.add(player));
+      match.team2.forEach(player => allPlayers.add(player));
+    });
+  });
+  const players = Array.from(allPlayers).sort();
 
   return `
     <div style="font-family: 'Inter', sans-serif; background: white; color: black; line-height: 1.5;">
@@ -256,6 +392,42 @@ export function generatePDFPreviewHTML({ tournamentName, playersCount, courtsCou
             <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Est. Duration</div>
             <div style="font-size: 14px; font-weight: bold; color: #000;">~${Math.floor(estimatedMinutes / 60)}h ${estimatedMinutes % 60}m</div>
           </div>
+        </div>
+      </div>
+
+      <!-- Page Break Indicator -->
+      <div style="margin: 40px 0; text-align: center; border-top: 2px dashed #ccc; padding-top: 20px;">
+        <h2 style="font-size: 20px; font-weight: bold; color: #000;">Page 2 - Player Scorecard</h2>
+      </div>
+
+      <!-- Player Scorecard Table -->
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 11px;">
+        <thead>
+          <tr style="background-color: #f0f0f0;">
+            <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Player</th>
+            ${rounds.map((_, index) => `<th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">R${index + 1}</th>`).join('')}
+            <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${players.map((player: string) => `
+            <tr>
+              <td style="border: 1px solid #ccc; padding: 8px; font-weight: bold;">${player}</td>
+              ${rounds.map(() => '<td style="border: 1px solid #ccc; padding: 8px; text-align: center;">___</td>').join('')}
+              <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">___</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <!-- Scorecard Instructions -->
+      <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
+        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 15px; color: #000;">Player Scoring Instructions</h3>
+        <div style="font-size: 12px; color: #333; line-height: 1.6;">
+          • Record points scored by each player in each round<br/>
+          • In Americano format, track individual contribution to team score<br/>
+          • Add up total points at the end to determine winner<br/>
+          • Typical winning scores range from 80-120 points total
         </div>
       </div>
 
