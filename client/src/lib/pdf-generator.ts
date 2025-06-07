@@ -38,92 +38,137 @@ export function generateTournamentPDF({ tournamentName, playersCount, courtsCoun
   pdf.line(margin, yPosition, pageWidth - margin, yPosition);
   yPosition += 15;
 
-  // Rounds
-  rounds.forEach((round, roundIndex) => {
-    // Check if we need a new page
-    const estimatedRoundHeight = 8 + (round.matches.length * 25);
-    if (yPosition + estimatedRoundHeight > pageHeight - margin) {
-      pdf.addPage();
-      yPosition = margin;
-    }
-
-    // Round header
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(`Round ${round.round}`, margin, yPosition);
-    yPosition += 12;
-
-    // Matches
+  // Create table structure
+  yPosition += 10;
+  
+  // Table headers
+  const tableStartY = yPosition;
+  const colWidths = [20, 25, 65, 65]; // Round, Court, Team 1 vs Team 2, Score
+  const totalTableWidth = colWidths.reduce((sum, width) => sum + width, 0);
+  const tableStartX = (pageWidth - totalTableWidth) / 2;
+  
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFillColor(240, 240, 240);
+  pdf.setDrawColor(0, 0, 0);
+  
+  let currentX = tableStartX;
+  const headerHeight = 8;
+  
+  // Draw header
+  pdf.rect(currentX, yPosition, colWidths[0], headerHeight, 'FD');
+  pdf.text('Round', currentX + colWidths[0]/2, yPosition + 5.5, { align: 'center' });
+  currentX += colWidths[0];
+  
+  pdf.rect(currentX, yPosition, colWidths[1], headerHeight, 'FD');
+  pdf.text('Court', currentX + colWidths[1]/2, yPosition + 5.5, { align: 'center' });
+  currentX += colWidths[1];
+  
+  pdf.rect(currentX, yPosition, colWidths[2], headerHeight, 'FD');
+  pdf.text('Match', currentX + colWidths[2]/2, yPosition + 5.5, { align: 'center' });
+  currentX += colWidths[2];
+  
+  pdf.rect(currentX, yPosition, colWidths[3], headerHeight, 'FD');
+  pdf.text('Score', currentX + colWidths[3]/2, yPosition + 5.5, { align: 'center' });
+  
+  yPosition += headerHeight;
+  
+  // Table rows
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  
+  rounds.forEach((round) => {
     round.matches.forEach((match, matchIndex) => {
-      // Check if we need a new page for this match
-      if (yPosition + 25 > pageHeight - margin) {
+      // Check if we need a new page
+      if (yPosition + 12 > pageHeight - margin - 20) {
         pdf.addPage();
-        yPosition = margin;
+        yPosition = margin + 20;
       }
-
-      // Match box
-      const boxHeight = 20;
-      const boxWidth = pageWidth - (2 * margin);
       
-      // Draw match box
+      const rowHeight = 12;
+      currentX = tableStartX;
+      
+      // Round number (only show for first match of round)
       pdf.setDrawColor(200, 200, 200);
-      pdf.setFillColor(248, 249, 250);
-      pdf.rect(margin, yPosition, boxWidth, boxHeight, 'FD');
-
-      // Court and game info
-      pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(100, 100, 100);
-      pdf.text(`Court ${match.court}`, margin + 5, yPosition + 6);
-      pdf.text(`Game ${match.gameNumber}`, pageWidth - margin - 20, yPosition + 6);
-
-      // Teams
-      pdf.setFontSize(11);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(0, 0, 0);
+      pdf.rect(currentX, yPosition, colWidths[0], rowHeight, 'S');
+      if (matchIndex === 0) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${round.round}`, currentX + colWidths[0]/2, yPosition + 7.5, { align: 'center' });
+        pdf.setFont('helvetica', 'normal');
+      }
+      currentX += colWidths[0];
       
+      // Court
+      pdf.rect(currentX, yPosition, colWidths[1], rowHeight, 'S');
+      pdf.text(`${match.court}`, currentX + colWidths[1]/2, yPosition + 7.5, { align: 'center' });
+      currentX += colWidths[1];
+      
+      // Match details
+      pdf.rect(currentX, yPosition, colWidths[2], rowHeight, 'S');
       const team1Text = `${match.team1[0]} & ${match.team1[1]}`;
       const team2Text = `${match.team2[0]} & ${match.team2[1]}`;
+      const matchText = `${team1Text} vs ${team2Text}`;
       
-      pdf.text(team1Text, margin + 5, yPosition + 12);
-      pdf.text('VS', pageWidth / 2 - 5, yPosition + 12);
-      pdf.text(team2Text, margin + 5, yPosition + 17);
-
-      yPosition += boxHeight + 5;
+      // Truncate if too long
+      const maxMatchLength = 35;
+      const displayText = matchText.length > maxMatchLength ? 
+        matchText.substring(0, maxMatchLength - 3) + '...' : matchText;
+      
+      pdf.text(displayText, currentX + 2, yPosition + 7.5);
+      currentX += colWidths[2];
+      
+      // Score column (empty for filling in)
+      pdf.rect(currentX, yPosition, colWidths[3], rowHeight, 'S');
+      pdf.text('___ - ___', currentX + colWidths[3]/2, yPosition + 7.5, { align: 'center' });
+      
+      yPosition += rowHeight;
     });
-
-    yPosition += 10;
+    
+    // Add small gap between rounds
+    yPosition += 3;
   });
 
-  // Tournament statistics
-  if (yPosition + 40 > pageHeight - margin) {
-    pdf.addPage();
-    yPosition = margin;
-  }
-
-  yPosition += 10;
+  // Add scoring instructions and summary
+  yPosition += 15;
   pdf.setLineWidth(0.5);
   pdf.line(margin, yPosition, pageWidth - margin, yPosition);
   yPosition += 15;
 
+  // Scoring Instructions
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Scoring Instructions', margin, yPosition);
+  yPosition += 12;
+
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('• Rally-point scoring: First team to 16 points wins', margin, yPosition);
+  yPosition += 6;
+  pdf.text('• Serve rotation: 4-rally blocks alternating between teams', margin, yPosition);
+  yPosition += 6;
+  pdf.text('• Change ends at 8 points (half-time)', margin, yPosition);
+  yPosition += 6;
+  pdf.text('• Record final score in Score column (e.g., 16-12)', margin, yPosition);
+  yPosition += 15;
+
+  // Tournament Summary
   pdf.setFontSize(12);
   pdf.setFont('helvetica', 'bold');
   pdf.text('Tournament Summary', margin, yPosition);
   yPosition += 12;
 
   const totalGames = rounds.reduce((sum, round) => sum + round.matches.length, 0);
-  const gamesPerPlayer = Math.floor(totalGames * 4 / playersCount);
-  const estimatedMinutes = totalGames * 30 + (rounds.length - 1) * 10; // 30 min per game + 10 min breaks
+  const estimatedMinutes = totalGames * 20 + (rounds.length - 1) * 5; // 20 min per game + 5 min breaks
 
   pdf.setFontSize(10);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(`• Total Rounds: ${rounds.length}`, margin, yPosition);
+  pdf.text(`• Format: Americano (7 rounds, optimal rotation)`, margin, yPosition);
   yPosition += 6;
-  pdf.text(`• Total Games: ${totalGames}`, margin, yPosition);
+  pdf.text(`• Total Games: ${totalGames} matches`, margin, yPosition);
   yPosition += 6;
-  pdf.text(`• Games per Player: ~${gamesPerPlayer}`, margin, yPosition);
+  pdf.text(`• Games per Player: 7 matches each`, margin, yPosition);
   yPosition += 6;
-  pdf.text(`• Estimated Duration: ${Math.floor(estimatedMinutes / 60)}h ${estimatedMinutes % 60}m`, margin, yPosition);
+  pdf.text(`• Estimated Duration: ~${Math.floor(estimatedMinutes / 60)}h ${estimatedMinutes % 60}m`, margin, yPosition);
 
   // Footer
   pdf.setFontSize(8);
@@ -148,57 +193,68 @@ export function generatePDFPreviewHTML({ tournamentName, playersCount, courtsCou
         <p style="font-size: 10px; color: #666; margin: 5px 0;">Generated on ${new Date().toLocaleDateString()}</p>
       </div>
 
-      <!-- Rounds -->
-      ${rounds.map(round => `
-        <div style="margin-bottom: 25px;">
-          <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 15px; color: #000; border-bottom: 1px solid #ccc; padding-bottom: 5px;">
-            Round ${round.round}
-          </h2>
-          <div style="display: grid; gap: 15px;">
-            ${round.matches.map(match => `
-              <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #f9f9f9;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                  <span style="font-weight: 600; color: #000;">Court ${match.court}</span>
-                  <span style="font-size: 12px; color: #666;">Game ${match.gameNumber}</span>
-                </div>
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                  <div style="text-align: center; flex: 1;">
-                    <div style="font-weight: 500; color: #000; margin-bottom: 2px;">${match.team1[0]}</div>
-                    <div style="font-weight: 500; color: #000; margin-bottom: 5px;">${match.team1[1]}</div>
-                    <div style="font-size: 10px; color: #666;">Team 1</div>
-                  </div>
-                  <div style="font-size: 16px; font-weight: bold; color: #ccc; margin: 0 20px;">VS</div>
-                  <div style="text-align: center; flex: 1;">
-                    <div style="font-weight: 500; color: #000; margin-bottom: 2px;">${match.team2[0]}</div>
-                    <div style="font-weight: 500; color: #000; margin-bottom: 5px;">${match.team2[1]}</div>
-                    <div style="font-size: 10px; color: #666;">Team 2</div>
-                  </div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
+      <!-- Tournament Schedule Table -->
+      <table style="width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 12px;">
+        <thead>
+          <tr style="background-color: #f0f0f0;">
+            <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Round</th>
+            <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Court</th>
+            <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Match</th>
+            <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rounds.map(round => 
+            round.matches.map((match, matchIndex) => {
+              const team1Text = `${match.team1[0]} & ${match.team1[1]}`;
+              const team2Text = `${match.team2[0]} & ${match.team2[1]}`;
+              const matchText = `${team1Text} vs ${team2Text}`;
+              
+              return `
+                <tr>
+                  <td style="border: 1px solid #ccc; padding: 8px; text-align: center; font-weight: ${matchIndex === 0 ? 'bold' : 'normal'};">
+                    ${matchIndex === 0 ? round.round : ''}
+                  </td>
+                  <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">${match.court}</td>
+                  <td style="border: 1px solid #ccc; padding: 8px;">${matchText}</td>
+                  <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">___ - ___</td>
+                </tr>
+              `;
+            }).join('')
+          ).join('')}
+        </tbody>
+      </table>
+
+      <!-- Scoring Instructions -->
+      <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
+        <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 15px; color: #000;">Scoring Instructions</h3>
+        <div style="font-size: 12px; color: #333; line-height: 1.6;">
+          • Rally-point scoring: First team to 16 points wins<br/>
+          • Serve rotation: 4-rally blocks alternating between teams<br/>
+          • Change ends at 8 points (half-time)<br/>
+          • Record final score in Score column (e.g., 16-12)
         </div>
-      `).join('')}
+      </div>
 
       <!-- Tournament Summary -->
-      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ccc;">
+      <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
         <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 15px; color: #000;">Tournament Summary</h3>
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
           <div>
-            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Total Rounds</div>
-            <div style="font-size: 18px; font-weight: bold; color: #000;">${rounds.length}</div>
+            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Format</div>
+            <div style="font-size: 14px; font-weight: bold; color: #000;">Americano (7 rounds)</div>
           </div>
           <div>
             <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Total Games</div>
-            <div style="font-size: 18px; font-weight: bold; color: #000;">${totalGames}</div>
+            <div style="font-size: 14px; font-weight: bold; color: #000;">${totalGames} matches</div>
           </div>
           <div>
             <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Games per Player</div>
-            <div style="font-size: 18px; font-weight: bold; color: #000;">~${gamesPerPlayer}</div>
+            <div style="font-size: 14px; font-weight: bold; color: #000;">7 matches each</div>
           </div>
           <div>
             <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Est. Duration</div>
-            <div style="font-size: 18px; font-weight: bold; color: #000;">${Math.floor(estimatedMinutes / 60)}h ${estimatedMinutes % 60}m</div>
+            <div style="font-size: 14px; font-weight: bold; color: #000;">~${Math.floor(estimatedMinutes / 60)}h ${estimatedMinutes % 60}m</div>
           </div>
         </div>
       </div>
