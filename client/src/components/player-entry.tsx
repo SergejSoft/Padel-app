@@ -49,10 +49,14 @@ export function PlayerEntry({ playersCount, onComplete, onBack }: PlayerEntryPro
   };
 
   const watchedPlayers = form.watch("players");
+  const filledCount = watchedPlayers.filter(name => name.trim().length > 0).length;
+  const isButtonDisabled = !!duplicateError || filledCount < playersCount;
 
   useEffect(() => {
     if (watchedPlayers.some(player => player.length > 0)) {
       validatePlayers(watchedPlayers);
+    } else {
+      setDuplicateError(null);
     }
   }, [watchedPlayers, playersCount]);
 
@@ -108,7 +112,7 @@ export function PlayerEntry({ playersCount, onComplete, onBack }: PlayerEntryPro
                 <Button
                   type="submit"
                   className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
-                  disabled={!!duplicateError || watchedPlayers.filter(name => name.trim().length > 0).length < playersCount}
+                  disabled={isButtonDisabled}
                 >
                   Generate Schedule
                 </Button>
