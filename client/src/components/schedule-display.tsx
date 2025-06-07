@@ -54,6 +54,8 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
         // Save tournament to backend
         const tournamentData: InsertTournament = {
           name: tournamentSetup.name,
+          date: tournamentSetup.date,
+          location: tournamentSetup.location,
           playersCount: tournamentSetup.playersCount,
           courtsCount: tournamentSetup.courtsCount,
           players,

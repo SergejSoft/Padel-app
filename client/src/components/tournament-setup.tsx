@@ -29,6 +29,8 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
     resolver: zodResolver(tournamentSetupSchema),
     defaultValues: {
       name: "",
+      date: "",
+      location: "",
       playersCount: 8,
       courtsCount: 2,
     },
@@ -68,6 +70,42 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
                     <FormControl>
                       <Input
                         placeholder="Enter tournament name"
+                        {...field}
+                        className="focus:ring-primary focus:border-primary"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tournament Date</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        className="focus:ring-primary focus:border-primary"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tournament Location</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter venue or location"
                         {...field}
                         className="focus:ring-primary focus:border-primary"
                       />

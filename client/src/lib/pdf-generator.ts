@@ -3,19 +3,21 @@ import type { Round } from "@shared/schema";
 
 export interface PDFConfig {
   tournamentName: string;
+  tournamentDate: string;
+  tournamentLocation: string;
   playersCount: number;
   courtsCount: number;
   rounds: Round[];
 }
 
-export function generateTournamentPDF({ tournamentName, playersCount, courtsCount, rounds }: PDFConfig): jsPDF {
+export function generateTournamentPDF({ tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, rounds }: PDFConfig): jsPDF {
   // Generate both schedule and scorecard pages
-  const pdf = generateSchedulePDF({ tournamentName, playersCount, courtsCount, rounds });
-  generateScorecardPDF(pdf, { tournamentName, playersCount, courtsCount, rounds });
+  const pdf = generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, rounds });
+  generateScorecardPDF(pdf, { tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, rounds });
   return pdf;
 }
 
-function generateSchedulePDF({ tournamentName, playersCount, courtsCount, rounds }: PDFConfig): jsPDF {
+function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, rounds }: PDFConfig): jsPDF {
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.width;
   const pageHeight = pdf.internal.pageSize.height;
