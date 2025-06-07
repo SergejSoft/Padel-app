@@ -24,18 +24,18 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
   const margin = 20;
   let yPosition = margin;
 
-  // Header
-  pdf.setFontSize(20);
+  // Compact Header
+  pdf.setFontSize(16);
   pdf.setFont('helvetica', 'bold');
   pdf.text(tournamentName, pageWidth / 2, yPosition, { align: 'center' });
   
-  yPosition += 10;
-  pdf.setFontSize(12);
+  yPosition += 6;
+  pdf.setFontSize(10);
   pdf.setFont('helvetica', 'normal');
   pdf.text('Americano Format Tournament Schedule', pageWidth / 2, yPosition, { align: 'center' });
   
-  yPosition += 8;
-  pdf.setFontSize(10);
+  yPosition += 5;
+  pdf.setFontSize(9);
   
   // Format and display the date
   const formattedDate = tournamentDate ? new Date(tournamentDate).toLocaleDateString('en-US', { 
@@ -47,20 +47,17 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
   
   pdf.text(`${formattedDate} • ${tournamentLocation || 'Location TBD'}`, pageWidth / 2, yPosition, { align: 'center' });
   
-  yPosition += 6;
+  yPosition += 4;
   pdf.text(`${playersCount} Players • ${courtsCount} Courts`, pageWidth / 2, yPosition, { align: 'center' });
-  
-  yPosition += 5;
-  pdf.text(`Generated on ${new Date().toLocaleDateString()}`, pageWidth / 2, yPosition, { align: 'center' });
 
   // Draw header underline
-  yPosition += 8;
+  yPosition += 6;
   pdf.setLineWidth(0.5);
   pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-  yPosition += 15;
+  yPosition += 8;
 
   // Create table structure
-  yPosition += 10;
+  yPosition += 5;
   
   // Table headers
   const tableStartY = yPosition;
@@ -74,23 +71,23 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
   pdf.setDrawColor(0, 0, 0);
   
   let currentX = tableStartX;
-  const headerHeight = 8;
+  const headerHeight = 6;
   
   // Draw header
   pdf.rect(currentX, yPosition, colWidths[0], headerHeight, 'FD');
-  pdf.text('Round', currentX + colWidths[0]/2, yPosition + 5.5, { align: 'center' });
+  pdf.text('Round', currentX + colWidths[0]/2, yPosition + 4, { align: 'center' });
   currentX += colWidths[0];
   
   pdf.rect(currentX, yPosition, colWidths[1], headerHeight, 'FD');
-  pdf.text('Court', currentX + colWidths[1]/2, yPosition + 5.5, { align: 'center' });
+  pdf.text('Court', currentX + colWidths[1]/2, yPosition + 4, { align: 'center' });
   currentX += colWidths[1];
   
   pdf.rect(currentX, yPosition, colWidths[2], headerHeight, 'FD');
-  pdf.text('Match', currentX + colWidths[2]/2, yPosition + 5.5, { align: 'center' });
+  pdf.text('Match', currentX + colWidths[2]/2, yPosition + 4, { align: 'center' });
   currentX += colWidths[2];
   
   pdf.rect(currentX, yPosition, colWidths[3], headerHeight, 'FD');
-  pdf.text('Score', currentX + colWidths[3]/2, yPosition + 5.5, { align: 'center' });
+  pdf.text('Score', currentX + colWidths[3]/2, yPosition + 4, { align: 'center' });
   
   yPosition += headerHeight;
   
