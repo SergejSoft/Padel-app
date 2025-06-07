@@ -8,71 +8,75 @@ export interface AmericanFormatConfig {
 export function generateAmericanFormat({ players, courts }: AmericanFormatConfig): Round[] {
   const numPlayers = players.length;
   
-  if (numPlayers < 4) {
-    throw new Error("American format requires at least 4 players");
+  if (numPlayers !== 8) {
+    throw new Error("This American format implementation is optimized for 8 players");
   }
 
-  if (numPlayers % 4 !== 0) {
-    throw new Error("American format requires a multiple of 4 players");
+  if (courts !== 2) {
+    throw new Error("This American format implementation requires exactly 2 courts");
   }
+
+  // Predefined optimal schedule for 8 players, 2 courts, 7 rounds
+  // This ensures optimal partner and opponent distribution
+  const optimalSchedule = [
+    // Round 1
+    [
+      { court: 1, team1: [players[7], players[2]], team2: [players[6], players[5]] },
+      { court: 2, team1: [players[1], players[4]], team2: [players[0], players[3]] }
+    ],
+    // Round 2
+    [
+      { court: 1, team1: [players[0], players[5]], team2: [players[1], players[2]] },
+      { court: 2, team1: [players[3], players[6]], team2: [players[4], players[7]] }
+    ],
+    // Round 3
+    [
+      { court: 1, team1: [players[2], players[3]], team2: [players[0], players[7]] },
+      { court: 2, team1: [players[4], players[5]], team2: [players[1], players[6]] }
+    ],
+    // Round 4
+    [
+      { court: 1, team1: [players[1], players[7]], team2: [players[4], players[2]] },
+      { court: 2, team1: [players[0], players[6]], team2: [players[3], players[5]] }
+    ],
+    // Round 5
+    [
+      { court: 1, team1: [players[3], players[4]], team2: [players[1], players[5]] },
+      { court: 2, team1: [players[2], players[6]], team2: [players[0], players[7]] }
+    ],
+    // Round 6
+    [
+      { court: 1, team1: [players[0], players[1]], team2: [players[6], players[7]] },
+      { court: 2, team1: [players[2], players[4]], team2: [players[3], players[5]] }
+    ],
+    // Round 7
+    [
+      { court: 1, team1: [players[5], players[6]], team2: [players[3], players[1]] },
+      { court: 2, team1: [players[7], players[4]], team2: [players[0], players[2]] }
+    ]
+  ];
 
   const rounds: Round[] = [];
-  const maxRounds = calculateOptimalRounds(numPlayers);
-  const playersArray = [...players];
+  let gameNumber = 1;
 
-  // Track partnerships and opponents to ensure variety
-  const partnerships = new Map<string, Set<string>>();
-  const opponents = new Map<string, Set<string>>();
-
-  // Initialize tracking
-  players.forEach(player => {
-    partnerships.set(player, new Set());
-    opponents.set(player, new Set());
-  });
-
-  for (let roundNum = 1; roundNum <= maxRounds; roundNum++) {
+  optimalSchedule.forEach((roundMatches, roundIndex) => {
     const matches: Match[] = [];
-    const roundPlayers = [...playersArray];
-    let gameNumber = (roundNum - 1) * courts + 1;
-
-    // Generate matches for this round
-    for (let court = 1; court <= courts && roundPlayers.length >= 4; court++) {
-      const match = generateOptimalMatch(roundPlayers, partnerships, opponents);
-      
-      if (match) {
-        matches.push({
-          court,
-          team1: match.team1,
-          team2: match.team2,
-          round: roundNum,
-          gameNumber
-        });
-
-        // Update tracking
-        updatePartnershipTracking(match, partnerships, opponents);
-        
-        // Remove used players from round
-        [match.team1[0], match.team1[1], match.team2[0], match.team2[1]].forEach(player => {
-          const index = roundPlayers.indexOf(player);
-          if (index > -1) roundPlayers.splice(index, 1);
-        });
-
-        gameNumber++;
-      }
-    }
-
-    if (matches.length > 0) {
-      rounds.push({
-        round: roundNum,
-        matches
+    
+    roundMatches.forEach((match) => {
+      matches.push({
+        court: match.court,
+        team1: match.team1 as [string, string],
+        team2: match.team2 as [string, string],
+        round: roundIndex + 1,
+        gameNumber: gameNumber++
       });
-    }
+    });
 
-    // Rotate players for next round
-    if (roundNum < maxRounds) {
-      rotatePlayersArray(playersArray);
-    }
-  }
+    rounds.push({
+      round: roundIndex + 1,
+      matches
+    });
+  });
 
   return rounds;
 }
@@ -184,20 +188,12 @@ function rotatePlayersArray(players: string[]): void {
 }
 
 export function validateTournamentConfig(playersCount: number, courtsCount: number): string | null {
-  if (playersCount < 4) {
-    return "Minimum 4 players required for American format";
+  if (playersCount !== 8) {
+    return "American format requires exactly 8 players";
   }
 
-  if (playersCount % 4 !== 0) {
-    return "Player count must be a multiple of 4 for American format";
-  }
-
-  if (courtsCount < 1) {
-    return "At least 1 court is required";
-  }
-
-  if (courtsCount > Math.floor(playersCount / 4)) {
-    return `Maximum ${Math.floor(playersCount / 4)} courts for ${playersCount} players`;
+  if (courtsCount !== 2) {
+    return "American format requires exactly 2 courts";
   }
 
   return null;

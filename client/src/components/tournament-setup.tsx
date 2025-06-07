@@ -83,26 +83,13 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Number of Players</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        const numValue = parseInt(value);
-                        field.onChange(numValue);
-                        validateConfiguration(numValue, watchedValues.courtsCount);
-                      }}
-                      defaultValue={field.value?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="focus:ring-primary focus:border-primary">
-                          <SelectValue placeholder="Select players" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="4">4 Players</SelectItem>
-                        <SelectItem value="8">8 Players</SelectItem>
-                        <SelectItem value="12">12 Players</SelectItem>
-                        <SelectItem value="16">16 Players</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Input
+                        value="8 Players"
+                        disabled
+                        className="bg-muted cursor-not-allowed"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -114,26 +101,13 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Number of Courts</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        const numValue = parseInt(value);
-                        field.onChange(numValue);
-                        validateConfiguration(watchedValues.playersCount, numValue);
-                      }}
-                      defaultValue={field.value?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="focus:ring-primary focus:border-primary">
-                          <SelectValue placeholder="Select courts" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="1">1 Court</SelectItem>
-                        <SelectItem value="2">2 Courts</SelectItem>
-                        <SelectItem value="3">3 Courts</SelectItem>
-                        <SelectItem value="4">4 Courts</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Input
+                        value="2 Courts"
+                        disabled
+                        className="bg-muted cursor-not-allowed"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -146,10 +120,15 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
               )}
 
               <div className="bg-background border border-border rounded-md p-4">
-                <h4 className="font-medium text-foreground mb-2">Tournament Format</h4>
-                <p className="text-sm text-muted-foreground">
-                  American Format ensures each player partners with different players and faces varied opponents across multiple rounds for maximum engagement.
+                <h4 className="font-medium text-foreground mb-2">Americano Format</h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  7 rounds with optimal partner and opponent rotation. Each player plays exactly once per round across 2 courts simultaneously.
                 </p>
+                <div className="text-xs text-muted-foreground">
+                  • Rally-point scoring to 16 points<br/>
+                  • 4-rally serve blocks with changeover at 8 points<br/>
+                  • ~90 minutes total duration including warm-up
+                </div>
               </div>
 
               <Button

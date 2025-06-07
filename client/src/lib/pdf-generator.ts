@@ -23,7 +23,7 @@ export function generateTournamentPDF({ tournamentName, playersCount, courtsCoun
   yPosition += 10;
   pdf.setFontSize(12);
   pdf.setFont('helvetica', 'normal');
-  pdf.text('American Format Tournament Schedule', pageWidth / 2, yPosition, { align: 'center' });
+  pdf.text('Americano Format Tournament Schedule', pageWidth / 2, yPosition, { align: 'center' });
   
   yPosition += 8;
   pdf.setFontSize(10);
@@ -143,7 +143,7 @@ export function generatePDFPreviewHTML({ tournamentName, playersCount, courtsCou
       <!-- Header -->
       <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #000;">
         <h1 style="font-size: 24px; font-weight: bold; margin: 0; color: #000;">${tournamentName}</h1>
-        <p style="font-size: 14px; color: #666; margin: 5px 0;">American Format Tournament Schedule</p>
+        <p style="font-size: 14px; color: #666; margin: 5px 0;">Americano Format Tournament Schedule</p>
         <p style="font-size: 12px; color: #666; margin: 5px 0;">${playersCount} Players • ${courtsCount} Courts</p>
         <p style="font-size: 10px; color: #666; margin: 5px 0;">Generated on ${new Date().toLocaleDateString()}</p>
       </div>

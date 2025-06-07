@@ -21,8 +21,8 @@ export type Tournament = typeof tournaments.$inferSelect;
 // Validation schemas
 export const tournamentSetupSchema = z.object({
   name: z.string().min(1, "Tournament name is required"),
-  playersCount: z.number().min(4, "Minimum 4 players required").max(16, "Maximum 16 players allowed"),
-  courtsCount: z.number().min(1, "At least 1 court required").max(4, "Maximum 4 courts allowed"),
+  playersCount: z.literal(8, { errorMap: () => ({ message: "American format requires exactly 8 players" }) }),
+  courtsCount: z.literal(2, { errorMap: () => ({ message: "American format requires exactly 2 courts" }) }),
 });
 
 export const playersSchema = z.object({
