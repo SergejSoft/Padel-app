@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Settings, Users, Calendar, Trash2, Edit } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Plus, Settings, Users, Calendar, Trash2, Edit, Crown, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentWizard } from "@/components/tournament-wizard";
@@ -34,6 +35,30 @@ export default function Dashboard() {
     onError: () => {
       toast({
         title: "Error deleting tournament",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const makeAdminMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/dev/make-admin", {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+      toast({
+        title: "Role updated",
+        description: "You are now an admin. Refresh the page to see admin features.",
+      });
+      // Refresh page to update UI
+      setTimeout(() => window.location.reload(), 1000);
+    },
+    onError: () => {
+      toast({
+        title: "Error updating role",
         description: "Please try again later.",
         variant: "destructive",
       });
@@ -97,6 +122,47 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
+        {/* Developer Testing Panel */}
+        {!isAdmin && (
+          <Alert className="mb-6 border-blue-200 bg-blue-50">
+            <Shield className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>
+                <strong>Testing Mode:</strong> You are currently an <Badge variant="outline">Organizer</Badge>. 
+                Click to become an admin and test admin features.
+              </span>
+              <Button
+                size="sm"
+                onClick={() => makeAdminMutation.mutate()}
+                disabled={makeAdminMutation.isPending}
+                className="ml-4"
+              >
+                {makeAdminMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Crown className="w-4 h-4 mr-2" />
+                    Become Admin
+                  </>
+                )}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {isAdmin && (
+          <Alert className="mb-6 border-green-200 bg-green-50">
+            <Crown className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Admin Mode:</strong> You have full access to all tournaments and can manage users. 
+              You can view and modify any tournament in the system.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Stats Cards */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           <Card>

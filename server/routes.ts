@@ -108,6 +108,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin routes
+  app.post("/api/admin/promote-user", isAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.body;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const updatedUser = await storage.upsertUser({
+        ...user,
+        role: "admin",
+        updatedAt: new Date(),
+      });
+      
+      res.json({ message: "User promoted to admin", user: updatedUser });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/admin/users", isAdmin, async (req: any, res) => {
+    try {
+      // For now, return empty array - would need to implement getAllUsers in storage
+      res.json([]);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Development helper: Make current user admin (remove in production)
+  app.post("/api/dev/make-admin", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const updatedUser = await storage.upsertUser({
+        ...user,
+        role: "admin",
+        updatedAt: new Date(),
+      });
+      
+      res.json({ message: "You are now an admin", user: updatedUser });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Generate share ID for tournament
   app.post("/api/tournaments/:id/share", async (req, res) => {
     try {
