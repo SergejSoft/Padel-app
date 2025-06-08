@@ -148,8 +148,8 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className="flex-1">
         <div className="container mx-auto px-4 py-8">
-        {/* Developer Testing Panel */}
-        {!isAdmin && (
+          {/* Developer Testing Panel */}
+          {!isAdmin && (
           <Alert className="mb-6 border-blue-200 bg-blue-50">
             <Shield className="h-4 w-4" />
             <AlertDescription className="flex items-center justify-between">
