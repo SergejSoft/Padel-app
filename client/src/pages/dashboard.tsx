@@ -278,8 +278,7 @@ export default function Dashboard() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(`/shared/${tournament.shareId}`, '_blank')}
-                        disabled={!tournament.shareId}
+                        onClick={() => setViewingTournament(tournament)}
                       >
                         View
                       </Button>
@@ -315,6 +314,13 @@ export default function Dashboard() {
           tournament={editingTournament}
           isOpen={!!editingTournament}
           onClose={() => setEditingTournament(null)}
+        />
+
+        {/* Tournament View Modal */}
+        <TournamentViewModal
+          tournament={viewingTournament}
+          isOpen={!!viewingTournament}
+          onClose={() => setViewingTournament(null)}
         />
       </div>
     </div>
