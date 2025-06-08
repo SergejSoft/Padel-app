@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentWizard } from "@/components/tournament-wizard";
 import { EditTournamentModal } from "@/components/edit-tournament-modal";
+import { TournamentViewModal } from "@/components/tournament-view-modal";
 import { apiRequest } from "@/lib/queryClient";
 import type { Tournament } from "@shared/schema";
 
@@ -18,9 +19,23 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const [showCreateTournament, setShowCreateTournament] = useState(false);
   const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
+  const [viewingTournament, setViewingTournament] = useState<Tournament | null>(null);
 
   const { data: tournaments = [], isLoading } = useQuery<Tournament[]>({
     queryKey: ["/api/tournaments"],
+  });
+
+  // Sort tournaments by date (newest first), then by creation order
+  const sortedTournaments = [...tournaments].sort((a, b) => {
+    // First, sort by date if both have dates
+    if (a.date && b.date) {
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    }
+    // If only one has a date, prioritize it
+    if (a.date && !b.date) return -1;
+    if (!a.date && b.date) return 1;
+    // If neither has a date, sort by ID (newest first)
+    return b.id - a.id;
   });
 
   const deleteMutation = useMutation({
@@ -226,7 +241,7 @@ export default function Dashboard() {
                 <Loader2 className="h-8 w-8 animate-spin" />
                 <span className="ml-2">Loading tournaments...</span>
               </div>
-            ) : tournaments.length === 0 ? (
+            ) : sortedTournaments.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-muted-foreground mb-4">No tournaments found</p>
                 <Button onClick={() => setShowCreateTournament(true)}>
@@ -236,7 +251,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                {tournaments.map((tournament) => (
+                {sortedTournaments.map((tournament) => (
                   <div
                     key={tournament.id}
                     className="flex items-center justify-between p-4 border border-border rounded-lg"
