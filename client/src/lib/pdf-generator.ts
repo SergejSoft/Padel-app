@@ -223,7 +223,7 @@ function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tour
   // Round headers
   for (let i = 1; i <= totalRounds; i++) {
     pdf.rect(currentX, yPosition, colWidths[i], headerHeight, 'FD');
-    pdf.text(`R${i}`, currentX + colWidths[i]/2, yPosition + 5.5, { align: 'center' });
+    pdf.text(`${i}`, currentX + colWidths[i]/2, yPosition + 5.5, { align: 'center' });
     currentX += colWidths[i];
   }
   
@@ -342,7 +342,7 @@ export function generatePDFPreviewHTML({ tournamentName, tournamentDate, tournam
         <thead>
           <tr style="background-color: #f0f0f0;">
             <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Player</th>
-            ${rounds.map((_, index) => `<th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">R${index + 1}</th>`).join('')}
+            ${rounds.map((_, index) => `<th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">${index + 1}</th>`).join('')}
             <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Total</th>
           </tr>
         </thead>
