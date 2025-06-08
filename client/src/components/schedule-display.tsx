@@ -118,6 +118,30 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
     pdf.save(`${tournamentSetup.name.replace(/\s+/g, '_')}_schedule.pdf`);
   };
 
+  const handleShare = async () => {
+    // First save the tournament, then generate share link
+    const tournamentData: InsertTournament = {
+      name: tournamentSetup.name,
+      date: tournamentSetup.date,
+      location: tournamentSetup.location,
+      playersCount: tournamentSetup.playersCount,
+      courtsCount: tournamentSetup.courtsCount,
+      players: players,
+      schedule: schedule,
+    };
+
+    try {
+      const savedTournament = await saveTournamentMutation.mutateAsync(tournamentData);
+      generateShareMutation.mutate(savedTournament.id);
+    } catch (error) {
+      toast({
+        title: "Error saving tournament",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const totalGames = schedule.reduce((sum, round) => sum + round.matches.length, 0);
   const gamesPerPlayer = Math.floor(totalGames * 4 / tournamentSetup.playersCount);
   // Calculate average game length: 1.5 hours total / 7 rounds = ~13 minutes per game
@@ -213,6 +237,21 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
           <Button onClick={handleDownloadPDF} className="bg-primary text-primary-foreground hover:bg-primary/90">
             <Download className="w-4 h-4 mr-2" />
             Download PDF
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleShare}
+            disabled={generateShareMutation.isPending}
+            className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
+          >
+            {generateShareMutation.isPending ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : copySuccess ? (
+              <Check className="w-4 h-4 mr-2" />
+            ) : (
+              <Share className="w-4 h-4 mr-2" />
+            )}
+            {copySuccess ? "Copied!" : "Share"}
           </Button>
         </div>
       </div>
