@@ -136,9 +136,13 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
     } catch (error) {
       toast({
         title: "Error saving tournament",
-        description: "Please try again later.",
+        description: "Please sign in to save and share tournaments.",
         variant: "destructive",
       });
+      // Redirect to login if not authenticated
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 2000);
     }
   };
 
