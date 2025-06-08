@@ -99,7 +99,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTournament(id: number): Promise<boolean> {
     const result = await db.delete(tournaments).where(eq(tournaments.id, id));
-    return result.count > 0;
+    return (result.rowCount || 0) > 0;
   }
 
   async getTournamentOwnerId(id: number): Promise<string | null> {

@@ -2,12 +2,32 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertTournamentSchema } from "@shared/schema";
+import { setupAuth, isAuthenticated, isAdmin, isOwnerOrAdmin } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Create tournament
-  app.post("/api/tournaments", async (req, res) => {
+  // Setup authentication middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const validatedData = insertTournamentSchema.parse(req.body);
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Create tournament (requires authentication)
+  app.post("/api/tournaments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const validatedData = insertTournamentSchema.parse({
+        ...req.body,
+        organizerId: userId,
+      });
       const tournament = await storage.createTournament(validatedData);
       res.json(tournament);
     } catch (error: any) {
@@ -31,11 +51,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all tournaments
-  app.get("/api/tournaments", async (req, res) => {
+  // Get tournaments (role-based access)
+  app.get("/api/tournaments", isAuthenticated, async (req: any, res) => {
     try {
-      const tournaments = await storage.getAllTournaments();
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      let tournaments;
+      if (user?.role === 'admin') {
+        // Admin can see all tournaments
+        tournaments = await storage.getAllTournaments();
+      } else {
+        // Organizers can only see their own tournaments
+        tournaments = await storage.getTournamentsByOrganizer(userId);
+      }
       res.json(tournaments);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update tournament (owner or admin only)
+  app.put("/api/tournaments/:id", isOwnerOrAdmin(async (req: any) => {
+    return await storage.getTournamentOwnerId(parseInt(req.params.id));
+  }), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertTournamentSchema.partial().parse(req.body);
+      const tournament = await storage.updateTournament(id, validatedData);
+      
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      res.json(tournament);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete tournament (owner or admin only)
+  app.delete("/api/tournaments/:id", isOwnerOrAdmin(async (req: any) => {
+    return await storage.getTournamentOwnerId(parseInt(req.params.id));
+  }), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTournament(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
