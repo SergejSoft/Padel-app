@@ -8,6 +8,7 @@ import { Loader2, Plus, Settings, Users, Calendar, Trash2, Edit, Crown, Shield }
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentWizard } from "@/components/tournament-wizard";
+import { EditTournamentModal } from "@/components/edit-tournament-modal";
 import { apiRequest } from "@/lib/queryClient";
 import type { Tournament } from "@shared/schema";
 
@@ -16,6 +17,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showCreateTournament, setShowCreateTournament] = useState(false);
+  const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
 
   const { data: tournaments = [], isLoading } = useQuery<Tournament[]>({
     queryKey: ["/api/tournaments"],
