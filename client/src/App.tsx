@@ -26,20 +26,10 @@ function Router() {
 
   return (
     <Switch>
-      {!isAuthenticated ? (
-        <>
-          <Route path="/" component={Landing} />
-          <Route path="/shared/:shareId" component={SharedTournament} />
-          <Route path="/tournament" component={Tournament} />
-          <Route component={NotFound} />
-        </>
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/shared/:shareId" component={SharedTournament} />
-          <Route component={NotFound} />
-        </>
-      )}
+      <Route path="/" component={!isAuthenticated ? Landing : Dashboard} />
+      <Route path="/shared/:shareId" component={SharedTournament} />
+      {!isAuthenticated && <Route path="/tournament" component={Tournament} />}
+      <Route component={NotFound} />
     </Switch>
   );
 }

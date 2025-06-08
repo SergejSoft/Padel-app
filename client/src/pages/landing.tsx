@@ -78,15 +78,17 @@ export default function Landing() {
               Ready to organize your tournament?
             </h2>
             <p className="text-muted-foreground mb-8">
-              Sign in to create and manage your padel tournaments
+              Sign in to start creating and managing your padel tournaments
             </p>
-            <Button 
-              size="lg" 
-              variant="outline"
-              onClick={() => window.location.href = "/api/login"}
-            >
-              Sign In
-            </Button>
+            <div className="flex gap-4 justify-center">
+              <Button 
+                size="lg" 
+                onClick={() => window.location.href = "/api/login"}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Sign In to Get Started
+              </Button>
+            </div>
           </div>
         </div>
       </div>
