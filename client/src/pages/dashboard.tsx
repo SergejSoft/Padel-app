@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TournamentWizard } from "@/components/tournament-wizard";
 import { EditTournamentModal } from "@/components/edit-tournament-modal";
 import { TournamentViewModal } from "@/components/tournament-view-modal";
+import { Footer } from "@/components/footer";
 import { apiRequest } from "@/lib/queryClient";
 import type { Tournament } from "@shared/schema";
 
@@ -112,7 +113,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 py-4">
@@ -145,7 +146,8 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="flex-1">
+        <div className="container mx-auto px-4 py-8">
         {/* Developer Testing Panel */}
         {!isAdmin && (
           <Alert className="mb-6 border-blue-200 bg-blue-50">
@@ -322,7 +324,10 @@ export default function Dashboard() {
           isOpen={!!viewingTournament}
           onClose={() => setViewingTournament(null)}
         />
+        </div>
       </div>
+      
+      <Footer />
     </div>
   );
 }
