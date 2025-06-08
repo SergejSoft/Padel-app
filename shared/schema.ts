@@ -11,6 +11,7 @@ export const tournaments = pgTable("tournaments", {
   courtsCount: integer("courts_count").notNull(),
   players: json("players").$type<string[]>().notNull(),
   schedule: json("schedule").$type<any[]>().notNull(),
+  shareId: text("share_id").unique(),
 });
 
 export const insertTournamentSchema = createInsertSchema(tournaments).omit({

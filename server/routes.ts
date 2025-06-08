@@ -41,6 +41,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate share ID for tournament
+  app.post("/api/tournaments/:id/share", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid tournament ID" });
+      }
+      
+      const shareId = await storage.generateShareId(id);
+      res.json({ shareId });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get tournament by share ID
+  app.get("/api/shared/:shareId", async (req, res) => {
+    try {
+      const { shareId } = req.params;
+      const tournament = await storage.getTournamentByShareId(shareId);
+      
+      if (!tournament) {
+        return res.status(404).json({ error: "Shared tournament not found" });
+      }
+      
+      res.json(tournament);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
