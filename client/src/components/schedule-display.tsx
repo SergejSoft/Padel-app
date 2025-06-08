@@ -3,11 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Eye } from "lucide-react";
+import { Loader2, Download, Eye, Share, Check, Copy } from "lucide-react";
 import { generateAmericanFormat } from "@/lib/american-format";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import { PDFPreviewModal } from "./pdf-preview-modal";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { TournamentSetup, Round, InsertTournament } from "@shared/schema";
 
 interface ScheduleDisplayProps {
@@ -22,8 +23,11 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
   const [isGenerating, setIsGenerating] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const [shareLink, setShareLink] = useState<string>("");
+  const [copySuccess, setCopySuccess] = useState(false);
   
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const saveTournamentMutation = useMutation({
     mutationFn: async (tournamentData: InsertTournament) => {
@@ -32,6 +36,34 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+    },
+  });
+
+  const generateShareMutation = useMutation({
+    mutationFn: async (tournamentId: number) => {
+      const response = await apiRequest("POST", `/api/tournaments/${tournamentId}/share`, {});
+      return response.json();
+    },
+    onSuccess: (data: { shareId: string }) => {
+      const shareUrl = `${window.location.origin}/shared/${data.shareId}`;
+      setShareLink(shareUrl);
+      
+      // Copy to clipboard
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        setCopySuccess(true);
+        setTimeout(() => setCopySuccess(false), 2000);
+        toast({
+          title: "Share link copied!",
+          description: "The tournament link has been copied to your clipboard.",
+        });
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error generating share link",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
     },
   });
 
