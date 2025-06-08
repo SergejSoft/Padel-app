@@ -1,13 +1,29 @@
-import { tournaments, type Tournament, type InsertTournament } from "@shared/schema";
+import {
+  tournaments,
+  users,
+  type Tournament,
+  type InsertTournament,
+  type User,
+  type UpsertUser,
+} from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
+  // User operations (required for Replit Auth)
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  
+  // Tournament operations
   getTournament(id: number): Promise<Tournament | undefined>;
   getTournamentByShareId(shareId: string): Promise<Tournament | undefined>;
   createTournament(tournament: InsertTournament): Promise<Tournament>;
   generateShareId(tournamentId: number): Promise<string>;
   getAllTournaments(): Promise<Tournament[]>;
+  getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]>;
+  updateTournament(id: number, tournament: Partial<InsertTournament>): Promise<Tournament | undefined>;
+  deleteTournament(id: number): Promise<boolean>;
+  getTournamentOwnerId(id: number): Promise<string | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -41,6 +57,57 @@ export class DatabaseStorage implements IStorage {
 
   async getAllTournaments(): Promise<Tournament[]> {
     return await db.select().from(tournaments);
+  }
+
+  // User operations (required for Replit Auth)
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
+  async getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]> {
+    return db.select().from(tournaments).where(eq(tournaments.organizerId, organizerId));
+  }
+
+  async updateTournament(id: number, tournamentData: Partial<InsertTournament>): Promise<Tournament | undefined> {
+    const [tournament] = await db
+      .update(tournaments)
+      .set({
+        ...tournamentData,
+        players: tournamentData.players as any,
+        schedule: tournamentData.schedule as any,
+      })
+      .where(eq(tournaments.id, id))
+      .returning();
+    return tournament;
+  }
+
+  async deleteTournament(id: number): Promise<boolean> {
+    const result = await db.delete(tournaments).where(eq(tournaments.id, id));
+    return result.count > 0;
+  }
+
+  async getTournamentOwnerId(id: number): Promise<string | null> {
+    const [tournament] = await db
+      .select({ organizerId: tournaments.organizerId })
+      .from(tournaments)
+      .where(eq(tournaments.id, id));
+    return tournament?.organizerId || null;
   }
 }
 
