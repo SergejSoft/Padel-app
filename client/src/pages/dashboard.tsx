@@ -48,22 +48,29 @@ export default function Dashboard() {
       const response = await apiRequest("POST", "/api/dev/make-admin", {});
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
       toast({
         title: "Role updated",
-        description: "You are now an admin. Refresh the page to see admin features.",
+        description: `You are now an admin (${data.user.role}). Page will refresh to show admin features.`,
       });
       // Refresh page to update UI
-      setTimeout(() => window.location.reload(), 1000);
+      setTimeout(() => window.location.reload(), 1500);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Admin promotion error:", error);
       toast({
         title: "Error updating role",
-        description: "Please try again later.",
+        description: error.message || "Please sign in again and try again.",
         variant: "destructive",
       });
+      // If unauthorized, redirect to login
+      if (error.message?.includes("Unauthorized")) {
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 2000);
+      }
     },
   });
 
@@ -264,13 +271,7 @@ export default function Dashboard() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          // TODO: Implement edit functionality
-                          toast({
-                            title: "Edit functionality",
-                            description: "Edit functionality will be implemented next.",
-                          });
-                        }}
+                        onClick={() => setEditingTournament(tournament)}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -293,6 +294,13 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+
+        {/* Edit Tournament Modal */}
+        <EditTournamentModal
+          tournament={editingTournament}
+          isOpen={!!editingTournament}
+          onClose={() => setEditingTournament(null)}
+        />
       </div>
     </div>
   );
