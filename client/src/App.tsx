@@ -8,6 +8,7 @@ import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Tournament from "@/pages/tournament";
 import SharedTournament from "@/pages/shared-tournament";
+import AmericanFormatRules from "@/pages/american-format-rules";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -28,6 +29,7 @@ function Router() {
     <Switch>
       <Route path="/" component={!isAuthenticated ? Landing : Dashboard} />
       <Route path="/shared/:shareId" component={SharedTournament} />
+      <Route path="/american-format-rules" component={AmericanFormatRules} />
       {!isAuthenticated && <Route path="/tournament" component={Tournament} />}
       <Route component={NotFound} />
     </Switch>
