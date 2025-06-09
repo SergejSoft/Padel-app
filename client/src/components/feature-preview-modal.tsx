@@ -1,18 +1,21 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import previewImage from "@assets/1_1749482036883.png";
 
 interface FeaturePreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   description: string;
+  imageSrc: string;
+  imageAlt: string;
 }
 
 export function FeaturePreviewModal({ 
   isOpen, 
   onClose, 
   title, 
-  description 
+  description,
+  imageSrc,
+  imageAlt
 }: FeaturePreviewModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -25,8 +28,8 @@ export function FeaturePreviewModal({
         </DialogHeader>
         <div className="mt-4">
           <img 
-            src={previewImage} 
-            alt="Tournament Setup Preview"
+            src={imageSrc} 
+            alt={imageAlt}
             className="w-full h-auto rounded-lg border shadow-sm max-h-96 object-contain"
           />
         </div>

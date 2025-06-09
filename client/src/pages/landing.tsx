@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Footer } from "@/components/footer";
 import { FeaturePreviewModal } from "@/components/feature-preview-modal";
 import { Calendar, Users, Trophy, Share, Heart, Eye } from "lucide-react";
-import previewImage from "@assets/1_1749482036883.png";
+import setupPreviewImage from "@assets/1_1749482036883.png";
+import playersPreviewImage from "@assets/2_1749482562652.png";
 
 export const BouncingBallIcon = ({ size = "1em", color = 'currentColor', ...props }) => (
   <svg 
@@ -33,7 +34,33 @@ export const TennisIcon = ({ size = "1em", color = 'currentColor', ...props }) =
 );
 
 export default function Landing() {
-  const [showPreview, setShowPreview] = useState(false);
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    imageSrc: string;
+    imageAlt: string;
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    imageSrc: "",
+    imageAlt: ""
+  });
+
+  const showPreview = (title: string, description: string, imageSrc: string, imageAlt: string) => {
+    setPreviewModal({
+      isOpen: true,
+      title,
+      description,
+      imageSrc,
+      imageAlt
+    });
+  };
+
+  const closePreview = () => {
+    setPreviewModal(prev => ({ ...prev, isOpen: false }));
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -58,46 +85,18 @@ export default function Landing() {
               <BouncingBallIcon size="2rem" className="text-primary" />
             </div>
 
-            {/* Feature Preview Section */}
-            <div className="max-w-4xl mx-auto">
-              <Card className="p-6 bg-muted/30 border-dashed border-2 border-primary/20">
-                <div className="grid md:grid-cols-2 gap-8 items-center">
-                  <div className="text-left">
-                    <h3 className="text-2xl font-bold text-foreground mb-3">
-                      Smart Tournament Setup
-                    </h3>
-                    <p className="text-muted-foreground mb-4">
-                      Our intelligent American Format algorithm automatically creates optimal schedules for 8 players across 2 courts, ensuring fair play and maximum engagement.
-                    </p>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowPreview(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <Eye className="w-4 h-4" />
-                      View Preview
-                    </Button>
-                  </div>
-                  <div className="relative">
-                    <img 
-                      src={previewImage} 
-                      alt="Tournament Setup Interface"
-                      className="w-full h-auto rounded-lg shadow-lg border cursor-pointer hover:shadow-xl transition-shadow"
-                      onClick={() => setShowPreview(true)}
-                    />
-                    <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-all cursor-pointer rounded-lg flex items-center justify-center opacity-0 hover:opacity-100">
-                      <Eye className="w-8 h-8 text-white" />
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </div>
+            
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
             <Card 
               className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => setShowPreview(true)}
+              onClick={() => showPreview(
+                "Smart Scheduling",
+                "See how our American Format algorithm automatically creates optimal tournament schedules for 8 players and 2 courts",
+                setupPreviewImage,
+                "Tournament Setup Interface"
+              )}
             >
               <CardHeader className="text-center">
                 <Calendar className="h-12 w-12 mx-auto mb-4 text-primary" />
@@ -110,7 +109,15 @@ export default function Landing() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => showPreview(
+                "Player Management",
+                "Easily add and manage all tournament participants with our intuitive player registration system",
+                playersPreviewImage,
+                "Player Names Interface"
+              )}
+            >
               <CardHeader className="text-center">
                 <Users className="h-12 w-12 mx-auto mb-4 text-primary" />
                 <CardTitle>Player Management</CardTitle>
@@ -170,10 +177,12 @@ export default function Landing() {
       <Footer />
       
       <FeaturePreviewModal
-        isOpen={showPreview}
-        onClose={() => setShowPreview(false)}
-        title="Smart Scheduling"
-        description="See how our American Format algorithm automatically creates optimal tournament schedules for 8 players and 2 courts"
+        isOpen={previewModal.isOpen}
+        onClose={closePreview}
+        title={previewModal.title}
+        description={previewModal.description}
+        imageSrc={previewModal.imageSrc}
+        imageAlt={previewModal.imageAlt}
       />
     </div>
   );
