@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Plus, Settings, Users, Calendar, Trash2, Edit, Crown, Shield, Ban, Play, Share } from "lucide-react";
+import { Loader2, Plus, Settings, Users, Calendar, Trash2, Edit, Crown, Shield, Ban, Play, Share, Copy, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentWizard } from "@/components/tournament-wizard";
@@ -142,6 +142,22 @@ export default function Dashboard() {
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
+  };
+
+  const handleCopyLink = (shareId: string) => {
+    const url = `${window.location.origin}/shared/${shareId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast({
+        title: "Link copied",
+        description: "Tournament link has been copied to clipboard.",
+      });
+    }).catch(() => {
+      toast({
+        title: "Copy failed",
+        description: "Could not copy link to clipboard.",
+        variant: "destructive",
+      });
+    });
   };
 
   if (showCreateTournament) {
@@ -301,13 +317,33 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setViewingTournament(tournament)}
-                      >
-                        View
-                      </Button>
+                      {tournament.shareId ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`/shared/${tournament.shareId}`, '_blank')}
+                          >
+                            <ExternalLink className="w-4 h-4 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCopyLink(tournament.shareId!)}
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setViewingTournament(tournament)}
+                        >
+                          View
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
