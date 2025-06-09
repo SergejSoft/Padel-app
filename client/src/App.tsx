@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/landing";
+import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Tournament from "@/pages/tournament";
 import SharedTournament from "@/pages/shared-tournament";
@@ -28,6 +29,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={!isAuthenticated ? Landing : Dashboard} />
+      <Route path="/login" component={Login} />
       <Route path="/shared/:shareId" component={SharedTournament} />
       <Route path="/american-format-rules" component={AmericanFormatRules} />
       {!isAuthenticated && <Route path="/tournament" component={Tournament} />}

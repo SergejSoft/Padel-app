@@ -45,7 +45,7 @@ export default function Landing() {
             <div className="flex items-center justify-center gap-3">
               <Button 
                 size="lg" 
-                onClick={() => window.location.href = "/api/login"}
+                onClick={() => window.location.href = "/login"}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 Get Started
@@ -114,7 +114,7 @@ export default function Landing() {
             <div className="flex gap-4 justify-center">
               <Button 
                 size="lg" 
-                onClick={() => window.location.href = "/api/login"}
+                onClick={() => window.location.href = "/login"}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 Sign In to Get Started
