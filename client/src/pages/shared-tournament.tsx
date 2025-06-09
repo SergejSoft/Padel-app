@@ -2,7 +2,9 @@ import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Users, Target, Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Calendar, MapPin, Users, Target, Clock, Ban } from "lucide-react";
 import { generateAmericanFormat } from "@/lib/american-format";
 import type { Tournament } from "@shared/schema";
 
@@ -16,7 +18,7 @@ export default function SharedTournament() {
       if (!response.ok) {
         throw new Error('Tournament not found');
       }
-      return response.json() as Tournament;
+      return response.json();
     },
     enabled: !!shareId,
   });
@@ -46,6 +48,14 @@ export default function SharedTournament() {
     );
   }
 
+  const getTournamentStatus = (tournament: Tournament) => {
+    if (tournament.status === 'cancelled') return 'cancelled';
+    if (tournament.date && new Date(tournament.date) < new Date()) return 'past';
+    return 'active';
+  };
+
+  const status = getTournamentStatus(tournament);
+
   const schedule = generateAmericanFormat({
     players: tournament.players,
     courts: tournament.courtsCount,
@@ -58,9 +68,24 @@ export default function SharedTournament() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto p-6">
+        {/* Status Alert for Cancelled Tournaments */}
+        {status === 'cancelled' && (
+          <Alert className="mb-6 border-red-200 bg-red-50">
+            <Ban className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Tournament Cancelled:</strong> This tournament has been cancelled and is no longer active.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">{tournament.name}</h1>
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <h1 className="text-3xl font-bold text-gray-900">{tournament.name}</h1>
+            {status === 'cancelled' && <Badge variant="destructive">Cancelled</Badge>}
+            {status === 'past' && <Badge variant="secondary">Past</Badge>}
+            {status === 'active' && <Badge variant="default">Active</Badge>}
+          </div>
           <div className="flex flex-wrap justify-center gap-6 text-gray-600">
             {tournament.date && (
               <div className="flex items-center gap-2">
