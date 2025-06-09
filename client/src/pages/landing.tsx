@@ -6,6 +6,7 @@ import { FeaturePreviewModal } from "@/components/feature-preview-modal";
 import { Calendar, Users, Trophy, Share, Heart, Eye } from "lucide-react";
 import setupPreviewImage from "@assets/1_1749482036883.png";
 import playersPreviewImage from "@assets/2_1749482562652.png";
+import schedulePreviewImage from "@assets/3_1749482762994.png";
 
 export const BouncingBallIcon = ({ size = "1em", color = 'currentColor', ...props }) => (
   <svg 
@@ -88,7 +89,7 @@ export default function Landing() {
             
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+          <div className="grid md:grid-cols-3 gap-6 mb-16">
             <Card 
               className="cursor-pointer hover:shadow-lg transition-shadow"
               onClick={() => showPreview(
@@ -129,19 +130,15 @@ export default function Landing() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="text-center">
-                <Trophy className="h-12 w-12 mx-auto mb-4 text-primary" />
-                <CardTitle>PDF Scorecards</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center">
-                  Generate professional tournament schedules and scorecards
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => showPreview(
+                "Share Tournaments",
+                "Generate shareable links that display professional tournament schedules with real-time updates and match results",
+                schedulePreviewImage,
+                "Tournament Schedule Interface"
+              )}
+            >
               <CardHeader className="text-center">
                 <Share className="h-12 w-12 mx-auto mb-4 text-primary" />
                 <CardTitle>Share Tournaments</CardTitle>
