@@ -53,16 +53,38 @@ export function TournamentViewModal({ tournament, isOpen, onClose }: TournamentV
     mutationFn: async () => {
       if (!tournament) return;
       
+      // Generate new schedule with updated player names
+      const { generateAmericanFormat } = await import("@/lib/american-format");
+      const newSchedule = generateAmericanFormat({
+        players: players,
+        courts: tournament.courtsCount,
+      });
+      
       const response = await apiRequest("PUT", `/api/tournaments/${tournament.id}`, {
         name: formData.name,
         date: formData.date || null,
         location: formData.location || null,
         players: players,
+        schedule: newSchedule,
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedTournament) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+      
+      // Update local state with the new data
+      if (updatedTournament) {
+        setFormData({
+          name: updatedTournament.name || "",
+          date: updatedTournament.date || "",
+          location: updatedTournament.location || "",
+        });
+        setPlayers(updatedTournament.players || []);
+        if (updatedTournament.schedule) {
+          setRounds(Array.isArray(updatedTournament.schedule) ? updatedTournament.schedule : JSON.parse(updatedTournament.schedule));
+        }
+      }
+      
       toast({
         title: "Tournament updated",
         description: "Changes have been saved successfully.",
@@ -103,15 +125,31 @@ export function TournamentViewModal({ tournament, isOpen, onClose }: TournamentV
     updateMutation.mutate();
   };
 
+  const handleCancel = () => {
+    // Reset form data to original tournament values
+    if (tournament) {
+      setFormData({
+        name: tournament.name || "",
+        date: tournament.date || "",
+        location: tournament.location || "",
+      });
+      setPlayers(tournament.players || []);
+      if (tournament.schedule) {
+        setRounds(Array.isArray(tournament.schedule) ? tournament.schedule : JSON.parse(tournament.schedule));
+      }
+    }
+    setIsEditing(false);
+  };
+
   if (!tournament) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
+          <DialogTitle className="flex items-center justify-between pr-8">
             <span>Tournament Details</span>
-            <div className="flex gap-2">
+            <div className="flex gap-2 mr-6">
               {isEditing ? (
                 <>
                   <Button
@@ -125,7 +163,7 @@ export function TournamentViewModal({ tournament, isOpen, onClose }: TournamentV
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setIsEditing(false)}
+                    onClick={handleCancel}
                   >
                     <X className="w-4 h-4 mr-1" />
                     Cancel
