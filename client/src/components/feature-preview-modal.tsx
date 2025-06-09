@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import previewImage from "@assets/1_1749482036883.png";
 
 interface FeaturePreviewModalProps {
@@ -16,16 +16,18 @@ export function FeaturePreviewModal({
 }: FeaturePreviewModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">{title}</DialogTitle>
-          <p className="text-muted-foreground">{description}</p>
+          <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            {description}
+          </DialogDescription>
         </DialogHeader>
-        <div className="mt-6">
+        <div className="mt-4">
           <img 
             src={previewImage} 
             alt="Tournament Setup Preview"
-            className="w-full h-auto rounded-lg border shadow-lg"
+            className="w-full h-auto rounded-lg border shadow-sm max-h-96 object-contain"
           />
         </div>
       </DialogContent>
