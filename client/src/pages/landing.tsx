@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Footer } from "@/components/footer";
+import { FeaturePreviewModal } from "@/components/feature-preview-modal";
 import { Calendar, Users, Trophy, Share, Heart } from "lucide-react";
 
 export const BouncingBallIcon = ({ size = "1em", color = 'currentColor', ...props }) => (
@@ -30,6 +32,8 @@ export const TennisIcon = ({ size = "1em", color = 'currentColor', ...props }) =
 );
 
 export default function Landing() {
+  const [showPreview, setShowPreview] = useState(false);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1">
@@ -55,7 +59,10 @@ export default function Landing() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-            <Card>
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => setShowPreview(true)}
+            >
               <CardHeader className="text-center">
                 <Calendar className="h-12 w-12 mx-auto mb-4 text-primary" />
                 <CardTitle>Smart Scheduling</CardTitle>
@@ -125,6 +132,13 @@ export default function Landing() {
       </div>
       
       <Footer />
+      
+      <FeaturePreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        title="Smart Scheduling"
+        description="See how our American Format algorithm automatically creates optimal tournament schedules for 8 players and 2 courts"
+      />
     </div>
   );
 }
