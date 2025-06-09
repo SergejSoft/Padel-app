@@ -60,6 +60,9 @@ export function TournamentViewModal({ tournament, isOpen, onClose }: TournamentV
         courts: tournament.courtsCount,
       });
       
+      console.log("Updated players:", players);
+      console.log("Generated new schedule:", newSchedule);
+      
       const response = await apiRequest("PUT", `/api/tournaments/${tournament.id}`, {
         name: formData.name,
         date: formData.date || null,
@@ -72,24 +75,34 @@ export function TournamentViewModal({ tournament, isOpen, onClose }: TournamentV
     onSuccess: (updatedTournament) => {
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
       
-      // Update local state with the new data
+      // Force update local state with the new data immediately
       if (updatedTournament) {
         setFormData({
           name: updatedTournament.name || "",
           date: updatedTournament.date || "",
           location: updatedTournament.location || "",
         });
-        setPlayers(updatedTournament.players || []);
+        setPlayers([...updatedTournament.players]);
+        
+        // Ensure schedule is properly updated with new player names
         if (updatedTournament.schedule) {
-          setRounds(Array.isArray(updatedTournament.schedule) ? updatedTournament.schedule : JSON.parse(updatedTournament.schedule));
+          const newSchedule = Array.isArray(updatedTournament.schedule) 
+            ? updatedTournament.schedule 
+            : JSON.parse(updatedTournament.schedule);
+          setRounds([...newSchedule]);
         }
       }
       
       toast({
         title: "Tournament updated",
-        description: "Changes have been saved successfully.",
+        description: "Player names and schedule have been updated successfully.",
       });
       setIsEditing(false);
+      
+      // Force a re-render by clearing and resetting tournament data
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+      }, 100);
     },
     onError: (error: any) => {
       toast({
