@@ -90,6 +90,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update tournament status (cancel/activate)
+  app.patch("/api/tournaments/:id/status", isOwnerOrAdmin(async (req: any) => {
+    return await storage.getTournamentOwnerId(parseInt(req.params.id));
+  }), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!['active', 'cancelled'].includes(status)) {
+        return res.status(400).json({ error: "Invalid status. Must be 'active' or 'cancelled'" });
+      }
+      
+      const tournament = await storage.updateTournamentStatus(id, status);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      res.json(tournament);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Delete tournament (owner or admin only)
   app.delete("/api/tournaments/:id", isOwnerOrAdmin(async (req: any) => {
     return await storage.getTournamentOwnerId(parseInt(req.params.id));

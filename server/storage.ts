@@ -22,6 +22,7 @@ export interface IStorage {
   getAllTournaments(): Promise<Tournament[]>;
   getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]>;
   updateTournament(id: number, tournament: Partial<InsertTournament>): Promise<Tournament | undefined>;
+  updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined>;
   deleteTournament(id: number): Promise<boolean>;
   getTournamentOwnerId(id: number): Promise<string | null>;
 }
@@ -38,10 +39,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createTournament(insertTournament: InsertTournament): Promise<Tournament> {
+    // Generate shareId immediately during creation to avoid duplicates
+    const shareId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const [tournament] = await db
       .insert(tournaments)
       .values({
         ...insertTournament,
+        shareId,
         players: insertTournament.players as any,
         schedule: insertTournament.schedule as any,
       })
@@ -53,6 +57,15 @@ export class DatabaseStorage implements IStorage {
     const shareId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     await db.update(tournaments).set({ shareId }).where(eq(tournaments.id, tournamentId));
     return shareId;
+  }
+
+  async updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined> {
+    const [tournament] = await db
+      .update(tournaments)
+      .set({ status })
+      .where(eq(tournaments.id, id))
+      .returning();
+    return tournament;
   }
 
   async getAllTournaments(): Promise<Tournament[]> {
