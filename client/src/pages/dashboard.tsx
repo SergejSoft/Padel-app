@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Plus, Settings, Users, Calendar, Trash2, Edit, Crown, Shield } from "lucide-react";
+import { Loader2, Plus, Settings, Users, Calendar, Trash2, Edit, Crown, Shield, Ban, Play, Share } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentWizard } from "@/components/tournament-wizard";
@@ -59,6 +59,27 @@ export default function Dashboard() {
     },
   });
 
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const response = await apiRequest("PATCH", `/api/tournaments/${id}/status`, { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+      toast({
+        title: "Tournament status updated",
+        description: "Tournament status has been changed successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating status",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const makeAdminMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/dev/make-admin", {});
@@ -93,6 +114,33 @@ export default function Dashboard() {
   const handleDeleteTournament = (tournamentId: number, tournamentName: string) => {
     if (confirm(`Are you sure you want to delete "${tournamentName}"? This action cannot be undone.`)) {
       deleteMutation.mutate(tournamentId);
+    }
+  };
+
+  const handleCancelTournament = (tournamentId: number) => {
+    updateStatusMutation.mutate({ id: tournamentId, status: 'cancelled' });
+  };
+
+  const handleActivateTournament = (tournamentId: number) => {
+    updateStatusMutation.mutate({ id: tournamentId, status: 'active' });
+  };
+
+  const getTournamentStatus = (tournament: Tournament) => {
+    if (tournament.status === 'cancelled') return 'cancelled';
+    if (tournament.date && new Date(tournament.date) < new Date()) return 'past';
+    return 'active';
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'cancelled':
+        return <Badge variant="destructive">Cancelled</Badge>;
+      case 'past':
+        return <Badge variant="secondary">Past</Badge>;
+      case 'active':
+        return <Badge variant="default">Active</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
     }
   };
 
@@ -149,35 +197,7 @@ export default function Dashboard() {
       <div className="flex-1">
         <div className="container mx-auto px-4 py-8">
           {/* Developer Testing Panel */}
-          {!isAdmin && (
-          <Alert className="mb-6 border-blue-200 bg-blue-50">
-            <Shield className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <span>
-                <strong>Testing Mode:</strong> You are currently an <Badge variant="outline">Organizer</Badge>. 
-                Click to become an admin and test admin features.
-              </span>
-              <Button
-                size="sm"
-                onClick={() => makeAdminMutation.mutate()}
-                disabled={makeAdminMutation.isPending}
-                className="ml-4"
-              >
-                {makeAdminMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <Crown className="w-4 h-4 mr-2" />
-                    Become Admin
-                  </>
-                )}
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
+
 
         {isAdmin && (
           <Alert className="mb-6 border-green-200 bg-green-50">
@@ -267,12 +287,16 @@ export default function Dashboard() {
                         <Badge variant="outline">
                           {tournament.courtsCount} Courts
                         </Badge>
+                        {getStatusBadge(getTournamentStatus(tournament))}
                       </div>
                       <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
                         <span>📅 {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'No date set'}</span>
                         <span>📍 {tournament.location || 'No location set'}</span>
                         {tournament.shareId && (
-                          <Badge variant="secondary">Shared</Badge>
+                          <span className="flex items-center">
+                            <Share className="w-3 h-3 mr-1" />
+                            Shareable
+                          </span>
                         )}
                       </div>
                     </div>
@@ -291,6 +315,26 @@ export default function Dashboard() {
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
+                      {getTournamentStatus(tournament) === 'active' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCancelTournament(tournament.id)}
+                          disabled={updateStatusMutation.isPending}
+                        >
+                          <Ban className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {getTournamentStatus(tournament) === 'cancelled' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleActivateTournament(tournament.id)}
+                          disabled={updateStatusMutation.isPending}
+                        >
+                          <Play className="w-4 h-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="destructive"
                         size="sm"
