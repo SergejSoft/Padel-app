@@ -3,6 +3,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Footer } from "@/components/footer";
 import { Calendar, Users, Trophy, Share, Heart } from "lucide-react";
 
+export const BouncingBallIcon = ({ size = "1em", color = 'currentColor', ...props }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    width={size} 
+    height={size} 
+    fill={color}
+    {...props}
+  >
+    <ellipse xmlns="http://www.w3.org/2000/svg" cx="12" cy="5" fill="currentColor" rx="4" ry="4"><animate id="svgSpinnersBouncingBall0" fill="freeze" attributeName="cy" begin="0;svgSpinnersBouncingBall2.end" calcMode="spline" dur="0.375s" keySplines=".33,0,.66,.33" values="5;20"/><animate attributeName="rx" begin="svgSpinnersBouncingBall0.end" calcMode="spline" dur="0.05s" keySplines=".33,0,.66,.33;.33,.66,.66,1" values="4;4.8;4"/><animate attributeName="ry" begin="svgSpinnersBouncingBall0.end" calcMode="spline" dur="0.05s" keySplines=".33,0,.66,.33;.33,.66,.66,1" values="4;3;4"/><animate id="svgSpinnersBouncingBall1" attributeName="cy" begin="svgSpinnersBouncingBall0.end" calcMode="spline" dur="0.025s" keySplines=".33,0,.66,.33" values="20;20.5"/><animate id="svgSpinnersBouncingBall2" attributeName="cy" begin="svgSpinnersBouncingBall1.end" calcMode="spline" dur="0.4s" keySplines=".33,.66,.66,1" values="20.5;5"/></ellipse>
+  </svg>
+);
+
 export default function Landing() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -15,13 +28,16 @@ export default function Landing() {
             <p className="text-xl text-muted-foreground mb-8">
               Create and manage American Format padel tournaments with ease
             </p>
-            <Button 
-              size="lg" 
-              onClick={() => window.location.href = "/api/login"}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              Get Started
-            </Button>
+            <div className="flex items-center justify-center gap-3">
+              <Button 
+                size="lg" 
+                onClick={() => window.location.href = "/api/login"}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Get Started
+              </Button>
+              <BouncingBallIcon size="2rem" className="text-primary" />
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
