@@ -99,7 +99,7 @@ export default function Landing() {
               <Button 
                 size="lg" 
                 onClick={() => window.location.href = "/login"}
-                className="bg-primary text-primary-foreground hover:bg-[#3c638e] transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="bg-primary text-primary-foreground hover:bg-[#2563eb] transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 Get Started
               </Button>
@@ -182,7 +182,7 @@ export default function Landing() {
               <Button 
                 size="lg" 
                 onClick={() => window.location.href = "/login"}
-                className="bg-primary text-primary-foreground hover:bg-[#3c638e] transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="bg-primary text-primary-foreground hover:bg-[#2563eb] transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 Sign In to Get Started
               </Button>
