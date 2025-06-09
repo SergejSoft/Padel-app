@@ -80,11 +80,8 @@ export default function Landing() {
     <div className="min-h-screen bg-background flex flex-col relative">
       {/* FREE Stamp */}
       <div className="absolute top-4 right-4 z-10">
-        <div className="bg-blue-600 text-white px-4 py-2 rounded-full transform rotate-12 shadow-lg border-2 border-blue-700">
-          <div className="flex items-center gap-2">
-            <FreeButtonIcon size="1.5rem" />
-            <span className="font-bold text-lg">FREE</span>
-          </div>
+        <div className="bg-blue-600 text-white px-3 py-1.5 rounded-full transform rotate-12 shadow-lg border-2 border-blue-700">
+          <span className="font-bold text-sm">FREE</span>
         </div>
       </div>
       
