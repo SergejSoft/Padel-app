@@ -25,6 +25,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [shareLink, setShareLink] = useState<string>("");
   const [copySuccess, setCopySuccess] = useState(false);
+  const [tournamentSaved, setTournamentSaved] = useState(false);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -35,6 +36,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
       return response.json();
     },
     onSuccess: () => {
+      setTournamentSaved(true);
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
     },
   });
@@ -83,18 +85,20 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
 
         setSchedule(generatedSchedule);
 
-        // Save tournament to backend
-        const tournamentData: InsertTournament = {
-          name: tournamentSetup.name,
-          date: tournamentSetup.date,
-          location: tournamentSetup.location,
-          playersCount: tournamentSetup.playersCount,
-          courtsCount: tournamentSetup.courtsCount,
-          players,
-          schedule: generatedSchedule,
-        };
+        // Save tournament to backend only once
+        if (!tournamentSaved && !saveTournamentMutation.isPending) {
+          const tournamentData: InsertTournament = {
+            name: tournamentSetup.name,
+            date: tournamentSetup.date,
+            location: tournamentSetup.location,
+            playersCount: tournamentSetup.playersCount,
+            courtsCount: tournamentSetup.courtsCount,
+            players,
+            schedule: generatedSchedule,
+          };
 
-        saveTournamentMutation.mutate(tournamentData);
+          saveTournamentMutation.mutate(tournamentData);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to generate schedule");
       } finally {
@@ -103,7 +107,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
     };
 
     generateSchedule();
-  }, [tournamentSetup, players]);
+  }, [tournamentSetup, players, tournamentSaved, saveTournamentMutation.isPending]);
 
   const handleDownloadPDF = () => {
     const pdf = generateTournamentPDF({

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Calendar, MapPin, Users, Target, Clock, Ban } from "lucide-react";
 import { generateAmericanFormat } from "@/lib/american-format";
+import { Footer } from "@/components/footer";
 import type { Tournament } from "@shared/schema";
 
 export default function SharedTournament() {
@@ -195,6 +196,8 @@ export default function SharedTournament() {
           </Link>
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 }
