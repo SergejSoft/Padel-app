@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [shareLink, setShareLink] = useState<string>("");
   const [copySuccess, setCopySuccess] = useState(false);
-  const [tournamentSaved, setTournamentSaved] = useState(false);
+  const tournamentSavedRef = useRef(false);
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -36,7 +36,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
       return response.json();
     },
     onSuccess: () => {
-      setTournamentSaved(true);
+      tournamentSavedRef.current = true;
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
     },
   });
@@ -86,7 +86,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
         setSchedule(generatedSchedule);
 
         // Save tournament to backend only once
-        if (!tournamentSaved && !saveTournamentMutation.isPending) {
+        if (!tournamentSavedRef.current && !saveTournamentMutation.isPending) {
           const tournamentData: InsertTournament = {
             name: tournamentSetup.name,
             date: tournamentSetup.date,
@@ -107,7 +107,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
     };
 
     generateSchedule();
-  }, [tournamentSetup, players, tournamentSaved, saveTournamentMutation.isPending]);
+  }, [tournamentSetup, players]);
 
   const handleDownloadPDF = () => {
     const pdf = generateTournamentPDF({
