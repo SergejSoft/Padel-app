@@ -199,11 +199,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get tournament by share ID
-  app.get("/api/shared/:shareId", async (req, res) => {
+  // Get tournament by share ID or URL slug
+  app.get("/api/shared/:identifier", async (req, res) => {
     try {
-      const { shareId } = req.params;
-      const tournament = await storage.getTournamentByShareId(shareId);
+      const { identifier } = req.params;
+      
+      // Try to find by shareId first, then by urlSlug
+      let tournament = await storage.getTournamentByShareId(identifier);
+      if (!tournament) {
+        tournament = await storage.getTournamentByUrlSlug(identifier);
+      }
       
       if (!tournament) {
         return res.status(404).json({ error: "Shared tournament not found" });

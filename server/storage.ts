@@ -17,8 +17,10 @@ export interface IStorage {
   // Tournament operations
   getTournament(id: number): Promise<Tournament | undefined>;
   getTournamentByShareId(shareId: string): Promise<Tournament | undefined>;
+  getTournamentByUrlSlug(urlSlug: string): Promise<Tournament | undefined>;
   createTournament(tournament: InsertTournament): Promise<Tournament>;
   generateShareId(tournamentId: number): Promise<string>;
+  generateUrlSlug(tournamentName: string): Promise<string>;
   getAllTournaments(): Promise<Tournament[]>;
   getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]>;
   updateTournament(id: number, tournament: Partial<InsertTournament>): Promise<Tournament | undefined>;
@@ -38,14 +40,21 @@ export class DatabaseStorage implements IStorage {
     return tournament || undefined;
   }
 
+  async getTournamentByUrlSlug(urlSlug: string): Promise<Tournament | undefined> {
+    const [tournament] = await db.select().from(tournaments).where(eq(tournaments.urlSlug, urlSlug));
+    return tournament || undefined;
+  }
+
   async createTournament(insertTournament: InsertTournament): Promise<Tournament> {
-    // Generate shareId immediately during creation to avoid duplicates
+    // Generate shareId and urlSlug immediately during creation to avoid duplicates
     const shareId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const urlSlug = await this.generateUrlSlug(insertTournament.name);
     const [tournament] = await db
       .insert(tournaments)
       .values({
         ...insertTournament,
         shareId,
+        urlSlug,
         players: insertTournament.players as any,
         schedule: insertTournament.schedule as any,
       })
@@ -57,6 +66,36 @@ export class DatabaseStorage implements IStorage {
     const shareId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     await db.update(tournaments).set({ shareId }).where(eq(tournaments.id, tournamentId));
     return shareId;
+  }
+
+  async generateUrlSlug(tournamentName: string): Promise<string> {
+    // Create a URL-friendly slug from tournament name
+    let baseSlug = tournamentName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .trim();
+
+    // If slug is empty, use a default
+    if (!baseSlug) {
+      baseSlug = 'tournament';
+    }
+
+    // Check if slug exists and make it unique
+    let counter = 1;
+    let finalSlug = baseSlug;
+    
+    while (true) {
+      const existing = await db.select().from(tournaments).where(eq(tournaments.urlSlug, finalSlug));
+      if (existing.length === 0) {
+        break;
+      }
+      finalSlug = `${baseSlug}${counter}`;
+      counter++;
+    }
+
+    return finalSlug;
   }
 
   async updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined> {
