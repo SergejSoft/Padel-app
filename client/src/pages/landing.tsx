@@ -239,7 +239,7 @@ export default function Landing() {
                         <CardTitle className="text-lg">Weekend Warriors</CardTitle>
                         <Badge variant="outline" className="text-orange-600 border-orange-600">
                           <Clock className="w-3 h-3 mr-1" />
-                          Filling
+                          Full
                         </Badge>
                       </div>
                       <CardDescription>July 22, 2025 • Park Courts</CardDescription>
