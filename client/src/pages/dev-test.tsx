@@ -11,8 +11,9 @@ export default function DevTest() {
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
+  const [mockUser, setMockUser] = useState<any>(null);
 
-  // Mock login mutation
+  // Mock login mutation that actually refreshes the page to simulate login
   const mockLogin = useMutation({
     mutationFn: async (userType: string) => {
       const response = await fetch("/api/dev/login", {
@@ -23,14 +24,19 @@ export default function DevTest() {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return await response.json();
+      const data = await response.json();
+      setMockUser(data.user);
+      return data;
     },
     onSuccess: (data: any) => {
       toast({
         title: "Mock Login Successful",
-        description: data.message,
+        description: `Logged in as ${data.user.role}. The page will refresh to apply the login.`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Refresh the page to apply the mock session
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     },
     onError: (error: any) => {
       toast({
