@@ -1,9 +1,16 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/footer";
 import { FeaturePreviewModal } from "@/components/feature-preview-modal";
-import { Calendar, Users, Trophy, Share, Heart, Eye } from "lucide-react";
+import { Calendar, Users, Trophy, Share, Heart, Eye, UserPlus, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import type { Tournament } from "@shared/schema";
 import setupPreviewImage from "@assets/1_1749482036883.png";
 import playersPreviewImage from "@assets/2_1749482562652.png";
 import schedulePreviewImage from "@assets/3_1749482762994.png";

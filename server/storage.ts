@@ -242,14 +242,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTournamentsByParticipant(userId: string): Promise<Tournament[]> {
-    return db
-      .select(tournaments)
+    const results = await db
+      .select({
+        id: tournaments.id,
+        name: tournaments.name,
+        date: tournaments.date,
+        location: tournaments.location,
+        playersCount: tournaments.playersCount,
+        courtsCount: tournaments.courtsCount,
+        players: tournaments.players,
+        schedule: tournaments.schedule,
+        shareId: tournaments.shareId,
+        urlSlug: tournaments.urlSlug,
+        status: tournaments.status,
+        registrationOpen: tournaments.registrationOpen,
+        organizerId: tournaments.organizerId,
+        createdAt: tournaments.createdAt,
+      })
       .from(tournaments)
       .innerJoin(
         tournamentParticipants,
         eq(tournaments.id, tournamentParticipants.tournamentId)
       )
       .where(eq(tournamentParticipants.userId, userId));
+    
+    return results;
   }
 
   async isUserRegisteredInTournament(tournamentId: number, userId: string): Promise<boolean> {

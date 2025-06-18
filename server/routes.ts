@@ -184,6 +184,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Tournament participant routes
+  app.post("/api/tournaments/:id/join", isAuthenticated, async (req: any, res) => {
+    try {
+      const tournamentId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      
+      if (isNaN(tournamentId)) {
+        return res.status(400).json({ error: "Invalid tournament ID" });
+      }
+
+      // Check if tournament exists and is open for registration
+      const tournament = await storage.getTournament(tournamentId);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+
+      if (tournament.registrationOpen !== "true") {
+        return res.status(400).json({ error: "Tournament is not open for registration" });
+      }
+
+      // Check if user is already registered
+      const isAlreadyRegistered = await storage.isUserRegisteredInTournament(tournamentId, userId);
+      if (isAlreadyRegistered) {
+        return res.status(400).json({ error: "You are already registered for this tournament" });
+      }
+
+      // Check if tournament is full
+      const participants = await storage.getTournamentParticipants(tournamentId);
+      if (participants.length >= tournament.playersCount) {
+        return res.status(400).json({ error: "Tournament is full" });
+      }
+
+      const participant = await storage.joinTournament({ tournamentId, userId });
+      res.json(participant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/tournaments/:id/leave", isAuthenticated, async (req: any, res) => {
+    try {
+      const tournamentId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+      
+      if (isNaN(tournamentId)) {
+        return res.status(400).json({ error: "Invalid tournament ID" });
+      }
+
+      const success = await storage.leaveTournament(tournamentId, userId);
+      if (!success) {
+        return res.status(404).json({ error: "Registration not found" });
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/tournaments/:id/participants", async (req, res) => {
+    try {
+      const tournamentId = parseInt(req.params.id);
+      
+      if (isNaN(tournamentId)) {
+        return res.status(400).json({ error: "Invalid tournament ID" });
+      }
+
+      const participants = await storage.getTournamentParticipants(tournamentId);
+      res.json(participants);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/tournaments/open", async (req, res) => {
+    try {
+      const openTournaments = await storage.getOpenTournaments();
+      res.json(openTournaments);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get("/api/user/tournaments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const tournaments = await storage.getTournamentsByParticipant(userId);
+      res.json(tournaments);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Generate share ID for tournament
   app.post("/api/tournaments/:id/share", async (req, res) => {
     try {
