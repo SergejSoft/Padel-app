@@ -175,7 +175,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Development helper: Make current user admin (remove in production)
+  // Development helper: Mock login as different user types (remove in production)
+  app.post("/api/dev/login", async (req: any, res) => {
+    try {
+      const { userType } = req.body; // 'admin', 'organizer', or 'player'
+      
+      let mockUser;
+      switch (userType) {
+        case 'admin':
+          mockUser = {
+            id: "mock-admin-123",
+            email: "admin@test.com",
+            firstName: "Admin",
+            lastName: "User",
+            profileImageUrl: null,
+            role: "admin"
+          };
+          break;
+        case 'organizer':
+          mockUser = {
+            id: "mock-organizer-456", 
+            email: "organizer@test.com",
+            firstName: "Tournament",
+            lastName: "Organizer",
+            profileImageUrl: null,
+            role: "organizer"
+          };
+          break;
+        case 'player':
+        default:
+          mockUser = {
+            id: "mock-player-789",
+            email: "player@test.com", 
+            firstName: "Test",
+            lastName: "Player",
+            profileImageUrl: null,
+            role: "player"
+          };
+          break;
+      }
+      
+      // Create or update the mock user in database
+      await storage.upsertUser(mockUser);
+      
+      // Create mock session data
+      const mockSession = {
+        claims: {
+          sub: mockUser.id,
+          email: mockUser.email,
+          first_name: mockUser.firstName,
+          last_name: mockUser.lastName,
+          profile_image_url: mockUser.profileImageUrl
+        },
+        expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
+      };
+      
+      // Store in session
+      req.session.passport = { user: mockSession };
+      
+      res.json({ message: `Logged in as ${userType}`, user: mockUser });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Development helper: Make current user admin (remove in production) 
   app.post("/api/dev/make-admin", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
