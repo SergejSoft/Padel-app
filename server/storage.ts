@@ -9,7 +9,7 @@ import {
   type InsertTournamentParticipant,
   type TournamentParticipant,
 } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
@@ -283,11 +283,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getOpenTournaments(): Promise<Tournament[]> {
-    const results = await db
-      .select()
-      .from(tournaments)
-      .where(eq(tournaments.registrationOpen, true));
-    return results;
+    try {
+      const results = await pool.query(
+        'SELECT * FROM tournaments WHERE registration_open = true ORDER BY date ASC'
+      );
+      return results.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        date: row.date,
+        location: row.location,
+        playersCount: row.players_count,
+        courtsCount: row.courts_count,
+        players: row.players || [],
+        schedule: row.schedule || [],
+        shareId: row.share_id,
+        urlSlug: row.url_slug,
+        status: row.status,
+        registrationOpen: row.registration_open,
+        organizerId: row.organizer_id,
+        createdAt: row.created_at,
+      }));
+    } catch (error) {
+      console.error("Error fetching open tournaments:", error);
+      return [];
+    }
   }
 }
 
