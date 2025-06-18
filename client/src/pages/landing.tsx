@@ -55,6 +55,10 @@ export const TennisIcon = ({ size = "1em", color = 'currentColor', ...props }) =
 );
 
 export default function Landing() {
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const [previewModal, setPreviewModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -69,6 +73,47 @@ export default function Landing() {
     imageAlt: ""
   });
 
+  // Fetch open tournaments for registration (only when authenticated)
+  const { data: openTournaments = [], isLoading: openTournamentsLoading } = useQuery<Tournament[]>({
+    queryKey: ["/api/tournaments/open"],
+    enabled: false, // Disable for now until we fix the query
+  });
+
+  // Fetch all tournaments to show upcoming ones (public endpoint)
+  const { data: allTournaments = [], isLoading: allTournamentsLoading } = useQuery<Tournament[]>({
+    queryKey: ["/api/tournaments"],
+    enabled: false, // Disable for now since it requires auth
+  });
+
+  const joinTournamentMutation = useMutation({
+    mutationFn: async (tournamentId: number) => {
+      return apiRequest("POST", `/api/tournaments/${tournamentId}/join`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "You have successfully joined the tournament!",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/open"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/tournaments"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to join tournament",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleJoinTournament = (tournamentId: number) => {
+    if (!isAuthenticated) {
+      window.location.href = "/api/login";
+      return;
+    }
+    joinTournamentMutation.mutate(tournamentId);
+  };
+
   const showPreview = (title: string, description: string, imageSrc: string, imageAlt: string) => {
     setPreviewModal({
       isOpen: true,
@@ -81,6 +126,22 @@ export default function Landing() {
 
   const closePreview = () => {
     setPreviewModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const getUpcomingTournaments = () => {
+    const today = new Date();
+    return allTournaments.filter(tournament => {
+      if (!tournament.date) return false;
+      const tournamentDate = new Date(tournament.date);
+      return tournamentDate >= today && tournament.status === 'active';
+    });
+  };
+
+  const getTournamentStatus = (tournament: Tournament) => {
+    if (tournament.registrationOpen === "true") {
+      return "Open for Registration";
+    }
+    return "Registration Closed";
   };
 
   return (
