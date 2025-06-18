@@ -4,13 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, MapPin, Users, Target, Clock, Ban } from "lucide-react";
+import { Calendar, MapPin, Users, Target, Clock, Ban, Download, Eye } from "lucide-react";
 import { generateAmericanFormat } from "@/lib/american-format";
+import { generateTournamentPDF } from "@/lib/pdf-generator";
+import { PDFPreviewModal } from "@/components/pdf-preview-modal";
 import { Footer } from "@/components/footer";
 import type { Tournament } from "@shared/schema";
+import { useState } from "react";
 
 export default function SharedTournament() {
   const { shareId } = useParams();
+  const [showPDFPreview, setShowPDFPreview] = useState(false);
 
   const { data: tournament, isLoading, error } = useQuery({
     queryKey: ['/api/shared', shareId],
@@ -187,8 +191,33 @@ export default function SharedTournament() {
           </CardContent>
         </Card>
 
-        {/* Footer */}
-        <div className="text-center mt-8">
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+          <Button 
+            onClick={() => setShowPDFPreview(true)}
+            className="flex items-center gap-2"
+          >
+            <Eye className="h-4 w-4" />
+            Preview Schedule
+          </Button>
+          <Button 
+            onClick={() => {
+              const pdf = generateTournamentPDF({
+                tournamentName: tournament.name,
+                tournamentDate: tournament.date,
+                tournamentLocation: tournament.location,
+                playersCount: tournament.playersCount,
+                courtsCount: tournament.courtsCount,
+                rounds: schedule,
+              });
+              pdf.save(`${tournament.name.replace(/\s+/g, '_')}_schedule.pdf`);
+            }}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Download PDF
+          </Button>
           <Link href="/">
             <Button variant="outline" size="lg">
               Create New Tournament
@@ -198,6 +227,28 @@ export default function SharedTournament() {
       </div>
       
       <Footer />
+      
+      <PDFPreviewModal
+        isOpen={showPDFPreview}
+        onClose={() => setShowPDFPreview(false)}
+        tournamentName={tournament.name}
+        tournamentDate={tournament.date}
+        tournamentLocation={tournament.location}
+        playersCount={tournament.playersCount}
+        courtsCount={tournament.courtsCount}
+        rounds={schedule}
+        onDownload={() => {
+          const pdf = generateTournamentPDF({
+            tournamentName: tournament.name,
+            tournamentDate: tournament.date,
+            tournamentLocation: tournament.location,
+            playersCount: tournament.playersCount,
+            courtsCount: tournament.courtsCount,
+            rounds: schedule,
+          });
+          pdf.save(`${tournament.name.replace(/\s+/g, '_')}_schedule.pdf`);
+        }}
+      />
     </div>
   );
 }

@@ -35,6 +35,7 @@ export const tournaments = pgTable("tournaments", {
   players: json("players").$type<string[]>().notNull(),
   schedule: json("schedule").$type<any[]>().notNull(),
   shareId: text("share_id").unique(),
+  urlSlug: text("url_slug").unique(), // Custom friendly URL slug
   status: text("status").notNull().default("active"), // active, cancelled, past
   organizerId: varchar("organizer_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
