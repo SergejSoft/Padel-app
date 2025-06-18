@@ -283,10 +283,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getOpenTournaments(): Promise<Tournament[]> {
-    return db
+    const results = await db
       .select()
       .from(tournaments)
       .where(eq(tournaments.registrationOpen, true));
+    return results;
   }
 }
 
