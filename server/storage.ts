@@ -286,7 +286,7 @@ export class DatabaseStorage implements IStorage {
     return db
       .select()
       .from(tournaments)
-      .where(eq(tournaments.registrationOpen, "true"));
+      .where(eq(tournaments.registrationOpen, true));
   }
 }
 

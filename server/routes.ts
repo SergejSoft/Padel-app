@@ -200,7 +200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Tournament not found" });
       }
 
-      if (tournament.registrationOpen !== "true") {
+      if (!tournament.registrationOpen) {
         return res.status(400).json({ error: "Tournament is not open for registration" });
       }
 
