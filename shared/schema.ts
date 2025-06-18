@@ -77,6 +77,7 @@ export const tournamentSetupSchema = z.object({
   location: z.string().min(1, "Tournament location is required"),
   playersCount: z.literal(8, { errorMap: () => ({ message: "American format requires exactly 8 players" }) }),
   courtsCount: z.literal(2, { errorMap: () => ({ message: "American format requires exactly 2 courts" }) }),
+  registrationOpen: z.boolean().optional().default(false),
 });
 
 export const playersSchema = z.object({

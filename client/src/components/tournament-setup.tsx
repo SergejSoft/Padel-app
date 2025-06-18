@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -33,6 +34,7 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
       location: "",
       playersCount: 8,
       courtsCount: 2,
+      registrationOpen: false,
     },
   });
 
