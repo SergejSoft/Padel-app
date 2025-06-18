@@ -200,103 +200,56 @@ export default function Landing() {
                 </div>
                 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {/* Sample tournament cards - these would be populated from API in real implementation */}
-                  <Card className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg">Summer Championship</CardTitle>
-                        <Badge variant="outline" className="text-green-600 border-green-600">
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Open
-                        </Badge>
-                      </div>
-                      <CardDescription>July 15, 2025 • City Sports Center</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2 mb-4">
-                        <div className="flex justify-between text-sm">
-                          <span>Players:</span>
-                          <span>6/8</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Courts:</span>
-                          <span>2</span>
-                        </div>
-                      </div>
-                      <Button 
-                        className="w-full" 
-                        onClick={() => window.location.href = "/login"}
-                      >
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        Join Tournament
-                      </Button>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg">Weekend Warriors</CardTitle>
-                        <Badge variant="outline" className="text-orange-600 border-orange-600">
-                          <Clock className="w-3 h-3 mr-1" />
-                          Full
-                        </Badge>
-                      </div>
-                      <CardDescription>July 22, 2025 • Park Courts</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2 mb-4">
-                        <div className="flex justify-between text-sm">
-                          <span>Players:</span>
-                          <span>8/8</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Courts:</span>
-                          <span>2</span>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        className="w-full" 
-                        disabled
-                      >
-                        <AlertCircle className="w-4 h-4 mr-2" />
-                        Tournament Full
-                      </Button>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <CardTitle className="text-lg">Elite Series</CardTitle>
-                        <Badge variant="outline" className="text-green-600 border-green-600">
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Open
-                        </Badge>
-                      </div>
-                      <CardDescription>August 5, 2025 • Elite Club</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2 mb-4">
-                        <div className="flex justify-between text-sm">
-                          <span>Players:</span>
-                          <span>3/8</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Courts:</span>
-                          <span>2</span>
-                        </div>
-                      </div>
-                      <Button 
-                        className="w-full" 
-                        onClick={() => window.location.href = "/login"}
-                      >
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        Join Tournament
-                      </Button>
-                    </CardContent>
-                  </Card>
+                  {isLoadingTournaments ? (
+                    <div className="col-span-full text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                      <p className="mt-2 text-gray-600">Loading tournaments...</p>
+                    </div>
+                  ) : openTournaments.length > 0 ? (
+                    openTournaments.map((tournament) => (
+                      <Card key={tournament.id} className="hover:shadow-lg transition-shadow">
+                        <CardHeader>
+                          <div className="flex justify-between items-start">
+                            <CardTitle className="text-lg">{tournament.name}</CardTitle>
+                            <Badge variant="outline" className="text-green-600 border-green-600">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Open
+                            </Badge>
+                          </div>
+                          <CardDescription>
+                            {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'Date TBD'} • {tournament.location}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2 mb-4">
+                            <div className="flex justify-between text-sm">
+                              <span>Players:</span>
+                              <span>{tournament.players?.length || 0}/{tournament.playersCount}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span>Courts:</span>
+                              <span>{tournament.courtsCount}</span>
+                            </div>
+                          </div>
+                          <Button 
+                            className="w-full" 
+                            onClick={() => window.location.href = "/login"}
+                          >
+                            <UserPlus className="w-4 h-4 mr-2" />
+                            Join Tournament
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="col-span-full text-center py-8">
+                      <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No Open Tournaments</h3>
+                      <p className="text-muted-foreground">
+                        There are currently no tournaments available for registration. Check back soon!
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="text-center mt-8">
