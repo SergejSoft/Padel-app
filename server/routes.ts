@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertTournamentSchema } from "@shared/schema";
+import { insertTournamentSchema, insertTournamentParticipantSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated, isAdmin, isOwnerOrAdmin } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {

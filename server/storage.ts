@@ -1,10 +1,13 @@
 import {
   tournaments,
   users,
+  tournamentParticipants,
   type Tournament,
   type InsertTournament,
   type User,
   type UpsertUser,
+  type InsertTournamentParticipant,
+  type TournamentParticipant,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -27,6 +30,14 @@ export interface IStorage {
   updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined>;
   deleteTournament(id: number): Promise<boolean>;
   getTournamentOwnerId(id: number): Promise<string | null>;
+  
+  // Tournament participant operations
+  joinTournament(participant: InsertTournamentParticipant): Promise<TournamentParticipant>;
+  leaveTournament(tournamentId: number, userId: string): Promise<boolean>;
+  getTournamentParticipants(tournamentId: number): Promise<TournamentParticipant[]>;
+  getTournamentsByParticipant(userId: string): Promise<Tournament[]>;
+  isUserRegisteredInTournament(tournamentId: number, userId: string): Promise<boolean>;
+  getOpenTournaments(): Promise<Tournament[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -200,6 +211,65 @@ export class DatabaseStorage implements IStorage {
       .from(tournaments)
       .where(eq(tournaments.id, id));
     return tournament?.organizerId || null;
+  }
+
+  // Tournament participant operations
+  async joinTournament(participant: InsertTournamentParticipant): Promise<TournamentParticipant> {
+    const [newParticipant] = await db
+      .insert(tournamentParticipants)
+      .values(participant)
+      .returning();
+    return newParticipant;
+  }
+
+  async leaveTournament(tournamentId: number, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(tournamentParticipants)
+      .where(
+        and(
+          eq(tournamentParticipants.tournamentId, tournamentId),
+          eq(tournamentParticipants.userId, userId)
+        )
+      );
+    return (result.rowCount || 0) > 0;
+  }
+
+  async getTournamentParticipants(tournamentId: number): Promise<TournamentParticipant[]> {
+    return db
+      .select()
+      .from(tournamentParticipants)
+      .where(eq(tournamentParticipants.tournamentId, tournamentId));
+  }
+
+  async getTournamentsByParticipant(userId: string): Promise<Tournament[]> {
+    return db
+      .select(tournaments)
+      .from(tournaments)
+      .innerJoin(
+        tournamentParticipants,
+        eq(tournaments.id, tournamentParticipants.tournamentId)
+      )
+      .where(eq(tournamentParticipants.userId, userId));
+  }
+
+  async isUserRegisteredInTournament(tournamentId: number, userId: string): Promise<boolean> {
+    const [participant] = await db
+      .select()
+      .from(tournamentParticipants)
+      .where(
+        and(
+          eq(tournamentParticipants.tournamentId, tournamentId),
+          eq(tournamentParticipants.userId, userId)
+        )
+      );
+    return !!participant;
+  }
+
+  async getOpenTournaments(): Promise<Tournament[]> {
+    return db
+      .select()
+      .from(tournaments)
+      .where(eq(tournaments.registrationOpen, "true"));
   }
 }
 
