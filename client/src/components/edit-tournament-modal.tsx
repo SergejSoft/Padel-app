@@ -23,6 +23,7 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
     name: tournament?.name || "",
     date: tournament?.date || "",
     location: tournament?.location || "",
+    players: tournament?.players || [],
   });
 
   const updateMutation = useMutation({
@@ -64,13 +65,14 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
         name: tournament.name,
         date: tournament.date || "",
         location: tournament.location || "",
+        players: tournament.players || [],
       });
     }
   }, [tournament]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Tournament</DialogTitle>
         </DialogHeader>
@@ -107,6 +109,27 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
               placeholder="Enter tournament location"
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Players</Label>
+            <div className="space-y-2">
+              {formData.players.map((player, index) => (
+                <div key={index} className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-500 w-8">#{index + 1}</span>
+                  <Input
+                    value={player}
+                    onChange={(e) => {
+                      const newPlayers = [...formData.players];
+                      newPlayers[index] = e.target.value;
+                      setFormData(prev => ({ ...prev, players: newPlayers }));
+                    }}
+                    placeholder={`Player ${index + 1} name`}
+                    required
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">

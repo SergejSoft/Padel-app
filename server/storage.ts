@@ -137,6 +137,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTournament(id: number, tournamentData: Partial<InsertTournament>): Promise<Tournament | undefined> {
+    // If players are being updated, we need to update the schedule as well
+    if (tournamentData.players) {
+      const existingTournament = await this.getTournament(id);
+      if (existingTournament && existingTournament.schedule) {
+        // Update player names in the schedule
+        const updatedSchedule = this.updatePlayerNamesInSchedule(
+          existingTournament.schedule,
+          existingTournament.players as string[],
+          tournamentData.players as string[]
+        );
+        tournamentData.schedule = updatedSchedule;
+      }
+    }
+
     const [tournament] = await db
       .update(tournaments)
       .set({
@@ -147,6 +161,32 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tournaments.id, id))
       .returning();
     return tournament;
+  }
+
+  private updatePlayerNamesInSchedule(schedule: any[], oldPlayers: string[], newPlayers: string[]): any[] {
+    // Create a mapping from old names to new names
+    const nameMapping: { [key: string]: string } = {};
+    oldPlayers.forEach((oldName, index) => {
+      if (index < newPlayers.length) {
+        nameMapping[oldName] = newPlayers[index];
+      }
+    });
+
+    // Update the schedule with new player names
+    return schedule.map(round => ({
+      ...round,
+      matches: round.matches.map((match: any) => ({
+        ...match,
+        team1: [
+          nameMapping[match.team1[0]] || match.team1[0],
+          nameMapping[match.team1[1]] || match.team1[1]
+        ],
+        team2: [
+          nameMapping[match.team2[0]] || match.team2[0],
+          nameMapping[match.team2[1]] || match.team2[1]
+        ]
+      }))
+    }));
   }
 
   async deleteTournament(id: number): Promise<boolean> {
