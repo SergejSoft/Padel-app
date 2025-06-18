@@ -46,8 +46,9 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
       const response = await apiRequest("POST", `/api/tournaments/${tournamentId}/share`, {});
       return response.json();
     },
-    onSuccess: (data: { shareId: string }) => {
-      const shareUrl = `${window.location.origin}/shared/${data.shareId}`;
+    onSuccess: (data: { shareId: string; urlSlug?: string }) => {
+      const identifier = data.urlSlug || data.shareId;
+      const shareUrl = `${window.location.origin}/shared/${identifier}`;
       setShareLink(shareUrl);
       
       // Copy to clipboard

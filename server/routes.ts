@@ -193,7 +193,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const shareId = await storage.generateShareId(id);
-      res.json({ shareId });
+      const tournament = await storage.getTournament(id);
+      res.json({ 
+        shareId, 
+        urlSlug: tournament?.urlSlug 
+      });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }

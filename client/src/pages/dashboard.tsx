@@ -144,8 +144,10 @@ export default function Dashboard() {
     }
   };
 
-  const handleCopyLink = (shareId: string) => {
-    const url = `${window.location.origin}/shared/${shareId}`;
+  const handleCopyLink = (tournament: Tournament) => {
+    // Use custom URL slug if available, fallback to shareId
+    const identifier = tournament.urlSlug || tournament.shareId;
+    const url = `${window.location.origin}/shared/${identifier}`;
     navigator.clipboard.writeText(url).then(() => {
       toast({
         title: "Link copied",
@@ -322,7 +324,10 @@ export default function Dashboard() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(`/shared/${tournament.shareId}`, '_blank')}
+                            onClick={() => {
+                              const identifier = tournament.urlSlug || tournament.shareId;
+                              window.open(`/shared/${identifier}`, '_blank');
+                            }}
                           >
                             <ExternalLink className="w-4 h-4 mr-1" />
                             View
@@ -330,7 +335,7 @@ export default function Dashboard() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleCopyLink(tournament.shareId!)}
+                            onClick={() => handleCopyLink(tournament)}
                           >
                             <Copy className="w-4 h-4" />
                           </Button>
