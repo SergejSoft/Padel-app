@@ -35,6 +35,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get open tournaments (must come before /:id route)
+  app.get("/api/tournaments/open", async (req, res) => {
+    try {
+      console.log("Fetching open tournaments...");
+      const openTournaments = await storage.getOpenTournaments();
+      console.log("Open tournaments fetched:", openTournaments.length);
+      res.json(openTournaments);
+    } catch (error: any) {
+      console.error("Error in /api/tournaments/open:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get tournament by ID
   app.get("/api/tournaments/:id", async (req, res) => {
     try {
@@ -253,15 +266,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const participants = await storage.getTournamentParticipants(tournamentId);
       res.json(participants);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.get("/api/tournaments/open", async (req, res) => {
-    try {
-      const openTournaments = await storage.getOpenTournaments();
-      res.json(openTournaments);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
