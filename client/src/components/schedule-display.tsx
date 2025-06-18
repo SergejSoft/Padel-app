@@ -96,6 +96,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
             courtsCount: tournamentSetup.courtsCount,
             players,
             schedule: generatedSchedule,
+            registrationOpen: tournamentSetup.registrationOpen || false,
           };
 
           saveTournamentMutation.mutate(tournamentData);

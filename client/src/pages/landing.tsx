@@ -55,6 +55,7 @@ export const TennisIcon = ({ size = "1em", color = 'currentColor', ...props }) =
 );
 
 export default function Landing() {
+  const { toast } = useToast();
   const [previewModal, setPreviewModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -67,6 +68,12 @@ export default function Landing() {
     description: "",
     imageSrc: "",
     imageAlt: ""
+  });
+
+  // Fetch open tournaments for display
+  const { data: openTournaments = [], isLoading: isLoadingTournaments } = useQuery<Tournament[]>({
+    queryKey: ["/api/tournaments/open"],
+    retry: false,
   });
 
   const showPreview = (title: string, description: string, imageSrc: string, imageAlt: string) => {

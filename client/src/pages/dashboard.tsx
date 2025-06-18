@@ -355,7 +355,6 @@ export default function Dashboard() {
                         <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
                           <span>📅 {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'No date set'}</span>
                           <span>📍 {tournament.location || 'No location set'}</span>
-                          <span>👤 Organized by {tournament.organizerName || 'Unknown'}</span>
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -480,45 +479,66 @@ export default function Dashboard() {
                           View
                         </Button>
                       )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditingTournament(tournament)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      {getTournamentStatus(tournament) === 'active' && (
+                      {user?.role === 'player' ? (
+                        // Player actions - only Leave button
                         <Button
-                          variant="outline"
+                          variant="destructive"
                           size="sm"
-                          onClick={() => handleCancelTournament(tournament.id)}
-                          disabled={updateStatusMutation.isPending}
+                          onClick={() => leaveTournamentMutation.mutate(tournament.id)}
+                          disabled={leaveTournamentMutation.isPending}
                         >
-                          <Ban className="w-4 h-4" />
+                          {leaveTournamentMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            "Leave"
+                          )}
                         </Button>
+                      ) : (
+                        // Organizer/Admin actions
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingTournament(tournament)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          {getTournamentStatus(tournament) === 'active' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleCancelTournament(tournament.id)}
+                              disabled={updateStatusMutation.isPending}
+                            >
+                              <Ban className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {getTournamentStatus(tournament) === 'cancelled' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleActivateTournament(tournament.id)}
+                              disabled={updateStatusMutation.isPending}
+                            >
+                              <Play className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteTournament(tournament.id, tournament.name)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              {deleteMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </Button>
+                          )}
+                        </>
                       )}
-                      {getTournamentStatus(tournament) === 'cancelled' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleActivateTournament(tournament.id)}
-                          disabled={updateStatusMutation.isPending}
-                        >
-                          <Play className="w-4 h-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteTournament(tournament.id, tournament.name)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        {deleteMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </Button>
                     </div>
                   </div>
                 ))}
