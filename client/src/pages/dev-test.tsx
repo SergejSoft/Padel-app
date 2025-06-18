@@ -42,7 +42,7 @@ export default function DevTest() {
   });
 
   // Get open tournaments
-  const { data: openTournaments = [] } = useQuery({
+  const { data: openTournaments = [] } = useQuery<Tournament[]>({
     queryKey: ["/api/tournaments/open"],
   });
 
@@ -77,7 +77,7 @@ export default function DevTest() {
   });
 
   // Get user tournaments
-  const { data: userTournaments = [] } = useQuery({
+  const { data: userTournaments = [] } = useQuery<Tournament[]>({
     queryKey: ["/api/user/tournaments"],
     enabled: isAuthenticated,
   });
@@ -147,7 +147,7 @@ export default function DevTest() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
-            {openTournaments.map((tournament: any) => (
+            {openTournaments.map((tournament) => (
               <Card key={tournament.id} className="border-l-4 border-l-blue-500">
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start mb-2">
@@ -157,7 +157,7 @@ export default function DevTest() {
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">
-                    {new Date(tournament.date).toLocaleDateString()} • {tournament.location}
+                    {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'Date TBD'} • {tournament.location}
                   </p>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">
@@ -187,14 +187,14 @@ export default function DevTest() {
           <CardContent>
             {userTournaments.length > 0 ? (
               <div className="grid gap-4">
-                {userTournaments.map((tournament: any) => (
+                {userTournaments.map((tournament) => (
                   <Card key={tournament.id} className="border-l-4 border-l-green-500">
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="font-semibold">{tournament.name}</h3>
                           <p className="text-sm text-muted-foreground">
-                            {new Date(tournament.date).toLocaleDateString()} • {tournament.location}
+                            {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'Date TBD'} • {tournament.location}
                           </p>
                         </div>
                         <Badge variant="secondary">Registered</Badge>
