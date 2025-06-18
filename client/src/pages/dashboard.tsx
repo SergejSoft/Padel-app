@@ -22,8 +22,14 @@ export default function Dashboard() {
   const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
   const [viewingTournament, setViewingTournament] = useState<Tournament | null>(null);
 
+  // Different queries based on user role
   const { data: tournaments = [], isLoading } = useQuery<Tournament[]>({
-    queryKey: ["/api/tournaments"],
+    queryKey: user?.role === 'player' ? ["/api/tournaments/participant"] : ["/api/tournaments"],
+  });
+
+  const { data: availableTournaments = [], isLoading: isLoadingAvailable } = useQuery<Tournament[]>({
+    queryKey: ["/api/tournaments/open"],
+    enabled: user?.role === 'player',
   });
 
   // Sort tournaments by date (newest first), then by creation order
@@ -111,6 +117,48 @@ export default function Dashboard() {
     },
   });
 
+  const joinTournamentMutation = useMutation({
+    mutationFn: async (tournamentId: number) => {
+      await apiRequest("POST", `/api/tournaments/${tournamentId}/join`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/participant"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/open"] });
+      toast({
+        title: "Tournament joined",
+        description: "You have successfully joined the tournament.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error joining tournament",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const leaveTournamentMutation = useMutation({
+    mutationFn: async (tournamentId: number) => {
+      await apiRequest("POST", `/api/tournaments/${tournamentId}/leave`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/participant"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/open"] });
+      toast({
+        title: "Tournament left",
+        description: "You have left the tournament.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error leaving tournament",
+        description: error.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDeleteTournament = (tournamentId: number, tournamentName: string) => {
     if (confirm(`Are you sure you want to delete "${tournamentName}"? This action cannot be undone.`)) {
       deleteMutation.mutate(tournamentId);
@@ -186,20 +234,22 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">
-                {isAdmin ? "Admin Dashboard" : "Tournament Dashboard"}
+                {isAdmin ? "Admin Dashboard" : user?.role === 'player' ? "My Tournaments" : "Tournament Dashboard"}
               </h1>
               <p className="text-muted-foreground">
                 Welcome back, {user?.firstName || user?.email}
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <Button
-                onClick={() => setShowCreateTournament(true)}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                New Tournament
-              </Button>
+              {user?.role !== 'player' && (
+                <Button
+                  onClick={() => setShowCreateTournament(true)}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Tournament
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={() => window.location.href = "/api/logout"}
@@ -262,15 +312,92 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        {/* Available Tournaments for Players */}
+        {user?.role === 'player' && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Play className="w-5 h-5 mr-2" />
+                Available Tournaments
+              </CardTitle>
+              <CardDescription>
+                Tournaments open for registration
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingAvailable ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <span className="ml-2">Loading available tournaments...</span>
+                </div>
+              ) : availableTournaments.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No tournaments available for registration</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {availableTournaments.map((tournament) => (
+                    <div
+                      key={tournament.id}
+                      className="flex items-center justify-between p-4 border border-border rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3">
+                          <h3 className="font-semibold text-foreground">{tournament.name}</h3>
+                          <Badge variant="outline">
+                            {tournament.playersCount} Players
+                          </Badge>
+                          <Badge variant="outline">
+                            {tournament.courtsCount} Courts
+                          </Badge>
+                          <Badge variant="default">Open</Badge>
+                        </div>
+                        <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
+                          <span>📅 {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'No date set'}</span>
+                          <span>📍 {tournament.location || 'No location set'}</span>
+                          <span>👤 Organized by {tournament.organizerName || 'Unknown'}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setViewingTournament(tournament)}
+                        >
+                          View Details
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => joinTournamentMutation.mutate(tournament.id)}
+                          disabled={joinTournamentMutation.isPending}
+                          className="bg-primary text-primary-foreground hover:bg-primary/90"
+                        >
+                          {joinTournamentMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            "Join"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Tournaments List */}
         <Card>
           <CardHeader>
             <CardTitle>
-              {isAdmin ? "All Tournaments" : "Your Tournaments"}
+              {isAdmin ? "All Tournaments" : user?.role === 'player' ? "My Tournaments" : "Your Tournaments"}
             </CardTitle>
             <CardDescription>
               {isAdmin 
                 ? "Manage all tournaments in the system" 
+                : user?.role === 'player'
+                ? "Tournaments you have joined"
                 : "Tournaments you have created and organized"
               }
             </CardDescription>
@@ -283,11 +410,15 @@ export default function Dashboard() {
               </div>
             ) : sortedTournaments.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">No tournaments found</p>
-                <Button onClick={() => setShowCreateTournament(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Tournament
-                </Button>
+                <p className="text-muted-foreground mb-4">
+                  {user?.role === 'player' ? 'You have not joined any tournaments yet' : 'No tournaments found'}
+                </p>
+                {user?.role !== 'player' && (
+                  <Button onClick={() => setShowCreateTournament(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Your First Tournament
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
