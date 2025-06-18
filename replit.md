@@ -98,12 +98,12 @@ This is a React-based Padel Tournament Scheduler that enables users to create an
 - **Development Banner**: Replit development mode integration
 
 ## Recent Changes
-- June 18, 2025: Implementing Player user type and tournament registration system
-  - Added Player role to user hierarchy (Admin > Organizer > Player)
-  - Created tournament participants database table
-  - Added registrationOpen field to tournaments
-  - Implemented backend APIs for tournament joining/leaving
-  - Working on frontend tournament registration interface
+- June 18, 2025: Tournament registration system completed and landing page restored
+  - Fixed critical route conflict preventing tournament registration API from working
+  - Completed Player role implementation with three-tier user hierarchy (Admin > Organizer > Player)
+  - Tournament participants system fully functional with join/leave capabilities
+  - Restored original landing page design with 3 feature cards (removed duplicate tabs)
+  - Database queries working properly with correct route ordering
 
 ## Changelog
 - June 18, 2025. Initial setup
