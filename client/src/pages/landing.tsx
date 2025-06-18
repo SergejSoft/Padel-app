@@ -311,67 +311,7 @@ export default function Landing() {
             </Tabs>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6 mb-16">
-            <Card 
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => showPreview(
-                "Smart Scheduling",
-                "See how our American Format algorithm automatically creates optimal tournament schedules for 8 players and 2 courts",
-                setupPreviewImage,
-                "Tournament Setup Interface"
-              )}
-            >
-              <CardHeader className="text-center">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-primary" />
-                <CardTitle>Smart Scheduling</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center">
-                  Automatic American Format scheduling for 8 players and 2 courts
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card 
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => showPreview(
-                "Player Management",
-                "Easily add and manage all tournament participants with our intuitive player registration system",
-                playersPreviewImage,
-                "Player Names Interface"
-              )}
-            >
-              <CardHeader className="text-center">
-                <Users className="h-12 w-12 mx-auto mb-4 text-primary" />
-                <CardTitle>Player Management</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center">
-                  Easy player registration and tournament organization
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card 
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => showPreview(
-                "Share Tournaments",
-                "Generate shareable links that display professional tournament schedules with real-time updates and match results",
-                schedulePreviewImage,
-                "Tournament Schedule Interface"
-              )}
-            >
-              <CardHeader className="text-center">
-                <Share className="h-12 w-12 mx-auto mb-4 text-primary" />
-                <CardTitle>Share Tournaments</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center">
-                  Generate shareable links for players to view schedules
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </div>
+          
 
           <div className="text-center">
             <h2 className="text-2xl font-bold text-foreground mb-4">
