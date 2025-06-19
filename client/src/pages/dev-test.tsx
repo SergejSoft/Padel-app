@@ -1,19 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tournament } from "@shared/schema";
 
 export default function DevTest() {
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [mockUser, setMockUser] = useState<any>(null);
+  const [authState, setAuthState] = useState<{
+    isAuthenticated: boolean;
+    isLoading: boolean;
+    user: any;
+  }>({
+    isAuthenticated: false,
+    isLoading: false,
+    user: null,
+  });
 
-  // Mock login mutation that actually refreshes the page to simulate login
+  // Mock login mutation
   const mockLogin = useMutation({
     mutationFn: async (userType: string) => {
       const response = await fetch("/api/dev/login", {
@@ -25,18 +32,25 @@ export default function DevTest() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
+      
+      // Update local auth state immediately
+      setAuthState({
+        isAuthenticated: true,
+        isLoading: false,
+        user: data.user,
+      });
       setMockUser(data.user);
+      
       return data;
     },
     onSuccess: (data: any) => {
       toast({
         title: "Mock Login Successful",
-        description: `Logged in as ${data.user.role}. The page will refresh to apply the login.`,
+        description: `Logged in as ${data.user.role}`,
       });
-      // Refresh the page to apply the mock session
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      
+      // Invalidate queries after successful login
+      queryClient.invalidateQueries({ queryKey: ["/api/user/tournaments"] });
     },
     onError: (error: any) => {
       toast({
@@ -47,9 +61,10 @@ export default function DevTest() {
     },
   });
 
-  // Get open tournaments
-  const { data: openTournaments = [] } = useQuery<Tournament[]>({
+  // Get open tournaments (no auth required)
+  const { data: openTournaments = [], isLoading: isLoadingTournaments } = useQuery<Tournament[]>({
     queryKey: ["/api/tournaments/open"],
+    retry: false,
   });
 
   // Join tournament mutation
@@ -82,10 +97,11 @@ export default function DevTest() {
     },
   });
 
-  // Get user tournaments
-  const { data: userTournaments = [] } = useQuery<Tournament[]>({
+  // Get user tournaments (only when authenticated)
+  const { data: userTournaments = [], isLoading: isLoadingUserTournaments } = useQuery<Tournament[]>({
     queryKey: ["/api/user/tournaments"],
-    enabled: isAuthenticated,
+    enabled: authState.isAuthenticated,
+    retry: false,
   });
 
   return (
@@ -98,19 +114,22 @@ export default function DevTest() {
           <CardTitle>Mock Authentication</CardTitle>
         </CardHeader>
         <CardContent>
-          {isAuthenticated ? (
+          {authState.isAuthenticated ? (
             <div className="space-y-4">
               <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                 <p className="font-medium text-green-800">
-                  Logged in as: {user?.firstName} {user?.lastName} ({user?.role})
+                  Logged in as: {authState.user?.firstName} {authState.user?.lastName} ({authState.user?.role})
                 </p>
-                <p className="text-sm text-green-600">Email: {user?.email}</p>
+                <p className="text-sm text-green-600">Email: {authState.user?.email}</p>
               </div>
               <Button 
-                onClick={() => window.location.reload()}
+                onClick={() => {
+                  setAuthState({ isAuthenticated: false, isLoading: false, user: null });
+                  setMockUser(null);
+                }}
                 variant="outline"
               >
-                Logout (Refresh Page)
+                Logout
               </Button>
             </div>
           ) : (
@@ -172,7 +191,7 @@ export default function DevTest() {
                     <Button
                       size="sm"
                       onClick={() => joinTournament.mutate(tournament.id)}
-                      disabled={!isAuthenticated || joinTournament.isPending}
+                      disabled={!authState.isAuthenticated || joinTournament.isPending}
                     >
                       {joinTournament.isPending ? "Joining..." : "Join Tournament"}
                     </Button>
