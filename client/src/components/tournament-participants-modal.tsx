@@ -22,7 +22,7 @@ export function TournamentParticipantsModal({ tournament, isOpen, onClose }: Tou
   const queryClient = useQueryClient();
 
   const { data: participants = [], isLoading } = useQuery<TournamentParticipant[]>({
-    queryKey: ["/api/tournaments", tournament?.id, "participants"],
+    queryKey: [`/api/tournaments/${tournament?.id}/participants`],
     enabled: !!tournament?.id && isOpen,
   });
 
@@ -34,7 +34,7 @@ export function TournamentParticipantsModal({ tournament, isOpen, onClose }: Tou
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tournaments", tournament?.id, "participants"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tournaments/${tournament?.id}/participants`] });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
       setNewPlayerName("");
       toast({
@@ -57,7 +57,7 @@ export function TournamentParticipantsModal({ tournament, isOpen, onClose }: Tou
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tournaments", tournament?.id, "participants"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/tournaments/${tournament?.id}/participants`] });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
       toast({
         title: "Player removed",
