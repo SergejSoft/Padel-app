@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tournament } from "@shared/schema";
 import { RegistrationSuccessAnimation } from "@/components/registration-success-animation";
+import { TournamentManagementTabs } from "@/components/tournament-management-tabs";
 
 export default function DevTest() {
   const { toast } = useToast();
@@ -216,9 +217,9 @@ export default function DevTest() {
         </CardContent>
       </Card>
 
-      {/* User Tournaments Section */}
+      {/* Tournament Management Section */}
       {authState.isAuthenticated && (
-        <MyTournamentsTab />
+        <TournamentManagementTabs />
       )}
 
       {/* Registration Success Animation */}
