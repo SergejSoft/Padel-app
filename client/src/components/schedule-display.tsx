@@ -100,8 +100,8 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
       setError(null);
 
       try {
-        // For tournaments with open registration but no players yet, save without schedule
-        if (tournamentSetup.skipPlayerEntry && players.length === 0) {
+        // For Open Registration tournaments, save without schedule
+        if (tournamentSetup.registrationOpen && players.length === 0) {
           // Save tournament without schedule for open registration
           if (!tournamentSavedRef.current && !saveTournamentMutation.isPending) {
             const tournamentData: InsertTournament = {
@@ -118,6 +118,13 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
             saveTournamentMutation.mutate(tournamentData);
           }
           setSchedule([]);
+          setIsGenerating(false);
+          return;
+        }
+
+        // Validate that we have exactly 8 players for schedule generation
+        if (players.length !== 8) {
+          setError("Exactly 8 players are required to generate a schedule.");
           setIsGenerating(false);
           return;
         }
@@ -269,7 +276,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
   }
 
   // Show open registration interface for tournaments without players
-  if (tournamentSetup.skipPlayerEntry && schedule.length === 0) {
+  if (tournamentSetup.registrationOpen && schedule.length === 0) {
     return (
       <CardContent className="p-8">
         <div className="text-center mb-8">
