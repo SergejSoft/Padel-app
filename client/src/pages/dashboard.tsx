@@ -17,6 +17,20 @@ import { Footer } from "@/components/footer";
 import { apiRequest } from "@/lib/queryClient";
 import type { Tournament } from "@shared/schema";
 
+// Component to display participant count for open registration tournaments
+function ParticipantCountDisplay({ tournamentId }: { tournamentId: number }) {
+  const { data: participants = [] } = useQuery({
+    queryKey: [`/api/tournaments/${tournamentId}/participants`],
+  });
+
+  return (
+    <span className="flex items-center text-blue-600">
+      <Users className="w-3 h-3 mr-1" />
+      {participants.length}/8 joined
+    </span>
+  );
+}
+
 export default function Dashboard() {
   const { user, isAdmin, isOrganizer } = useAuth();
   const { toast } = useToast();
@@ -362,11 +376,19 @@ export default function Dashboard() {
                         <Badge variant="outline">
                           {tournament.courtsCount} Courts
                         </Badge>
+                        {tournament.registrationOpen && (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                            Open Registration
+                          </Badge>
+                        )}
                         {getStatusBadge(getTournamentStatus(tournament))}
                       </div>
                       <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
                         <span>📅 {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'No date set'}</span>
                         <span>📍 {tournament.location || 'No location set'}</span>
+                        {tournament.registrationOpen && (
+                          <ParticipantCountDisplay tournamentId={tournament.id} />
+                        )}
                         {tournament.shareId && (
                           <span className="flex items-center">
                             <Share className="w-3 h-3 mr-1" />
