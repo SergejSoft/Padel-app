@@ -92,181 +92,185 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col relative">
-      {/* FREE Stamp */}
-      <div className="absolute top-4 right-4 z-10">
-        <div className="bg-blue-600 text-white px-3 py-1.5 rounded-full transform rotate-12 shadow-lg border-2 border-blue-700">
-          <span className="font-bold text-sm">FREE</span>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header with Navigation */}
+      <header className="bg-white shadow-sm border-b relative">
+        {/* FREE Stamp */}
+        <div className="absolute top-2 right-4 z-10">
+          <div className="bg-blue-600 text-white px-2 py-1 rounded-full transform rotate-12 shadow-md border border-blue-700">
+            <span className="font-bold text-xs">FREE</span>
+          </div>
         </div>
-      </div>
+        
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TennisIcon size="2rem" className="text-primary" />
+              <h1 className="text-xl font-bold text-foreground">Padel Tournament App</h1>
+            </div>
+            
+            {/* Tournament Navigation */}
+            <nav className="hidden md:flex items-center gap-6">
+              {openTournaments.slice(0, 3).map((tournament) => (
+                <div key={tournament.id} className="text-sm">
+                  <span className="text-muted-foreground">
+                    {tournament.name} • {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'TBD'}
+                  </span>
+                </div>
+              ))}
+              {openTournaments.length > 3 && (
+                <Button variant="outline" size="sm">
+                  View All ({openTournaments.length})
+                </Button>
+              )}
+            </nav>
+            
+            <Button 
+              onClick={() => window.location.href = "/login"}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Get Started
+            </Button>
+          </div>
+        </div>
+      </header>
       
       <div className="flex-1">
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center mb-16">
-            <h1 className="text-4xl font-bold text-foreground mb-4 flex items-center justify-center gap-3">
-              <TennisIcon size="3rem" className="text-primary" />
-              Padel Tournament App
-            </h1>
-            <p className="text-xl text-muted-foreground mb-8">
+        <div className="container mx-auto px-4 py-12">
+          {/* Hero Section - Simplified */}
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-foreground mb-4">
               Create and manage American Format padel tournaments with ease
+            </h2>
+            <p className="text-lg text-muted-foreground mb-8">
+              Smart scheduling, player management, and professional tournament results
             </p>
-            <div className="flex items-center justify-center gap-3 mb-12">
-              <Button 
-                size="lg" 
-                onClick={() => window.location.href = "/login"}
-                className="bg-primary text-primary-foreground hover:bg-[#2563eb] transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                Get Started
-              </Button>
-              <BouncingBallIcon size="2rem" className="text-primary" />
+            <div className="flex items-center justify-center gap-2">
+              <BouncingBallIcon size="1.5rem" className="text-primary" />
+              <span className="text-sm text-muted-foreground">Simple • Fast • Professional</span>
             </div>
           </div>
 
-          {/* Tournament Registration Section */}
-          <div className="mb-16">
-            <Tabs defaultValue="features" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="features">Features</TabsTrigger>
-                <TabsTrigger value="tournaments">Upcoming Tournaments</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="features" className="mt-8">
-                <div className="grid md:grid-cols-3 gap-6">
-                  <Card 
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => showPreview(
-                      "Smart Scheduling",
-                      "See how our American Format algorithm automatically creates optimal tournament schedules for 8 players and 2 courts",
-                      setupPreviewImage,
-                      "Tournament Setup Interface"
-                    )}
-                  >
-                    <CardHeader className="text-center">
-                      <Calendar className="h-12 w-12 mx-auto mb-4 text-primary" />
-                      <CardTitle>Smart Scheduling</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-center">
-                        Automatic American Format scheduling for 8 players and 2 courts
-                      </CardDescription>
-                    </CardContent>
-                  </Card>
-
-                  <Card 
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => showPreview(
-                      "Player Management",
-                      "Easily manage tournament participants with our intuitive player entry system",
-                      playersPreviewImage,
-                      "Player Entry Interface"
-                    )}
-                  >
-                    <CardHeader className="text-center">
-                      <Users className="h-12 w-12 mx-auto mb-4 text-primary" />
-                      <CardTitle>Player Management</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-center">
-                        Simple player registration and tournament participation
-                      </CardDescription>
-                    </CardContent>
-                  </Card>
-
-                  <Card 
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => showPreview(
-                      "Tournament Results",
-                      "Generate professional tournament schedules and scorecards with PDF export",
-                      schedulePreviewImage,
-                      "Tournament Schedule Display"
-                    )}
-                  >
-                    <CardHeader className="text-center">
-                      <Trophy className="h-12 w-12 mx-auto mb-4 text-primary" />
-                      <CardTitle>Professional Output</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-center">
-                        PDF export for schedules and scorecards
-                      </CardDescription>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="tournaments" className="mt-8">
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold mb-4">Upcoming Tournaments</h3>
-                  <p className="text-muted-foreground">Join tournaments or view upcoming events in your area</p>
+          {/* Main Content - Simplified */}
+          <div className="grid md:grid-cols-2 gap-12 mb-16">
+            {/* Features Section */}
+            <div>
+              <h3 className="text-2xl font-bold mb-6">Key Features</h3>
+              <div className="space-y-4">
+                <div 
+                  className="flex items-start gap-4 p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  onClick={() => showPreview(
+                    "Smart Scheduling",
+                    "See how our American Format algorithm automatically creates optimal tournament schedules for 8 players and 2 courts",
+                    setupPreviewImage,
+                    "Tournament Setup Interface"
+                  )}
+                >
+                  <Calendar className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-semibold mb-1">Smart Scheduling</h4>
+                    <p className="text-sm text-muted-foreground">Automatic American Format scheduling for 8 players and 2 courts</p>
+                  </div>
                 </div>
                 
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {isLoadingTournaments ? (
-                    <div className="col-span-full text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                      <p className="mt-2 text-gray-600">Loading tournaments...</p>
-                    </div>
-                  ) : openTournaments.length > 0 ? (
-                    openTournaments.map((tournament) => (
-                      <Card key={tournament.id} className="hover:shadow-lg transition-shadow">
-                        <CardHeader>
-                          <div className="flex justify-between items-start">
-                            <CardTitle className="text-lg">{tournament.name}</CardTitle>
-                            <Badge variant="outline" className="text-green-600 border-green-600">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Open
-                            </Badge>
-                          </div>
-                          <CardDescription>
-                            {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'Date TBD'} • {tournament.location}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2 mb-4">
-                            <div className="flex justify-between text-sm">
-                              <span>Players:</span>
-                              <span>{(tournament as any).participantCount || 0}/{tournament.playersCount}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span>Courts:</span>
-                              <span>{tournament.courtsCount}</span>
-                            </div>
-                          </div>
+                <div 
+                  className="flex items-start gap-4 p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  onClick={() => showPreview(
+                    "Player Management",
+                    "Easily manage tournament participants with our intuitive player entry system",
+                    playersPreviewImage,
+                    "Player Entry Interface"
+                  )}
+                >
+                  <Users className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-semibold mb-1">Player Management</h4>
+                    <p className="text-sm text-muted-foreground">Simple player registration and tournament participation</p>
+                  </div>
+                </div>
+                
+                <div 
+                  className="flex items-start gap-4 p-4 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  onClick={() => showPreview(
+                    "Tournament Results",
+                    "Generate professional tournament schedules and scorecards with PDF export",
+                    schedulePreviewImage,
+                    "Tournament Schedule Display"
+                  )}
+                >
+                  <Trophy className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-semibold mb-1">Professional Output</h4>
+                    <p className="text-sm text-muted-foreground">PDF export for schedules and scorecards</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tournaments Section */}
+            <div>
+              <h3 className="text-2xl font-bold mb-6">Upcoming Tournaments</h3>
+              
+              {isLoadingTournaments ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading tournaments...</p>
+                </div>
+              ) : openTournaments.length > 0 ? (
+                <div className="space-y-4">
+                  {openTournaments.slice(0, 3).map((tournament) => (
+                    <Card key={tournament.id} className="hover:shadow-lg transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-semibold">{tournament.name}</h4>
+                          <Badge variant="outline" className="text-green-600 border-green-600">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Open
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'Date TBD'} • {tournament.location}
+                        </p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">
+                            Players: {(tournament as any).participantCount || 0}/{tournament.playersCount}
+                          </span>
                           <Button 
-                            className="w-full" 
+                            size="sm"
                             onClick={() => window.location.href = "/login"}
                           >
                             <UserPlus className="w-4 h-4 mr-2" />
-                            Join Tournament
+                            Join
                           </Button>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <div className="col-span-full text-center py-8">
-                      <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">No Open Tournaments</h3>
-                      <p className="text-muted-foreground">
-                        There are currently no tournaments available for registration. Check back soon!
-                      </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  {openTournaments.length > 3 && (
+                    <div className="text-center mt-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => window.location.href = "/login"}
+                      >
+                        View All {openTournaments.length} Tournaments
+                      </Button>
                     </div>
                   )}
                 </div>
-
-                <div className="text-center mt-8">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => window.location.href = "/login"}
-                  >
-                    Sign In to View More Tournaments
-                  </Button>
+              ) : (
+                <div className="text-center py-8">
+                  <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h4 className="text-lg font-semibold mb-2">No Open Tournaments</h4>
+                  <p className="text-muted-foreground">
+                    There are currently no tournaments available for registration. Check back soon!
+                  </p>
                 </div>
-              </TabsContent>
-            </Tabs>
+              )}
+            </div>
           </div>
 
-          
-
+          {/* Call to Action */}
           <div className="text-center">
             <h2 className="text-2xl font-bold text-foreground mb-4">
               Ready to organize your tournament?
