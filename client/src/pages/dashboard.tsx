@@ -15,11 +15,11 @@ import { TournamentParticipantsModal } from "@/components/tournament-participant
 import { MyTournamentsTab } from "@/components/my-tournaments-tab";
 import { Footer } from "@/components/footer";
 import { apiRequest } from "@/lib/queryClient";
-import type { Tournament } from "@shared/schema";
+import type { Tournament, TournamentParticipant } from "@shared/schema";
 
 // Component to display participant count for open registration tournaments
 function ParticipantCountDisplay({ tournamentId }: { tournamentId: number }) {
-  const { data: participants = [] } = useQuery({
+  const { data: participants = [] } = useQuery<TournamentParticipant[]>({
     queryKey: [`/api/tournaments/${tournamentId}/participants`],
   });
 

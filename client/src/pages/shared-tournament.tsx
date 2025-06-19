@@ -1,22 +1,28 @@
 import { useParams, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, MapPin, Users, Target, Clock, Ban, Download, Eye } from "lucide-react";
+import { Calendar, MapPin, Users, Target, Clock, Ban, Download, Eye, UserPlus, Check } from "lucide-react";
 import { generateAmericanFormat } from "@/lib/american-format";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import { PDFPreviewModal } from "@/components/pdf-preview-modal";
 import { Footer } from "@/components/footer";
-import type { Tournament } from "@shared/schema";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import type { Tournament, TournamentParticipant } from "@shared/schema";
 import { useState } from "react";
 
 export default function SharedTournament() {
   const { shareId } = useParams();
   const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data: tournament, isLoading, error } = useQuery({
+  const { data: tournament, isLoading, error } = useQuery<Tournament>({
     queryKey: ['/api/shared', shareId],
     queryFn: async () => {
       const response = await fetch(`/api/shared/${shareId}`);
@@ -27,6 +33,47 @@ export default function SharedTournament() {
     },
     enabled: !!shareId,
   });
+
+  // Get tournament participants for Open Registration tournaments
+  const { data: participants = [] } = useQuery<TournamentParticipant[]>({
+    queryKey: [`/api/tournaments/${tournament?.id}/participants`],
+    enabled: !!tournament?.id && tournament?.registrationOpen,
+  });
+
+  const joinTournamentMutation = useMutation({
+    mutationFn: async () => {
+      if (!tournament?.id) throw new Error('Tournament not found');
+      await apiRequest("POST", `/api/tournaments/${tournament.id}/join`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/tournaments/${tournament?.id}/participants`] });
+      toast({
+        title: "Registration successful!",
+        description: "You have successfully joined the tournament.",
+      });
+    },
+    onError: (error: any) => {
+      if (error.message?.includes("Unauthorized")) {
+        toast({
+          title: "Please sign in",
+          description: "You need to sign in to register for tournaments.",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 1500);
+      } else {
+        toast({
+          title: "Registration failed",
+          description: error.message || "Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  const isUserRegistered = user && participants.some(p => p.userId === user.id);
+  const isTournamentFull = participants.length >= 8;
 
   if (isLoading) {
     return (
@@ -91,6 +138,11 @@ export default function SharedTournament() {
             {status === 'cancelled' && <Badge variant="destructive">Cancelled</Badge>}
             {status === 'past' && <Badge variant="secondary">Past</Badge>}
             {status === 'active' && <Badge variant="default">Active</Badge>}
+            {tournament.registrationOpen && (
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                Open Registration
+              </Badge>
+            )}
           </div>
           <div className="flex flex-wrap justify-center gap-6 text-gray-600">
             {tournament.date && (
@@ -124,6 +176,94 @@ export default function SharedTournament() {
             </div>
           </div>
         </div>
+
+        {/* Open Registration Section */}
+        {tournament.registrationOpen && (
+          <Card className="mb-8 border-blue-200 bg-blue-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-800">
+                <UserPlus className="h-5 w-5" />
+                Tournament Registration
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-800 font-medium">
+                      {participants.length}/8 Players Registered
+                    </p>
+                    <p className="text-blue-600 text-sm">
+                      {8 - participants.length} spots remaining
+                    </p>
+                  </div>
+                  
+                  {user ? (
+                    isUserRegistered ? (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <Check className="h-4 w-4" />
+                        <span className="font-medium">You're registered!</span>
+                      </div>
+                    ) : isTournamentFull ? (
+                      <Badge variant="destructive">Tournament Full</Badge>
+                    ) : (
+                      <Button 
+                        onClick={() => joinTournamentMutation.mutate()}
+                        disabled={joinTournamentMutation.isPending}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {joinTournamentMutation.isPending ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Registering...
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Register for Tournament
+                          </>
+                        )}
+                      </Button>
+                    )
+                  ) : (
+                    <div className="text-center">
+                      <p className="text-blue-600 text-sm mb-2">Sign in to register</p>
+                      <Button 
+                        onClick={() => window.location.href = "/api/login"}
+                        variant="outline"
+                        className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+                      >
+                        Sign In
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Participant List */}
+                {participants.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-blue-800 mb-3">Registered Players:</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {participants.map((participant, index) => (
+                        <div
+                          key={participant.id}
+                          className="flex items-center gap-2 p-2 bg-white rounded border"
+                        >
+                          <Badge variant="outline" className="text-xs">
+                            {index + 1}
+                          </Badge>
+                          <span className="text-sm font-medium truncate">
+                            {participant.playerName || `Player ${index + 1}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tournament Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
