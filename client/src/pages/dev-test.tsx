@@ -204,7 +204,7 @@ export default function DevTest() {
       </Card>
 
       {/* User Tournaments Section */}
-      {isAuthenticated && (
+      {authState.isAuthenticated && (
         <Card>
           <CardHeader>
             <CardTitle>My Tournaments</CardTitle>
