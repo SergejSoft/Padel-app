@@ -17,7 +17,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { Tournament } from "@shared/schema";
 
 export default function Dashboard() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isOrganizer } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showCreateTournament, setShowCreateTournament] = useState(false);
