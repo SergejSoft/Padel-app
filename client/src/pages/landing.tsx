@@ -124,75 +124,12 @@ export default function Landing() {
 
           {/* Tournament Registration Section */}
           <div className="mb-16">
-            <Tabs defaultValue="features" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="features">Features</TabsTrigger>
+            <Tabs defaultValue="tournaments" className="w-full">
+              <TabsList className="grid w-full grid-cols-1">
                 <TabsTrigger value="tournaments">Upcoming Tournaments</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="features" className="mt-8">
-                <div className="grid md:grid-cols-3 gap-6">
-                  <Card 
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => showPreview(
-                      "Smart Scheduling",
-                      "See how our American Format algorithm automatically creates optimal tournament schedules for 8 players and 2 courts",
-                      setupPreviewImage,
-                      "Tournament Setup Interface"
-                    )}
-                  >
-                    <CardHeader className="text-center">
-                      <Calendar className="h-12 w-12 mx-auto mb-4 text-primary" />
-                      <CardTitle>Smart Scheduling</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-center">
-                        Automatic American Format scheduling for 8 players and 2 courts
-                      </CardDescription>
-                    </CardContent>
-                  </Card>
-
-                  <Card 
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => showPreview(
-                      "Player Management",
-                      "Easily manage tournament participants with our intuitive player entry system",
-                      playersPreviewImage,
-                      "Player Entry Interface"
-                    )}
-                  >
-                    <CardHeader className="text-center">
-                      <Users className="h-12 w-12 mx-auto mb-4 text-primary" />
-                      <CardTitle>Player Management</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-center">
-                        Simple player registration and tournament participation
-                      </CardDescription>
-                    </CardContent>
-                  </Card>
-
-                  <Card 
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => showPreview(
-                      "Tournament Results",
-                      "Generate professional tournament schedules and scorecards with PDF export",
-                      schedulePreviewImage,
-                      "Tournament Schedule Display"
-                    )}
-                  >
-                    <CardHeader className="text-center">
-                      <Trophy className="h-12 w-12 mx-auto mb-4 text-primary" />
-                      <CardTitle>Professional Output</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-center">
-                        PDF export for schedules and scorecards
-                      </CardDescription>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
+              
 
               <TabsContent value="tournaments" className="mt-8">
                 <div className="text-center mb-8">
