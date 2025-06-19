@@ -218,34 +218,7 @@ export default function DevTest() {
 
       {/* User Tournaments Section */}
       {authState.isAuthenticated && (
-        <Card>
-          <CardHeader>
-            <CardTitle>My Tournaments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {userTournaments.length > 0 ? (
-              <div className="grid gap-4">
-                {userTournaments.map((tournament) => (
-                  <Card key={tournament.id} className="border-l-4 border-l-green-500">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold">{tournament.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'Date TBD'} • {tournament.location}
-                          </p>
-                        </div>
-                        <Badge variant="secondary">Registered</Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground">No tournaments joined yet.</p>
-            )}
-          </CardContent>
-        </Card>
+        <MyTournamentsTab />
       )}
 
       {/* Registration Success Animation */}
