@@ -119,7 +119,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
             playersCount: tournamentSetup.playersCount,
             courtsCount: tournamentSetup.courtsCount,
             players,
-            schedule: generatedSchedule,
+            schedule: generatedSchedule as any,
             registrationOpen: tournamentSetup.registrationOpen || false,
           };
 
@@ -157,7 +157,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
       playersCount: tournamentSetup.playersCount,
       courtsCount: tournamentSetup.courtsCount,
       players: players,
-      schedule: schedule,
+      schedule: schedule as any,
     };
 
     try {
@@ -260,6 +260,24 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
           Back to Players
         </Button>
         <div className="space-x-3">
+          {tournamentSetup.registrationOpen && (
+            <Button
+              onClick={() => {
+                if (saveTournamentMutation.data?.id) {
+                  activateRegistrationMutation.mutate(saveTournamentMutation.data.id);
+                }
+              }}
+              disabled={activateRegistrationMutation.isPending || !saveTournamentMutation.data?.id}
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              {activateRegistrationMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4 mr-2" />
+              )}
+              Activate Registration
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => setShowPDFPreview(true)}

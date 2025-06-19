@@ -109,15 +109,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { status } = req.body;
+      const { status, registrationOpen } = req.body;
       
       if (!['active', 'cancelled'].includes(status)) {
         return res.status(400).json({ error: "Invalid status. Must be 'active' or 'cancelled'" });
       }
       
-      const tournament = await storage.updateTournamentStatus(id, status);
+      // Update both status and registration open state
+      let tournament = await storage.updateTournamentStatus(id, status);
       if (!tournament) {
         return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      // If registrationOpen is provided, update that too
+      if (typeof registrationOpen === 'boolean') {
+        tournament = await storage.updateTournament(id, { registrationOpen });
       }
       
       res.json(tournament);
