@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tournament } from "@shared/schema";
+import { RegistrationSuccessAnimation } from "@/components/registration-success-animation";
 
 export default function DevTest() {
   const { toast } = useToast();
@@ -19,6 +20,13 @@ export default function DevTest() {
     isLoading: false,
     user: null,
   });
+  
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [successAnimationData, setSuccessAnimationData] = useState<{
+    tournamentName: string;
+    playerCount: number;
+    totalPlayers: number;
+  } | null>(null);
 
   // Mock login mutation
   const mockLogin = useMutation({
@@ -78,13 +86,18 @@ export default function DevTest() {
         const errorData = await response.json();
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
-      return await response.json();
+      return { tournamentId, result: await response.json() };
     },
-    onSuccess: () => {
-      toast({
-        title: "Tournament Joined",
-        description: "You have successfully joined the tournament!",
-      });
+    onSuccess: (data) => {
+      const tournament = openTournaments.find(t => t.id === data.tournamentId);
+      if (tournament) {
+        setSuccessAnimationData({
+          tournamentName: tournament.name,
+          playerCount: ((tournament as any).participantCount || 0) + 1,
+          totalPlayers: tournament.playersCount,
+        });
+        setShowSuccessAnimation(true);
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/user/tournaments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments/open"] });
     },
@@ -233,6 +246,20 @@ export default function DevTest() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Registration Success Animation */}
+      {successAnimationData && (
+        <RegistrationSuccessAnimation
+          isVisible={showSuccessAnimation}
+          tournamentName={successAnimationData.tournamentName}
+          playerCount={successAnimationData.playerCount}
+          totalPlayers={successAnimationData.totalPlayers}
+          onComplete={() => {
+            setShowSuccessAnimation(false);
+            setSuccessAnimationData(null);
+          }}
+        />
       )}
     </div>
   );

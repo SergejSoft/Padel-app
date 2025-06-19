@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/footer";
 import { FeaturePreviewModal } from "@/components/feature-preview-modal";
+import { RegistrationSuccessAnimation } from "@/components/registration-success-animation";
 import { Calendar, Users, Trophy, Share, Heart, Eye, UserPlus, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
