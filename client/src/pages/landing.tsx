@@ -224,7 +224,7 @@ export default function Landing() {
                           <div className="space-y-2 mb-4">
                             <div className="flex justify-between text-sm">
                               <span>Players:</span>
-                              <span>{tournament.players?.length || 0}/{tournament.playersCount}</span>
+                              <span>{(tournament as any).participantCount || 0}/{tournament.playersCount}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                               <span>Courts:</span>

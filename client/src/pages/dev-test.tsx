@@ -186,7 +186,7 @@ export default function DevTest() {
                   </p>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">
-                      Players: {tournament.players?.length || 0}/{tournament.playersCount}
+                      Players: {(tournament as any).participantCount || 0}/{tournament.playersCount}
                     </span>
                     <Button
                       size="sm"

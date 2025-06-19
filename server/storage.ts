@@ -283,41 +283,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getOpenTournaments(): Promise<Tournament[]> {
-    // Return hardcoded tournaments for demonstration since DB query has type issues
-    return [
-      {
-        id: 37,
-        name: "Summer Championship 2025",
-        date: "2025-07-15",
-        location: "City Sports Center",
-        playersCount: 8,
-        courtsCount: 2,
-        players: [],
-        schedule: [],
-        shareId: null,
-        urlSlug: null,
-        status: "active",
-        registrationOpen: true,
-        organizerId: "37856078",
-        createdAt: new Date("2025-06-18T18:10:22.597Z"),
-      },
-      {
-        id: 38,
-        name: "Weekend Warriors League",
-        date: "2025-07-22",
-        location: "Park Courts Complex",
-        playersCount: 8,
-        courtsCount: 2,
-        players: [],
-        schedule: [],
-        shareId: null,
-        urlSlug: null,
-        status: "active",
-        registrationOpen: true,
-        organizerId: "37856078",
-        createdAt: new Date("2025-06-18T18:10:22.597Z"),
-      }
-    ];
+    const tournamentsList = await db
+      .select()
+      .from(tournaments)
+      .where(and(
+        eq(tournaments.registrationOpen, true),
+        eq(tournaments.status, "active")
+      ));
+
+    // Get participant count for each tournament
+    const tournamentsWithParticipants = await Promise.all(
+      tournamentsList.map(async (tournament) => {
+        const participants = await db
+          .select()
+          .from(tournamentParticipants)
+          .where(eq(tournamentParticipants.tournamentId, tournament.id));
+
+        return {
+          ...tournament,
+          participantCount: participants.length,
+        };
+      })
+    );
+
+    return tournamentsWithParticipants;
   }
 }
 
