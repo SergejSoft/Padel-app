@@ -50,18 +50,7 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
     }
   };
 
-  const onSaveWithoutPlayers = () => {
-    const data = form.getValues();
-    if (data.registrationOpen && validateConfiguration(data.playersCount, data.courtsCount)) {
-      // Save tournament without players for open registration
-      onComplete({
-        ...data,
-        skipPlayerEntry: true
-      });
-    }
-  };
-
-  const watchedValues = form.watch();
+  const watchRegistrationOpen = form.watch("registrationOpen");
 
   return (
     <CardContent className="p-8">
@@ -164,28 +153,66 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="registrationOpen"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">
-                        Open Registration
-                      </FormLabel>
-                      <div className="text-sm text-muted-foreground">
-                        Allow players to join this tournament on their own
+              <div className="space-y-4">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold mb-2">Tournament Type</h3>
+                  <p className="text-sm text-muted-foreground">Choose how players will join your tournament</p>
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="registrationOpen"
+                  render={({ field }) => (
+                    <FormItem className="space-y-4">
+                      <div className="grid grid-cols-1 gap-4">
+                        {/* Simple Flow Option */}
+                        <div 
+                          className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                            !field.value 
+                              ? 'border-primary bg-primary/5' 
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                          onClick={() => field.onChange(false)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-4 h-4 rounded-full border-2 ${
+                              !field.value ? 'border-primary bg-primary' : 'border-border'
+                            }`} />
+                            <div>
+                              <div className="font-semibold">Simple Flow</div>
+                              <div className="text-sm text-muted-foreground">
+                                Add all 8 players now and generate schedule immediately
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Open Registration Option */}
+                        <div 
+                          className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                            field.value 
+                              ? 'border-primary bg-primary/5' 
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                          onClick={() => field.onChange(true)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-4 h-4 rounded-full border-2 ${
+                              field.value ? 'border-primary bg-primary' : 'border-border'
+                            }`} />
+                            <div>
+                              <div className="font-semibold">Open Registration</div>
+                              <div className="text-sm text-muted-foreground">
+                                Let players register themselves, generate schedule when full
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               {validationError && (
                 <Alert variant="destructive">
@@ -206,23 +233,21 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
               </div>
 
               <div className="space-y-3">
-                <Button
-                  type="submit"
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                  disabled={!!validationError || !form.formState.isValid}
-                >
-                  Continue to Players
-                </Button>
-                
-                {watchedValues.registrationOpen && (
+                {watchRegistrationOpen ? (
                   <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
+                    type="submit"
+                    className="w-full bg-green-600 text-white hover:bg-green-700"
                     disabled={!!validationError || !form.formState.isValid}
-                    onClick={onSaveWithoutPlayers}
                   >
-                    Save & Open for Player Registration
+                    Create Tournament & Open Registration
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                    disabled={!!validationError || !form.formState.isValid}
+                  >
+                    Continue to Add Players
                   </Button>
                 )}
               </div>

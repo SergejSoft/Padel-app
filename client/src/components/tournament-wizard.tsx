@@ -18,11 +18,12 @@ export function TournamentWizard() {
 
   const handleSetupComplete = (setup: TournamentSetupType) => {
     setTournamentSetup(setup);
-    if (setup.skipPlayerEntry) {
-      // Skip player entry and go directly to schedule with empty players
+    if (setup.registrationOpen) {
+      // Open Registration Flow: Skip player entry and go directly to schedule with empty players
       setPlayers([]);
       setCurrentStep(3);
     } else {
+      // Simple Flow: Continue to player entry
       setCurrentStep(2);
     }
   };
