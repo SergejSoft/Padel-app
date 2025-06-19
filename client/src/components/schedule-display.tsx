@@ -70,6 +70,30 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
     },
   });
 
+  const activateRegistrationMutation = useMutation({
+    mutationFn: async (tournamentId: number) => {
+      const response = await apiRequest("PATCH", `/api/tournaments/${tournamentId}/status`, { 
+        status: "active",
+        registrationOpen: true 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+      toast({
+        title: "Registration Activated!",
+        description: "Players can now find and join this tournament.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error activating registration",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     const generateSchedule = async () => {
       setIsGenerating(true);
