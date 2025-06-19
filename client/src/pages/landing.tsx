@@ -125,9 +125,11 @@ export default function Landing() {
           {/* Tournament Registration Section */}
           <div className="mb-16">
             <Tabs defaultValue="features" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className={`grid w-full ${openTournaments.length > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                 <TabsTrigger value="features">Features</TabsTrigger>
-                <TabsTrigger value="tournaments">Upcoming Tournaments</TabsTrigger>
+                {openTournaments.length > 0 && (
+                  <TabsTrigger value="tournaments">Upcoming Tournaments</TabsTrigger>
+                )}
               </TabsList>
               
               <TabsContent value="features" className="mt-8">
@@ -194,74 +196,68 @@ export default function Landing() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="tournaments" className="mt-8">
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold mb-4">Upcoming Tournaments</h3>
-                  <p className="text-muted-foreground">Join tournaments or view upcoming events in your area</p>
-                </div>
-                
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {isLoadingTournaments ? (
-                    <div className="col-span-full text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                      <p className="mt-2 text-gray-600">Loading tournaments...</p>
-                    </div>
-                  ) : openTournaments.length > 0 ? (
-                    openTournaments.map((tournament) => (
-                      <Card key={tournament.id} className="hover:shadow-lg transition-shadow">
-                        <CardHeader>
-                          <div className="flex justify-between items-start">
-                            <CardTitle className="text-lg">{tournament.name}</CardTitle>
-                            <Badge variant="outline" className="text-green-600 border-green-600">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Open
-                            </Badge>
-                          </div>
-                          <CardDescription>
-                            {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'Date TBD'} • {tournament.location}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2 mb-4">
-                            <div className="flex justify-between text-sm">
-                              <span>Players:</span>
-                              <span>{(tournament as any).participantCount || 0}/{tournament.playersCount}</span>
+              {openTournaments.length > 0 && (
+                <TabsContent value="tournaments" className="mt-8">
+                  <div className="text-center mb-8">
+                    <h3 className="text-2xl font-bold mb-4">Upcoming Tournaments</h3>
+                    <p className="text-muted-foreground">Join tournaments or view upcoming events in your area</p>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {isLoadingTournaments ? (
+                      <div className="col-span-full text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                        <p className="mt-2 text-gray-600">Loading tournaments...</p>
+                      </div>
+                    ) : (
+                      openTournaments.map((tournament) => (
+                        <Card key={tournament.id} className="hover:shadow-lg transition-shadow">
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <CardTitle className="text-lg">{tournament.name}</CardTitle>
+                              <Badge variant="outline" className="text-green-600 border-green-600">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Open
+                              </Badge>
                             </div>
-                            <div className="flex justify-between text-sm">
-                              <span>Courts:</span>
-                              <span>{tournament.courtsCount}</span>
+                            <CardDescription>
+                              {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'Date TBD'} • {tournament.location}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-2 mb-4">
+                              <div className="flex justify-between text-sm">
+                                <span>Players:</span>
+                                <span>{(tournament as any).participantCount || 0}/{tournament.playersCount}</span>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span>Courts:</span>
+                                <span>{tournament.courtsCount}</span>
+                              </div>
                             </div>
-                          </div>
-                          <Button 
-                            className="w-full" 
-                            onClick={() => window.location.href = "/login"}
-                          >
-                            <UserPlus className="w-4 h-4 mr-2" />
-                            Join Tournament
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <div className="col-span-full text-center py-8">
-                      <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">No Open Tournaments</h3>
-                      <p className="text-muted-foreground">
-                        There are currently no tournaments available for registration. Check back soon!
-                      </p>
-                    </div>
-                  )}
-                </div>
+                            <Button 
+                              className="w-full" 
+                              onClick={() => window.location.href = "/login"}
+                            >
+                              <UserPlus className="w-4 h-4 mr-2" />
+                              Join Tournament
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
+                  </div>
 
-                <div className="text-center mt-8">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => window.location.href = "/login"}
-                  >
-                    Sign In to View More Tournaments
-                  </Button>
-                </div>
-              </TabsContent>
+                  <div className="text-center mt-8">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => window.location.href = "/login"}
+                    >
+                      Sign In to View More Tournaments
+                    </Button>
+                  </div>
+                </TabsContent>
+              )}
             </Tabs>
           </div>
 
