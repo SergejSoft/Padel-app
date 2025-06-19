@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TournamentWizard } from "@/components/tournament-wizard";
 import { EditTournamentModal } from "@/components/edit-tournament-modal";
 import { TournamentViewModal } from "@/components/tournament-view-modal";
+import { TournamentParticipantsModal } from "@/components/tournament-participants-modal";
 import { MyTournamentsTab } from "@/components/my-tournaments-tab";
 import { Footer } from "@/components/footer";
 import { apiRequest } from "@/lib/queryClient";
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const [showCreateTournament, setShowCreateTournament] = useState(false);
   const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
   const [viewingTournament, setViewingTournament] = useState<Tournament | null>(null);
+  const [managingParticipants, setManagingParticipants] = useState<Tournament | null>(null);
 
   // Single query for tournaments based on user role
   const { data: tournaments = [], isLoading } = useQuery<Tournament[]>({
@@ -484,6 +486,13 @@ export default function Dashboard() {
           tournament={viewingTournament}
           isOpen={!!viewingTournament}
           onClose={() => setViewingTournament(null)}
+        />
+
+        {/* Tournament Participants Modal */}
+        <TournamentParticipantsModal
+          tournament={managingParticipants}
+          isOpen={!!managingParticipants}
+          onClose={() => setManagingParticipants(null)}
         />
         </div>
       </div>

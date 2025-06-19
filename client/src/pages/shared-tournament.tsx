@@ -61,10 +61,11 @@ export default function SharedTournament() {
 
   const status = getTournamentStatus(tournament);
 
-  const schedule = generateAmericanFormat({
+  // Only generate schedule if we have exactly 8 players
+  const schedule = tournament.players.length === 8 ? generateAmericanFormat({
     players: tournament.players,
     courts: tournament.courtsCount,
-  });
+  }) : [];
 
   const totalGames = schedule.reduce((sum, round) => sum + round.matches.length, 0);
   const gamesPerPlayer = Math.floor(totalGames * 4 / tournament.playersCount);
