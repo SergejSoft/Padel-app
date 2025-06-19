@@ -100,7 +100,29 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
       setError(null);
 
       try {
-        // Simulate processing time for better UX
+        // For tournaments with open registration but no players yet, save without schedule
+        if (tournamentSetup.skipPlayerEntry && players.length === 0) {
+          // Save tournament without schedule for open registration
+          if (!tournamentSavedRef.current && !saveTournamentMutation.isPending) {
+            const tournamentData: InsertTournament = {
+              name: tournamentSetup.name,
+              date: tournamentSetup.date,
+              location: tournamentSetup.location,
+              playersCount: tournamentSetup.playersCount,
+              courtsCount: tournamentSetup.courtsCount,
+              players: [],
+              schedule: [] as any,
+              registrationOpen: true,
+            };
+
+            saveTournamentMutation.mutate(tournamentData);
+          }
+          setSchedule([]);
+          setIsGenerating(false);
+          return;
+        }
+
+        // Normal schedule generation with players
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         const generatedSchedule = generateAmericanFormat({
@@ -241,6 +263,71 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
               Start Over
             </Button>
           </div>
+        </div>
+      </CardContent>
+    );
+  }
+
+  // Show open registration interface for tournaments without players
+  if (tournamentSetup.skipPlayerEntry && schedule.length === 0) {
+    return (
+      <CardContent className="p-8">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-foreground mb-2">Tournament Created!</h2>
+          <p className="text-muted-foreground">
+            {tournamentSetup.name} • Open for Player Registration
+          </p>
+        </div>
+
+        <div className="bg-muted rounded-xl p-6 mb-8">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Tournament is Live!</h3>
+            <p className="text-muted-foreground mb-4">
+              Players can now find and join this tournament on the landing page.
+            </p>
+            <div className="bg-background border border-border rounded-lg p-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="text-center">
+                  <div className="font-semibold text-foreground">Date</div>
+                  <div className="text-muted-foreground">{new Date(tournamentSetup.date).toLocaleDateString()}</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold text-foreground">Location</div>
+                  <div className="text-muted-foreground">{tournamentSetup.location}</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold text-foreground">Format</div>
+                  <div className="text-muted-foreground">{tournamentSetup.playersCount} Players, {tournamentSetup.courtsCount} Courts</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-center space-y-4">
+          <div className="space-x-3">
+            <Button
+              variant="outline"
+              onClick={handleShare}
+              disabled={generateShareMutation.isPending}
+              className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
+            >
+              {generateShareMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : copySuccess ? (
+                <Check className="w-4 h-4 mr-2" />
+              ) : (
+                <Share className="w-4 h-4 mr-2" />
+              )}
+              {copySuccess ? "Copied!" : "Share Tournament"}
+            </Button>
+          </div>
+          <Button variant="outline" onClick={onReset} className="w-full">
+            Create Another Tournament
+          </Button>
         </div>
       </CardContent>
     );

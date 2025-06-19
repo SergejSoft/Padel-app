@@ -50,6 +50,17 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
     }
   };
 
+  const onSaveWithoutPlayers = () => {
+    const data = form.getValues();
+    if (data.registrationOpen && validateConfiguration(data.playersCount, data.courtsCount)) {
+      // Save tournament without players for open registration
+      onComplete({
+        ...data,
+        skipPlayerEntry: true
+      });
+    }
+  };
+
   const watchedValues = form.watch();
 
   return (
@@ -194,13 +205,27 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
                 </div>
               </div>
 
-              <Button
-                type="submit"
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                disabled={!!validationError || !form.formState.isValid}
-              >
-                Continue to Players
-              </Button>
+              <div className="space-y-3">
+                <Button
+                  type="submit"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                  disabled={!!validationError || !form.formState.isValid}
+                >
+                  Continue to Players
+                </Button>
+                
+                {watchedValues.registrationOpen && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
+                    disabled={!!validationError || !form.formState.isValid}
+                    onClick={onSaveWithoutPlayers}
+                  >
+                    Save & Open for Player Registration
+                  </Button>
+                )}
+              </div>
             </form>
           </Form>
         </div>

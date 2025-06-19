@@ -18,7 +18,13 @@ export function TournamentWizard() {
 
   const handleSetupComplete = (setup: TournamentSetupType) => {
     setTournamentSetup(setup);
-    setCurrentStep(2);
+    if (setup.skipPlayerEntry) {
+      // Skip player entry and go directly to schedule with empty players
+      setPlayers([]);
+      setCurrentStep(3);
+    } else {
+      setCurrentStep(2);
+    }
   };
 
   const handlePlayersComplete = (playerList: string[]) => {
