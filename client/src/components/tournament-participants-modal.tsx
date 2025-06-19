@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -21,17 +21,30 @@ export function TournamentParticipantsModal({ tournament, isOpen, onClose }: Tou
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: participants = [], isLoading } = useQuery<TournamentParticipant[]>({
+  const { data: participantsData = [], isLoading } = useQuery({
     queryKey: [`/api/tournaments/${tournament?.id}/participants`],
     enabled: !!tournament?.id && isOpen,
   });
 
+  const participants = participantsData as TournamentParticipant[];
+
+  // Debug logging for participant count
+  useEffect(() => {
+    if (participants && participants.length >= 0) {
+      console.log(`Participants for tournament ${tournament?.id}:`, participants);
+      console.log(`Participant count: ${participants.length}`);
+    }
+  }, [participants, tournament?.id]);
+
   const addPlayerMutation = useMutation({
     mutationFn: async (playerName: string) => {
+      console.log(`Adding player "${playerName}" to tournament ${tournament?.id}`);
       const response = await apiRequest("POST", `/api/tournaments/${tournament?.id}/add-player`, {
         playerName,
       });
-      return response.json();
+      const result = await response.json();
+      console.log('Add player response:', result);
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/tournaments/${tournament?.id}/participants`] });
