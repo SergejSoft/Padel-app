@@ -46,7 +46,8 @@ export const tournaments = pgTable("tournaments", {
 export const tournamentParticipants = pgTable("tournament_participants", {
   id: serial("id").primaryKey(),
   tournamentId: integer("tournament_id").notNull().references(() => tournaments.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull(),
+  playerName: varchar("player_name"),
   joinedAt: timestamp("joined_at").defaultNow(),
 }, (table) => [
   // Unique constraint to prevent duplicate registrations

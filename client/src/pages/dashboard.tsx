@@ -423,6 +423,17 @@ export default function Dashboard() {
                       ) : (
                         // Organizer/Admin actions
                         <>
+                          {tournament.registrationOpen && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setManagingParticipants(tournament)}
+                              className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+                            >
+                              <Users className="w-4 h-4 mr-1" />
+                              Participants
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"

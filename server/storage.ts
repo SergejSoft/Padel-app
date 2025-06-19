@@ -214,7 +214,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Tournament participant operations
-  async joinTournament(participant: InsertTournamentParticipant): Promise<TournamentParticipant> {
+  async joinTournament(participant: InsertTournamentParticipant & { playerName?: string }): Promise<TournamentParticipant> {
     const [newParticipant] = await db
       .insert(tournamentParticipants)
       .values(participant)

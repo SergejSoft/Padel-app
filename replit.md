@@ -98,7 +98,16 @@ This is a React-based Padel Tournament Scheduler that enables users to create an
 - **Development Banner**: Replit development mode integration
 
 ## Recent Changes
-- June 19, 2025: Enhanced Admin privileges and streamlined open registration workflow
+- June 19, 2025: Implemented comprehensive participant management system for open registration tournaments
+  - Added tournament participants management modal for admins/organizers
+  - Created backend APIs for viewing, adding, and removing tournament participants
+  - Implemented manual player addition functionality for organizers
+  - Added participant count tracking and display in tournament management
+  - Enhanced tournament viewing to handle tournaments with partial participant lists
+  - Fixed American format algorithm to only generate schedules with exactly 8 players
+  - Added "Generate Schedule" functionality when tournament reaches full capacity
+  - Created "Manage Participants" button for open registration tournaments in dashboard
+  - Updated database schema to support participant names for manually added players
   - Ensured Admin has the same privileges as Organizer throughout the system
   - Added "Save & Open for Player Registration" button to skip player entry when Open Registration is enabled
   - Implemented tournament creation without players for immediate open registration

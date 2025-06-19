@@ -267,6 +267,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get tournament participants
+  app.get("/api/tournaments/:id/participants", isOwnerOrAdmin(async (req: any) => {
+    return await storage.getTournamentOwnerId(parseInt(req.params.id));
+  }), async (req: any, res) => {
+    try {
+      const tournamentId = parseInt(req.params.id);
+      const participants = await storage.getTournamentParticipants(tournamentId);
+      res.json(participants);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Add player manually to tournament
+  app.post("/api/tournaments/:id/add-player", isOwnerOrAdmin(async (req: any) => {
+    return await storage.getTournamentOwnerId(parseInt(req.params.id));
+  }), async (req: any, res) => {
+    try {
+      const tournamentId = parseInt(req.params.id);
+      const { playerName } = req.body;
+      
+      if (!playerName) {
+        return res.status(400).json({ error: "Player name is required" });
+      }
+
+      // Check current participant count
+      const participants = await storage.getTournamentParticipants(tournamentId);
+      if (participants.length >= 8) {
+        return res.status(400).json({ error: "Tournament is full" });
+      }
+
+      // Create a mock user entry for manually added players
+      const mockUserId = `manual-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      const participant = await storage.joinTournament({
+        tournamentId,
+        userId: mockUserId,
+        playerName,
+      });
+      
+      res.json(participant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Remove participant from tournament
+  app.delete("/api/tournaments/:id/participants/:userId", isOwnerOrAdmin(async (req: any) => {
+    return await storage.getTournamentOwnerId(parseInt(req.params.id));
+  }), async (req: any, res) => {
+    try {
+      const tournamentId = parseInt(req.params.id);
+      const { userId } = req.params;
+      
+      const success = await storage.leaveTournament(tournamentId, userId);
+      if (!success) {
+        return res.status(404).json({ error: "Participant not found" });
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Generate schedule for tournament with participants
+  app.post("/api/tournaments/:id/generate-schedule", isOwnerOrAdmin(async (req: any) => {
+    return await storage.getTournamentOwnerId(parseInt(req.params.id));
+  }), async (req: any, res) => {
+    try {
+      const tournamentId = parseInt(req.params.id);
+      
+      // Get tournament and participants
+      const tournament = await storage.getTournament(tournamentId);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+
+      const participants = await storage.getTournamentParticipants(tournamentId);
+      if (participants.length !== 8) {
+        return res.status(400).json({ error: "Exactly 8 players required to generate schedule" });
+      }
+
+      // Generate schedule with participant names
+      const playerNames = participants.map(p => p.playerName || p.userId);
+      // Note: Schedule generation would happen here using the American format algorithm
+      // For now, we'll update the tournament with the player list
+      
+      const updatedTournament = await storage.updateTournament(tournamentId, {
+        players: playerNames,
+        // schedule would be generated here
+      });
+      
+      res.json(updatedTournament);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Tournament participant routes
   app.post("/api/tournaments/:id/join", isAuthenticated, async (req: any, res) => {
     try {

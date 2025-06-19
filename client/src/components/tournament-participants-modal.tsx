@@ -193,7 +193,7 @@ export function TournamentParticipantsModal({ tournament, isOpen, onClose }: Tou
                   >
                     <div className="flex items-center space-x-3">
                       <Badge variant="outline">{index + 1}</Badge>
-                      <span className="font-medium">{participant.userId}</span>
+                      <span className="font-medium">{participant.playerName || participant.userId}</span>
                       <span className="text-sm text-muted-foreground">
                         Joined {participant.joinedAt ? new Date(participant.joinedAt).toLocaleDateString() : 'Unknown'}
                       </span>
