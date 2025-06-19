@@ -345,8 +345,8 @@ export default function SharedTournament() {
             onClick={() => {
               const pdf = generateTournamentPDF({
                 tournamentName: tournament.name,
-                tournamentDate: tournament.date,
-                tournamentLocation: tournament.location,
+                tournamentDate: tournament.date || '',
+                tournamentLocation: tournament.location || '',
                 playersCount: tournament.playersCount,
                 courtsCount: tournament.courtsCount,
                 rounds: schedule,
@@ -373,16 +373,16 @@ export default function SharedTournament() {
         isOpen={showPDFPreview}
         onClose={() => setShowPDFPreview(false)}
         tournamentName={tournament.name}
-        tournamentDate={tournament.date}
-        tournamentLocation={tournament.location}
+        tournamentDate={tournament.date || ''}
+        tournamentLocation={tournament.location || ''}
         playersCount={tournament.playersCount}
         courtsCount={tournament.courtsCount}
         rounds={schedule}
         onDownload={() => {
           const pdf = generateTournamentPDF({
             tournamentName: tournament.name,
-            tournamentDate: tournament.date,
-            tournamentLocation: tournament.location,
+            tournamentDate: tournament.date ?? '',
+            tournamentLocation: tournament.location ?? '',
             playersCount: tournament.playersCount,
             courtsCount: tournament.courtsCount,
             rounds: schedule,
