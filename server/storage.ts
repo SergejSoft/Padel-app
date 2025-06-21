@@ -26,6 +26,8 @@ export interface IStorage {
   updateTournament(id: number, tournament: Partial<InsertTournament>): Promise<Tournament | undefined>;
   updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined>;
   updateTournamentResults(id: number, results: any, schedule: any): Promise<Tournament | undefined>;
+  getTournamentByLeaderboardId(leaderboardId: string): Promise<Tournament | undefined>;
+  generateLeaderboardId(tournamentId: number): Promise<string>;
   deleteTournament(id: number): Promise<boolean>;
   getTournamentOwnerId(id: number): Promise<string | null>;
 }
@@ -221,18 +223,50 @@ export class DatabaseStorage implements IStorage {
 
   async updateTournamentResults(id: number, results: any, schedule: any): Promise<Tournament | undefined> {
     try {
+      // Generate leaderboard ID if not exists
+      const leaderboardId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
       const [tournament] = await db
         .update(tournaments)
         .set({ 
           results: results,
+          finalScores: schedule,
           schedule: schedule,
-          status: 'completed'
+          status: 'completed',
+          leaderboardId: leaderboardId,
+          completedAt: new Date()
         })
         .where(eq(tournaments.id, id))
         .returning();
       return tournament || undefined;
     } catch (error) {
       console.error('Storage error in updateTournamentResults:', error);
+      throw error;
+    }
+  }
+
+  async getTournamentByLeaderboardId(leaderboardId: string): Promise<Tournament | undefined> {
+    try {
+      const [tournament] = await db.select().from(tournaments).where(eq(tournaments.leaderboardId, leaderboardId));
+      return tournament || undefined;
+    } catch (error) {
+      console.error('Storage error in getTournamentByLeaderboardId:', error);
+      throw error;
+    }
+  }
+
+  async generateLeaderboardId(tournamentId: number): Promise<string> {
+    try {
+      const leaderboardId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
+      await db
+        .update(tournaments)
+        .set({ leaderboardId })
+        .where(eq(tournaments.id, tournamentId));
+        
+      return leaderboardId;
+    } catch (error) {
+      console.error('Storage error in generateLeaderboardId:', error);
       throw error;
     }
   }

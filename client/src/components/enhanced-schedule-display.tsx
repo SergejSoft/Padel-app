@@ -173,13 +173,24 @@ export function EnhancedScheduleDisplay({
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Results saved successfully",
         description: "Tournament results have been saved and the tournament is now completed.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
       setShowFinalsLeaderboard(false);
+      
+      // Show leaderboard link
+      if (data.leaderboardId) {
+        const leaderboardUrl = `${window.location.origin}/leaderboard/${data.leaderboardId}`;
+        navigator.clipboard.writeText(leaderboardUrl).then(() => {
+          toast({
+            title: "Leaderboard link copied!",
+            description: "Share this permanent link to view the final results.",
+          });
+        });
+      }
     },
     onError: (error: any) => {
       toast({

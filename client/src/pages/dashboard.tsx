@@ -337,10 +337,26 @@ export default function Dashboard() {
                             Shareable
                           </span>
                         )}
+                        {tournament.status === 'completed' && tournament.leaderboardId && (
+                          <span className="flex items-center">
+                            <Trophy className="w-3 h-3 mr-1" />
+                            Final Results
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2 flex-wrap sm:flex-nowrap">
-                      {tournament.shareId ? (
+                      {tournament.status === 'completed' && tournament.leaderboardId ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(`/leaderboard/${tournament.leaderboardId}`, '_blank')}
+                          className="text-xs sm:text-sm"
+                        >
+                          <Trophy className="w-4 h-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Results</span>
+                        </Button>
+                      ) : tournament.shareId ? (
                         <>
                           <Button
                             variant="outline"

@@ -98,6 +98,8 @@ This is a React-based Padel Tournament Scheduler that enables users to create an
 - **Development Banner**: Replit development mode integration
 
 ## Changelog
+- June 21, 2025. Added permanent leaderboard functionality with database storage for final results and dedicated leaderboard page access via unique URLs
+- June 21, 2025. Implemented mobile-responsive dashboard, fixed empty score inputs, and added tournament result saving with completion status
 - June 21, 2025. Fixed tournament scheduling algorithm and added wizard state persistence to prevent data loss when navigating between steps
 - June 21, 2025. Prepared app for deployment: hidden dev-only tests, added time input to tournament creation
 - June 21, 2025. Added internal scoring algorithm validation test with simulated tournament scenarios

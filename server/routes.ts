@@ -290,6 +290,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get tournament leaderboard by leaderboard ID
+  app.get("/api/leaderboard/:leaderboardId", async (req, res) => {
+    try {
+      const { leaderboardId } = req.params;
+      
+      const tournament = await storage.getTournamentByLeaderboardId(leaderboardId);
+      
+      if (!tournament) {
+        return res.status(404).json({ error: "Leaderboard not found" });
+      }
+
+      if (tournament.status !== 'completed' || !tournament.results) {
+        return res.status(404).json({ error: "Tournament results not available" });
+      }
+      
+      res.json({
+        tournamentId: tournament.id,
+        tournamentName: tournament.name,
+        tournamentDate: tournament.date,
+        tournamentTime: tournament.time,
+        tournamentLocation: tournament.location,
+        results: tournament.results,
+        finalScores: tournament.finalScores,
+        completedAt: tournament.completedAt,
+        status: tournament.status
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

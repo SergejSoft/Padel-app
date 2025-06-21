@@ -36,11 +36,14 @@ export const tournaments = pgTable("tournaments", {
   players: json("players").$type<string[]>().notNull(),
   schedule: json("schedule").$type<any[]>().notNull(),
   results: json("results").$type<PlayerStats[]>(), // Final leaderboard results
+  finalScores: json("final_scores").$type<any[]>(), // Match scores with results
+  leaderboardId: text("leaderboard_id").unique(), // Unique ID for leaderboard access
   shareId: text("share_id").unique(),
   urlSlug: text("url_slug").unique(), // Custom friendly URL slug
   status: text("status").notNull().default("active"), // active, cancelled, past, completed
   organizerId: text("organizer_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"), // When tournament was completed
 });
 
 export const insertTournamentSchema = createInsertSchema(tournaments).omit({
