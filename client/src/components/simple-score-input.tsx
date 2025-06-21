@@ -55,58 +55,38 @@ export function SimpleScoreInput({
   const currentSum = (parseInt(team1Input) || 0) + (parseInt(team2Input) || 0);
 
   return (
-    <div className="space-y-3 min-w-[160px]">
-      <div className="text-xs font-medium text-muted-foreground text-center">
-        Game #{gameNumber}
-      </div>
+    <div className="flex items-center gap-2 min-w-[100px]">
+      {/* Team 1 Score */}
+      <Input
+        type="number"
+        min="0"
+        max="16"
+        value={team1Input}
+        onChange={(e) => handleTeam1Change(e.target.value)}
+        className={`w-12 h-8 text-center text-sm font-medium ${!isValid ? 'border-red-500' : ''}`}
+        placeholder="0"
+      />
       
-      <div className="space-y-3">
-        {/* Team 1 Input */}
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">
-            {team1[0]} & {team1[1]}
-          </Label>
-          <Input
-            type="number"
-            min="0"
-            max="16"
-            value={team1Input}
-            onChange={(e) => handleTeam1Change(e.target.value)}
-            className={`h-9 text-center font-medium ${!isValid ? 'border-red-500' : ''}`}
-            placeholder="0"
-          />
-        </div>
+      {/* Separator */}
+      <span className="text-muted-foreground text-sm">-</span>
+      
+      {/* Team 2 Score */}
+      <Input
+        type="number"
+        min="0"
+        max="16"
+        value={team2Input}
+        onChange={(e) => handleTeam2Change(e.target.value)}
+        className={`w-12 h-8 text-center text-sm font-medium ${!isValid ? 'border-red-500' : ''}`}
+        placeholder="0"
+      />
 
-        {/* VS Divider */}
-        <div className="text-center text-xs text-muted-foreground font-medium">
-          VS
-        </div>
-
-        {/* Team 2 Input */}
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">
-            {team2[0]} & {team2[1]}
-          </Label>
-          <Input
-            type="number"
-            min="0"
-            max="16"
-            value={team2Input}
-            onChange={(e) => handleTeam2Change(e.target.value)}
-            className={`h-9 text-center font-medium ${!isValid ? 'border-red-500' : ''}`}
-            placeholder="0"
-          />
-        </div>
-      </div>
-
-      {/* Validation Message */}
-      <div className="text-center">
+      {/* Validation Indicator */}
+      <div className="flex items-center ml-1">
         {currentSum === 16 && isValid ? (
-          <div className="text-xs text-green-600 font-medium">✓ Valid</div>
+          <div className="text-green-600 text-xs">✓</div>
         ) : (
-          <div className="text-xs text-red-500">
-            Sum: {currentSum}/16
-          </div>
+          <div className="text-red-500 text-xs">{currentSum}/16</div>
         )}
       </div>
     </div>
