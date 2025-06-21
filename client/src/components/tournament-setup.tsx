@@ -30,6 +30,7 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
     defaultValues: {
       name: "",
       date: "",
+      time: "",
       location: "",
       playersCount: 8,
       courtsCount: 2,

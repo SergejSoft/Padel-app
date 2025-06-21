@@ -219,8 +219,8 @@ function runScoringValidationTest(): { success: boolean; message: string; detail
 // Export for use in components or manual testing
 export { runScoringValidationTest, calculatePlayerScores };
 
-// Auto-run test in development
-if (typeof window !== 'undefined' && import.meta.env.DEV) {
+// Auto-run test in development (disabled for deployment)
+if (typeof window !== 'undefined' && import.meta.env.DEV && false) {
   // Run test after a short delay to ensure everything is loaded
   setTimeout(() => {
     const result = runScoringValidationTest();

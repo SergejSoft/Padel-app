@@ -148,12 +148,15 @@ export default function SharedTournament() {
             {tournament.date && (
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                <span>{new Date(tournament.date).toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}</span>
+                <span>
+                  {new Date(tournament.date).toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                  {tournament.time && ` at ${tournament.time}`}
+                </span>
               </div>
             )}
             {tournament.location && (
