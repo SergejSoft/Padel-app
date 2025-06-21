@@ -32,12 +32,39 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
 
   const saveTournamentMutation = useMutation({
     mutationFn: async (tournamentData: InsertTournament) => {
+      console.log('Saving tournament with data:', tournamentData);
       const response = await apiRequest("POST", "/api/tournaments", tournamentData);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Tournament saved successfully:', data);
       tournamentSavedRef.current = true;
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+      toast({
+        title: "Tournament created successfully!",
+        description: "Your tournament has been created and can now be shared.",
+      });
+      // Clear the saved wizard state
+      localStorage.removeItem('tournament_wizard_state');
+    },
+    onError: (error: any) => {
+      console.error('Tournament save error:', error);
+      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again to save the tournament.",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 1000);
+      } else {
+        toast({
+          title: "Error saving tournament",
+          description: error.message || "Please try again.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
