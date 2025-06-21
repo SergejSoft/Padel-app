@@ -15,22 +15,31 @@ import {
 } from "lucide-react";
 import { ScoreInputModal } from "./score-input-modal";
 import { LeaderboardModal } from "./leaderboard-modal";
+import { FinalsLeaderboard } from "./finals-leaderboard";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import type { Round, Match, PlayerStats, MatchScore } from "@shared/schema";
 
 interface EnhancedScheduleDisplayProps {
   rounds: Round[];
   tournamentName: string;
+  tournamentId?: number;
   onScoreUpdate: (gameNumber: number, score: MatchScore) => void;
 }
 
 export function EnhancedScheduleDisplay({ 
   rounds, 
   tournamentName, 
+  tournamentId,
   onScoreUpdate 
 }: EnhancedScheduleDisplayProps) {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [showScoreModal, setShowScoreModal] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showFinalsLeaderboard, setShowFinalsLeaderboard] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const handleScoreClick = (match: Match) => {
     setSelectedMatch(match);
@@ -153,6 +162,51 @@ export function EnhancedScheduleDisplay({
   
   const totalMatches = rounds.reduce((total, round) => total + round.matches.length, 0);
   const progressPercentage = totalMatches > 0 ? (completedMatches / totalMatches) * 100 : 0;
+  const allMatchesCompleted = completedMatches === totalMatches && totalMatches > 0;
+
+  const saveResultsMutation = useMutation({
+    mutationFn: async ({ results, schedule }: { results: PlayerStats[], schedule: Round[] }) => {
+      if (!tournamentId) throw new Error("Tournament ID is required");
+      const response = await apiRequest("PATCH", `/api/tournaments/${tournamentId}/results`, {
+        results,
+        schedule
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Results saved successfully",
+        description: "Tournament results have been saved and the tournament is now completed.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+      setShowFinalsLeaderboard(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error saving results",
+        description: error.message || "Failed to save tournament results.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSaveResults = () => {
+    const playerStats = calculatePlayerStats();
+    saveResultsMutation.mutate({ 
+      results: playerStats, 
+      schedule: rounds 
+    });
+  };
+
+  const calculateFinalsPlayerScores = () => {
+    const playerStats = calculatePlayerStats();
+    return playerStats.map(stat => ({
+      player: stat.player,
+      totalPoints: stat.totalPoints,
+      gamesPlayed: stat.matchesPlayed,
+      averageScore: stat.matchesPlayed > 0 ? stat.totalPoints / stat.matchesPlayed : 0
+    }));
+  };
 
   return (
     <div className="space-y-6">
@@ -169,14 +223,26 @@ export function EnhancedScheduleDisplay({
                 Track scores and view live leaderboard
               </p>
             </div>
-            <Button 
-              onClick={() => setShowLeaderboard(true)}
-              variant="default"
-              className="flex items-center gap-2"
-            >
-              <BarChart3 className="h-4 w-4" />
-              View Leaderboard
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setShowLeaderboard(true)}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <BarChart3 className="h-4 w-4" />
+                Live Leaderboard
+              </Button>
+              {allMatchesCompleted && (
+                <Button 
+                  onClick={() => setShowFinalsLeaderboard(true)}
+                  variant="default"
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                >
+                  <Trophy className="h-4 w-4" />
+                  Finals Results
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
