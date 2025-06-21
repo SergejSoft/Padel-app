@@ -98,6 +98,7 @@ This is a React-based Padel Tournament Scheduler that enables users to create an
 - **Development Banner**: Replit development mode integration
 
 ## Changelog
+- June 21, 2025. Added comprehensive scoring system visual proposal with live score tracking, leaderboards, and demo page
 - June 18, 2025. Initial setup
 
 ## User Preferences

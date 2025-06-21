@@ -10,6 +10,7 @@ import Dashboard from "@/pages/dashboard";
 import Tournament from "@/pages/tournament";
 import SharedTournament from "@/pages/shared-tournament";
 import AmericanFormatRules from "@/pages/american-format-rules";
+import ScoringDemo from "@/pages/scoring-demo";
 import NotFound from "@/pages/not-found";
 
 function Router() {

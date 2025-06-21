@@ -74,9 +74,34 @@ export interface Match {
   team2: [string, string];
   round: number;
   gameNumber: number;
+  score?: MatchScore;
+  status?: 'pending' | 'in_progress' | 'completed';
+}
+
+export interface MatchScore {
+  team1Score: number;
+  team2Score: number;
+  sets?: SetScore[];
+}
+
+export interface SetScore {
+  team1: number;
+  team2: number;
 }
 
 export interface Round {
   round: number;
   matches: Match[];
+}
+
+export interface PlayerStats {
+  player: string;
+  matchesPlayed: number;
+  matchesWon: number;
+  setsWon: number;
+  setsLost: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  winPercentage: number;
+  totalPoints: number;
 }
