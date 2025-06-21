@@ -136,13 +136,24 @@ export function FinalsLeaderboard({
                 className="bg-green-600 hover:bg-green-700 text-white px-8 py-2"
               >
                 <Trophy className="h-4 w-4 mr-2" />
-                Save Tournament Results
+                Save Tournament Results & Mark Complete
               </Button>
               <p className="text-sm text-muted-foreground text-center">
-                Saving results will create a permanent leaderboard link that can be shared with players
+                This will mark the tournament as completed and create a permanent leaderboard link
               </p>
             </div>
           )}
+
+          {/* Back to Dashboard Button */}
+          <div className="flex justify-center pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={onClose}
+              className="px-6"
+            >
+              Back to Tournament
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
