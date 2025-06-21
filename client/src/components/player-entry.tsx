@@ -11,6 +11,7 @@ interface PlayerEntryProps {
   playersCount: number;
   onComplete: (players: string[]) => void;
   onBack: () => void;
+  initialPlayers?: string[];
 }
 
 export function PlayerEntry({ playersCount, onComplete, onBack }: PlayerEntryProps) {

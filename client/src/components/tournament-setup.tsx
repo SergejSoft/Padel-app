@@ -22,18 +22,24 @@ interface TournamentSetupProps {
   onBack: () => void;
 }
 
-export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
+interface TournamentSetupProps {
+  onComplete: (setup: TournamentSetup) => void;
+  onBack: () => void;
+  initialData?: Partial<TournamentSetup>;
+}
+
+export function TournamentSetup({ onComplete, onBack, initialData }: TournamentSetupProps) {
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const form = useForm<TournamentSetup>({
     resolver: zodResolver(tournamentSetupSchema),
     defaultValues: {
-      name: "",
-      date: "",
-      time: "",
-      location: "",
-      playersCount: 8,
-      courtsCount: 2,
+      name: initialData?.name || "",
+      date: initialData?.date || "",
+      time: initialData?.time || "",
+      location: initialData?.location || "",
+      playersCount: initialData?.playersCount || 8,
+      courtsCount: initialData?.courtsCount || 2,
     },
   });
 
