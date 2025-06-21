@@ -1,14 +1,18 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SimpleScoreInput } from "@/components/simple-score-input";
 import { FinalsLeaderboard } from "@/components/finals-leaderboard";
 import { runScoringValidationTest } from "@/lib/__tests__/scoring-validation.test";
+import { useAuth } from "@/hooks/useAuth";
 import { ArrowLeft, Users, Calendar, MapPin, Trophy, TestTube } from "lucide-react";
 import type { Round } from "@shared/schema";
 
 export default function ScoringDemo() {
+  const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
   const [gameScores, setGameScores] = useState<Record<number, { team1Score: number; team2Score: number }>>({
     1: { team1Score: 12, team2Score: 4 },
     2: { team1Score: 10, team2Score: 6 },
@@ -152,9 +156,14 @@ export default function ScoringDemo() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="flex items-center gap-2"
+                onClick={() => setLocation(isAuthenticated ? "/" : "/")}
+              >
                 <ArrowLeft className="h-4 w-4" />
-                Back to Dashboard
+                {isAuthenticated ? "Back to Dashboard" : "Back to Home"}
               </Button>
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-sm">P</span>
