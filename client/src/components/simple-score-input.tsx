@@ -55,34 +55,38 @@ export function SimpleScoreInput({
   const currentSum = (parseInt(team1Input) || 0) + (parseInt(team2Input) || 0);
 
   return (
-    <div className="flex items-center gap-2 min-w-[100px]">
+    <div className="flex items-center gap-1 sm:gap-2 min-w-[80px] sm:min-w-[100px]">
       {/* Team 1 Score */}
       <Input
         type="number"
+        inputMode="numeric"
+        pattern="[0-9]*"
         min="0"
         max="16"
         value={team1Input}
         onChange={(e) => handleTeam1Change(e.target.value)}
-        className={`w-12 h-8 text-center text-sm font-medium ${!isValid ? 'border-red-500' : ''}`}
+        className={`w-10 sm:w-12 h-7 sm:h-8 text-center text-xs sm:text-sm font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation`}
         placeholder="0"
       />
       
       {/* Separator */}
-      <span className="text-muted-foreground text-sm">-</span>
+      <span className="text-muted-foreground text-xs sm:text-sm">-</span>
       
       {/* Team 2 Score */}
       <Input
         type="number"
+        inputMode="numeric"
+        pattern="[0-9]*"
         min="0"
         max="16"
         value={team2Input}
         onChange={(e) => handleTeam2Change(e.target.value)}
-        className={`w-12 h-8 text-center text-sm font-medium ${!isValid ? 'border-red-500' : ''}`}
+        className={`w-10 sm:w-12 h-7 sm:h-8 text-center text-xs sm:text-sm font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation`}
         placeholder="0"
       />
 
       {/* Validation Indicator */}
-      <div className="flex items-center ml-1">
+      <div className="flex items-center ml-0.5 sm:ml-1">
         {currentSum === 16 && isValid ? (
           <div className="text-green-600 text-xs">✓</div>
         ) : (

@@ -212,9 +212,9 @@ export default function SharedTournament() {
           <div className="text-center mb-6">
             <Button 
               onClick={() => setShowLeaderboard(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-lg font-semibold"
+              className="bg-green-600 hover:bg-green-700 text-white px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg font-semibold w-full sm:w-auto"
             >
-              <Trophy className="h-5 w-5 mr-2" />
+              <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               View Leaderboard
             </Button>
           </div>
@@ -232,28 +232,32 @@ export default function SharedTournament() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Round {round.round}</h3>
                   <div className="grid gap-3">
                     {round.matches.map((match, matchIndex) => (
-                      <div key={matchIndex} className="bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
-                            <div className="bg-white rounded-full px-3 py-1 text-sm font-medium text-gray-700">
+                      <div key={matchIndex} className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
+                            <div className="bg-white rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-gray-700 flex-shrink-0">
                               Court {match.court}
                             </div>
-                            <div className="text-gray-900 flex-1">
-                              <span className="font-medium">{match.team1[0]} & {match.team1[1]}</span>
-                              <span className="mx-2 text-gray-500">vs</span>
-                              <span className="font-medium">{match.team2[0]} & {match.team2[1]}</span>
+                            <div className="text-gray-900 flex-1 min-w-0">
+                              <div className="block sm:inline">
+                                <span className="font-medium text-sm sm:text-base">{match.team1[0]} & {match.team1[1]}</span>
+                                <span className="mx-1 sm:mx-2 text-gray-500 text-sm">vs</span>
+                                <span className="font-medium text-sm sm:text-base">{match.team2[0]} & {match.team2[1]}</span>
+                              </div>
                             </div>
                           </div>
-                          <SimpleScoreInput
-                            team1={match.team1}
-                            team2={match.team2}
-                            team1Score={gameScores[match.gameNumber]?.team1Score || 0}
-                            team2Score={gameScores[match.gameNumber]?.team2Score || 0}
-                            onScoreChange={(team1Score, team2Score) => 
-                              handleScoreChange(match.gameNumber, team1Score, team2Score)
-                            }
-                            gameNumber={match.gameNumber}
-                          />
+                          <div className="flex-shrink-0">
+                            <SimpleScoreInput
+                              team1={match.team1}
+                              team2={match.team2}
+                              team1Score={gameScores[match.gameNumber]?.team1Score || 0}
+                              team2Score={gameScores[match.gameNumber]?.team2Score || 0}
+                              onScoreChange={(team1Score, team2Score) => 
+                                handleScoreChange(match.gameNumber, team1Score, team2Score)
+                              }
+                              gameNumber={match.gameNumber}
+                            />
+                          </div>
                         </div>
                       </div>
                     ))}
