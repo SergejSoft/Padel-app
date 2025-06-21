@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SimpleScoreInput } from "@/components/simple-score-input";
 import { FinalsLeaderboard } from "@/components/finals-leaderboard";
-import { ArrowLeft, Users, Calendar, MapPin, Trophy } from "lucide-react";
+import { runScoringValidationTest } from "@/lib/__tests__/scoring-validation.test";
+import { ArrowLeft, Users, Calendar, MapPin, Trophy, TestTube } from "lucide-react";
 import type { Round } from "@shared/schema";
 
 export default function ScoringDemo() {
@@ -292,6 +293,37 @@ export default function ScoringDemo() {
           playerScores={calculatePlayerScores()}
           tournamentName="Summer Championship 2024"
         />
+
+        {/* Test Validation */}
+        <Card className="mt-8 border-blue-200 bg-blue-50/50">
+          <CardHeader>
+            <CardTitle className="text-blue-900 flex items-center gap-2">
+              <TestTube className="h-5 w-5" />
+              Scoring Algorithm Validation
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-blue-700">
+              Test the scoring algorithm with a simulated tournament where Player 1 always wins.
+            </p>
+            <Button 
+              onClick={() => {
+                const result = runScoringValidationTest();
+                if (result.success) {
+                  alert(`✅ Test Passed!\n\n${result.message}\n\nDetails:\n- Rounds: ${result.details?.rounds}\n- Total Games: ${result.details?.totalGames}\n- Player 1 Points: ${result.details?.player1Stats?.totalPoints}\n- Player 1 Games: ${result.details?.player1Stats?.gamesPlayed}`);
+                } else {
+                  alert(`❌ Test Failed!\n\n${result.message}\n\nCheck console for details.`);
+                  console.error('Test Details:', result.details);
+                }
+              }}
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
+              <TestTube className="h-4 w-4 mr-2" />
+              Run Validation Test
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Instructions */}
         <Card className="mt-8 border-orange-200 bg-orange-50/50">
