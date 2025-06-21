@@ -116,8 +116,15 @@ export class DatabaseStorage implements IStorage {
 
   // User operations (required for Replit Auth)
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    try {
+      console.log(`Storage: Looking for user with id: "${id}"`);
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      console.log(`Storage: User found:`, user ? `${user.id} (${user.role})` : 'not found');
+      return user;
+    } catch (error) {
+      console.error('Storage error in getUser:', error);
+      throw error;
+    }
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -136,22 +143,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]> {
-    console.log(`Storage: Looking for tournaments with organizer_id: "${organizerId}"`);
-    
-    // First check if the organizer_id exists in the database
-    const allTournaments = await db.select().from(tournaments);
-    console.log('All tournaments in DB:', allTournaments.map(t => `ID:${t.id} Name:${t.name} Organizer:${t.organizerId}`));
-    
-    const result = await db
-      .select()
-      .from(tournaments)
-      .where(eq(tournaments.organizerId, organizerId))
-      .orderBy(desc(tournaments.createdAt));
-    
-    console.log(`Storage: Found ${result.length} tournaments for organizer "${organizerId}"`);
-    console.log('Matching tournaments:', result.map(t => `${t.id}: ${t.name}`));
-    
-    return result;
+    try {
+      console.log(`Storage: Looking for tournaments with organizer_id: "${organizerId}"`);
+      
+      const result = await db
+        .select()
+        .from(tournaments)
+        .where(eq(tournaments.organizerId, organizerId))
+        .orderBy(desc(tournaments.createdAt));
+      
+      console.log(`Storage: Found ${result.length} tournaments for organizer "${organizerId}"`);
+      return result;
+    } catch (error) {
+      console.error('Storage error in getTournamentsByOrganizer:', error);
+      throw error;
+    }
   }
 
   async updateTournament(id: number, tournamentData: Partial<InsertTournament>): Promise<Tournament | undefined> {

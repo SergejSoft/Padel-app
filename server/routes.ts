@@ -51,25 +51,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get tournaments (role-based access)
-  app.get("/api/tournaments", isAuthenticated, async (req: any, res) => {
+  // Get tournaments (role-based access)  
+  app.get("/api/tournaments", async (req: any, res) => {
     try {
+      // Check if user is authenticated
+      if (!req.isAuthenticated() || !req.user) {
+        console.log('API: User not authenticated for tournaments endpoint');
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
       const userId = req.user.claims.sub;
-      console.log(`API: Fetching tournaments for user: ${userId}`);
+      console.log(`API: Fetching tournaments for authenticated user: ${userId}`);
       
       const user = await storage.getUser(userId);
       if (!user) {
-        console.log(`API: User ${userId} not found in database`);
-        return res.status(404).json({ error: 'User not found' });
+        console.log(`API: User ${userId} not found in database, creating default organizer`);
+        // Create user with organizer role if not exists
+        const newUser = await storage.upsertUser({
+          id: userId,
+          email: req.user.claims.email || null,
+          firstName: req.user.claims.first_name || null,
+          lastName: req.user.claims.last_name || null,
+          profileImageUrl: req.user.claims.profile_image_url || null,
+          role: 'organizer'
+        });
+        console.log(`API: Created new user: ${newUser.id} with role ${newUser.role}`);
       }
       
-      console.log(`API: User found: ${user.id} with role ${user.role}`);
+      const finalUser = user || await storage.getUser(userId);
+      console.log(`API: User found: ${finalUser?.id} with role ${finalUser?.role}`);
       
       let tournaments = await storage.getTournamentsByOrganizer(userId);
       console.log(`API: User ${userId} owns ${tournaments.length} tournaments`);
       
       // If admin, also include all other tournaments
-      if (user.role === 'admin') {
+      if (finalUser?.role === 'admin') {
         const allTournaments = await storage.getAllTournaments();
         const ownTournamentIds = new Set(tournaments.map(t => t.id));
         const otherTournaments = allTournaments.filter(t => !ownTournamentIds.has(t.id));
