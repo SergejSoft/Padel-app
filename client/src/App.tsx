@@ -33,6 +33,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/shared/:shareId" component={SharedTournament} />
       <Route path="/american-format-rules" component={AmericanFormatRules} />
+      <Route path="/scoring-demo" component={ScoringDemo} />
       {!isAuthenticated && <Route path="/tournament" component={Tournament} />}
       <Route component={NotFound} />
     </Switch>

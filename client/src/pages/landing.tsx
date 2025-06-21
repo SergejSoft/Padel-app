@@ -186,6 +186,14 @@ export default function Landing() {
               >
                 Sign In to Get Started
               </Button>
+              <Button 
+                variant="outline" 
+                size="lg"
+                onClick={() => window.location.href = "/scoring-demo"}
+                className="transition-all duration-300 hover:scale-105 hover:bg-blue-500 hover:text-white hover:border-blue-500 active:scale-95"
+              >
+                View Scoring Demo
+              </Button>
             </div>
           </div>
         </div>
