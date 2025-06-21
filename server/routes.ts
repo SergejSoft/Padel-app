@@ -55,18 +55,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/tournaments", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      console.log(`Fetching tournaments for user: ${userId}`);
       const user = await storage.getUser(userId);
+      console.log(`User found: ${user ? user.role : 'not found'}`);
       
       let tournaments;
       if (user?.role === 'admin') {
         // Admin can see all tournaments
         tournaments = await storage.getAllTournaments();
+        console.log(`Admin fetched ${tournaments.length} tournaments`);
       } else {
         // Organizers can only see their own tournaments
         tournaments = await storage.getTournamentsByOrganizer(userId);
+        console.log(`Organizer fetched ${tournaments.length} tournaments for user ${userId}`);
       }
       res.json(tournaments);
     } catch (error: any) {
+      console.error('Error fetching tournaments:', error);
       res.status(500).json({ error: error.message });
     }
   });

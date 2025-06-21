@@ -7,7 +7,7 @@ import {
   type UpsertUser,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -136,11 +136,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]> {
-    return await db
+    console.log(`Storage: Looking for tournaments with organizer_id: "${organizerId}" (type: ${typeof organizerId})`);
+    
+    // Try both string and number comparisons to handle type mismatches
+    const stringResult = await db
       .select()
       .from(tournaments)
       .where(eq(tournaments.organizerId, organizerId))
       .orderBy(desc(tournaments.createdAt));
+    
+    console.log(`Storage: Found ${stringResult.length} tournaments for organizer "${organizerId}"`);
+    
+    // If no results with string, try converting to number and back
+    if (stringResult.length === 0) {
+      const numericId = parseInt(organizerId);
+      if (!isNaN(numericId)) {
+        const numericResult = await db
+          .select()
+          .from(tournaments)
+          .where(eq(tournaments.organizerId, numericId.toString()))
+          .orderBy(desc(tournaments.createdAt));
+        console.log(`Storage: Found ${numericResult.length} tournaments with numeric conversion`);
+        return numericResult;
+      }
+    }
+    
+    return stringResult;
   }
 
   async updateTournament(id: number, tournamentData: Partial<InsertTournament>): Promise<Tournament | undefined> {

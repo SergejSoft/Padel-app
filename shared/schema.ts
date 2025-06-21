@@ -38,7 +38,7 @@ export const tournaments = pgTable("tournaments", {
   shareId: text("share_id").unique(),
   urlSlug: text("url_slug").unique(), // Custom friendly URL slug
   status: text("status").notNull().default("active"), // active, cancelled, past
-  organizerId: varchar("organizer_id").references(() => users.id),
+  organizerId: text("organizer_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
