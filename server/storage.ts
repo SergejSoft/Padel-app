@@ -138,6 +138,10 @@ export class DatabaseStorage implements IStorage {
   async getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]> {
     console.log(`Storage: Looking for tournaments with organizer_id: "${organizerId}"`);
     
+    // First check if the organizer_id exists in the database
+    const allTournaments = await db.select().from(tournaments);
+    console.log('All tournaments in DB:', allTournaments.map(t => `ID:${t.id} Name:${t.name} Organizer:${t.organizerId}`));
+    
     const result = await db
       .select()
       .from(tournaments)
@@ -145,7 +149,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(tournaments.createdAt));
     
     console.log(`Storage: Found ${result.length} tournaments for organizer "${organizerId}"`);
-    console.log('Tournament IDs:', result.map(t => `${t.id}: ${t.name}`));
+    console.log('Matching tournaments:', result.map(t => `${t.id}: ${t.name}`));
     
     return result;
   }

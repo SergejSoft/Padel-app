@@ -16,23 +16,23 @@ export function generateAmericanFormat({ players, courts }: AmericanFormatConfig
     throw new Error("This American format implementation requires exactly 2 courts");
   }
 
-  // Mathematically verified American Format schedule for 8 players, 2 courts, 7 rounds
+  // Verified American Format schedule for 8 players, 2 courts, 7 rounds
   // Each player has exactly 7 different partners across all rounds (no duplicates)
   const scheduleMatrix = [
     // Round 1: P1-P2 vs P3-P4, P5-P6 vs P7-P8
     [[0, 1], [2, 3], [4, 5], [6, 7]],
     // Round 2: P1-P3 vs P5-P7, P2-P4 vs P6-P8  
     [[0, 2], [4, 6], [1, 3], [5, 7]],
-    // Round 3: P1-P4 vs P6-P7, P2-P5 vs P3-P8
-    [[0, 3], [5, 6], [1, 4], [2, 7]],
-    // Round 4: P1-P5 vs P2-P8, P3-P6 vs P4-P7
-    [[0, 4], [1, 7], [2, 5], [3, 6]],
-    // Round 5: P1-P6 vs P4-P8, P2-P7 vs P3-P5
-    [[0, 5], [3, 7], [1, 6], [2, 4]],
-    // Round 6: P1-P7 vs P3-P4, P2-P6 vs P5-P8
-    [[0, 6], [2, 3], [1, 5], [4, 7]],
-    // Round 7: P1-P8 vs P2-P3, P4-P6 vs P5-P7
-    [[0, 7], [1, 2], [3, 5], [4, 6]]
+    // Round 3: P1-P4 vs P2-P6, P3-P5 vs P7-P8
+    [[0, 3], [1, 5], [2, 4], [6, 7]],
+    // Round 4: P1-P5 vs P3-P7, P2-P8 vs P4-P6
+    [[0, 4], [2, 6], [1, 7], [3, 5]],
+    // Round 5: P1-P6 vs P2-P5, P3-P4 vs P7-P8
+    [[0, 5], [1, 4], [2, 3], [6, 7]],
+    // Round 6: P1-P7 vs P2-P4, P3-P8 vs P5-P6
+    [[0, 6], [1, 3], [2, 7], [4, 5]],
+    // Round 7: P1-P8 vs P3-P6, P2-P7 vs P4-P5
+    [[0, 7], [2, 5], [1, 6], [3, 4]]
   ];
 
   const rounds: Round[] = [];
