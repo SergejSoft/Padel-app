@@ -22,8 +22,15 @@ export default function Dashboard() {
   const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
   const [viewingTournament, setViewingTournament] = useState<Tournament | null>(null);
 
-  const { data: tournaments = [], isLoading } = useQuery<Tournament[]>({
+  const { data: tournaments = [], isLoading, error } = useQuery<Tournament[]>({
     queryKey: ["/api/tournaments"],
+    retry: false,
+    onError: (error) => {
+      console.error('Dashboard query error:', error);
+    },
+    onSuccess: (data) => {
+      console.log('Dashboard loaded tournaments:', data?.length || 0);
+    }
   });
 
   // Sort tournaments by date (newest first), then by creation order

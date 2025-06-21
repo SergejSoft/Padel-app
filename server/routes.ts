@@ -55,28 +55,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/tournaments", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      console.log(`Fetching tournaments for user: ${userId}`);
+      console.log(`API: Fetching tournaments for user: ${userId}`);
+      
       const user = await storage.getUser(userId);
-      console.log(`User found: ${user ? `${user.id} with role ${user.role}` : 'not found'}`);
-      
-      let tournaments;
-      // Always fetch user's own tournaments, regardless of role
-      tournaments = await storage.getTournamentsByOrganizer(userId);
-      console.log(`User ${userId} fetched ${tournaments.length} tournaments`);
-      
-      // If admin, also include all other tournaments
-      if (user?.role === 'admin') {
-        const allTournaments = await storage.getAllTournaments();
-        // Merge and deduplicate
-        const allTournamentIds = new Set(tournaments.map(t => t.id));
-        const otherTournaments = allTournaments.filter(t => !allTournamentIds.has(t.id));
-        tournaments = [...tournaments, ...otherTournaments];
-        console.log(`Admin user now has ${tournaments.length} total tournaments`);
+      if (!user) {
+        console.log(`API: User ${userId} not found in database`);
+        return res.status(404).json({ error: 'User not found' });
       }
       
+      console.log(`API: User found: ${user.id} with role ${user.role}`);
+      
+      let tournaments = await storage.getTournamentsByOrganizer(userId);
+      console.log(`API: User ${userId} owns ${tournaments.length} tournaments`);
+      
+      // If admin, also include all other tournaments
+      if (user.role === 'admin') {
+        const allTournaments = await storage.getAllTournaments();
+        const ownTournamentIds = new Set(tournaments.map(t => t.id));
+        const otherTournaments = allTournaments.filter(t => !ownTournamentIds.has(t.id));
+        tournaments = [...tournaments, ...otherTournaments];
+        console.log(`API: Admin user now has ${tournaments.length} total tournaments`);
+      }
+      
+      console.log(`API: Returning ${tournaments.length} tournaments`);
       res.json(tournaments);
     } catch (error: any) {
-      console.error('Error fetching tournaments:', error);
+      console.error('API Error fetching tournaments:', error);
+      console.error('Stack trace:', error.stack);
       res.status(500).json({ error: error.message });
     }
   });
