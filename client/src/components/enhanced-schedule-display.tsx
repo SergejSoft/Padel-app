@@ -381,6 +381,16 @@ export function EnhancedScheduleDisplay({
         playerStats={calculatePlayerStats()}
         tournamentName={tournamentName}
       />
+
+      {/* Finals Leaderboard Modal */}
+      <FinalsLeaderboard
+        isOpen={showFinalsLeaderboard}
+        onClose={() => setShowFinalsLeaderboard(false)}
+        playerScores={calculateFinalsPlayerScores()}
+        tournamentName={tournamentName}
+        onSaveResults={handleSaveResults}
+        canSaveResults={!!tournamentId}
+      />
     </div>
   );
 }

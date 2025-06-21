@@ -134,6 +134,7 @@ export default function Dashboard() {
 
   const getTournamentStatus = (tournament: Tournament) => {
     if (tournament.status === 'cancelled') return 'cancelled';
+    if (tournament.status === 'completed') return 'completed';
     if (tournament.date && new Date(tournament.date) < new Date()) return 'past';
     return 'active';
   };
@@ -142,6 +143,8 @@ export default function Dashboard() {
     switch (status) {
       case 'cancelled':
         return <Badge variant="destructive">Cancelled</Badge>;
+      case 'completed':
+        return <Badge variant="default" className="bg-green-600">Completed</Badge>;
       case 'past':
         return <Badge variant="secondary">Past</Badge>;
       case 'active':
