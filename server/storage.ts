@@ -108,7 +108,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllTournaments(): Promise<Tournament[]> {
-    return await db.select().from(tournaments);
+    return await db
+      .select()
+      .from(tournaments)
+      .orderBy(desc(tournaments.createdAt));
   }
 
   // User operations (required for Replit Auth)
@@ -133,7 +136,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]> {
-    return db.select().from(tournaments).where(eq(tournaments.organizerId, organizerId));
+    return await db
+      .select()
+      .from(tournaments)
+      .where(eq(tournaments.organizerId, organizerId))
+      .orderBy(desc(tournaments.createdAt));
   }
 
   async updateTournament(id: number, tournamentData: Partial<InsertTournament>): Promise<Tournament | undefined> {
