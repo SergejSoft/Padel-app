@@ -10,18 +10,13 @@ import Dashboard from "@/pages/dashboard";
 import Tournament from "@/pages/tournament";
 import SharedTournament from "@/pages/shared-tournament";
 import AmericanFormatRules from "@/pages/american-format-rules";
-import ScoringDemo from "@/pages/scoring-demo";
+import DevTest from "@/pages/dev-test";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading, error } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
-  // Only show loading for protected routes, not for public pages like scoring demo
-  const isPublicRoute = window.location.pathname.includes('/scoring-demo') || 
-                       window.location.pathname.includes('/american-format-rules') ||
-                       window.location.pathname.includes('/shared/');
-
-  if (isLoading && !isPublicRoute) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -36,10 +31,10 @@ function Router() {
     <Switch>
       <Route path="/" component={!isAuthenticated ? Landing : Dashboard} />
       <Route path="/login" component={Login} />
+      <Route path="/dev-test" component={DevTest} />
       <Route path="/shared/:shareId" component={SharedTournament} />
       <Route path="/american-format-rules" component={AmericanFormatRules} />
-      <Route path="/scoring-demo" component={ScoringDemo} />
-      {isAuthenticated && <Route path="/tournament" component={Tournament} />}
+      {!isAuthenticated && <Route path="/tournament" component={Tournament} />}
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,26 +1,28 @@
 import { useParams, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, MapPin, Users, Target, Clock, Ban, Download, Eye, Trophy } from "lucide-react";
+import { Calendar, MapPin, Users, Target, Clock, Ban, Download, Eye, UserPlus, Check } from "lucide-react";
 import { generateAmericanFormat } from "@/lib/american-format";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import { PDFPreviewModal } from "@/components/pdf-preview-modal";
-import { SimpleScoreInput } from "@/components/simple-score-input";
-import { FinalsLeaderboard } from "@/components/finals-leaderboard";
 import { Footer } from "@/components/footer";
-import type { Tournament } from "@shared/schema";
-import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import type { Tournament, TournamentParticipant } from "@shared/schema";
+import { useState } from "react";
 
 export default function SharedTournament() {
   const { shareId } = useParams();
   const [showPDFPreview, setShowPDFPreview] = useState(false);
-  const [gameScores, setGameScores] = useState<Record<number, { team1Score: number; team2Score: number }>>({});
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const { data: tournament, isLoading, error } = useQuery({
+  const { data: tournament, isLoading, error } = useQuery<Tournament>({
     queryKey: ['/api/shared', shareId],
     queryFn: async () => {
       const response = await fetch(`/api/shared/${shareId}`);
@@ -31,6 +33,47 @@ export default function SharedTournament() {
     },
     enabled: !!shareId,
   });
+
+  // Get tournament participants for Open Registration tournaments
+  const { data: participants = [] } = useQuery<TournamentParticipant[]>({
+    queryKey: [`/api/tournaments/${tournament?.id}/participants`],
+    enabled: !!tournament?.id && tournament?.registrationOpen,
+  });
+
+  const joinTournamentMutation = useMutation({
+    mutationFn: async () => {
+      if (!tournament?.id) throw new Error('Tournament not found');
+      await apiRequest("POST", `/api/tournaments/${tournament.id}/join`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/tournaments/${tournament?.id}/participants`] });
+      toast({
+        title: "Registration successful!",
+        description: "You have successfully joined the tournament.",
+      });
+    },
+    onError: (error: any) => {
+      if (error.message?.includes("Unauthorized")) {
+        toast({
+          title: "Please sign in",
+          description: "You need to sign in to register for tournaments.",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 1500);
+      } else {
+        toast({
+          title: "Registration failed",
+          description: error.message || "Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  const isUserRegistered = user && participants.some(p => p.userId === user.id);
+  const isTournamentFull = participants.length >= 8;
 
   if (isLoading) {
     return (
@@ -65,63 +108,15 @@ export default function SharedTournament() {
 
   const status = getTournamentStatus(tournament);
 
-  const schedule = generateAmericanFormat({
+  // Only generate schedule if we have exactly 8 players
+  const schedule = tournament.players.length === 8 ? generateAmericanFormat({
     players: tournament.players,
     courts: tournament.courtsCount,
-  });
+  }) : [];
 
   const totalGames = schedule.reduce((sum, round) => sum + round.matches.length, 0);
   const gamesPerPlayer = Math.floor(totalGames * 4 / tournament.playersCount);
   const avgGameMinutes = 13; // Average game length
-
-  // Calculate player scores for leaderboard
-  const calculatePlayerScores = () => {
-    const playerScores: Record<string, { totalPoints: number; gamesPlayed: number }> = {};
-    
-    // Initialize all players
-    tournament.players.forEach((player: string) => {
-      playerScores[player] = { totalPoints: 0, gamesPlayed: 0 };
-    });
-
-    // Calculate scores from games
-    schedule.forEach(round => {
-      round.matches.forEach(match => {
-        const score = gameScores[match.gameNumber];
-        if (score) {
-          // Team 1 players
-          match.team1.forEach(player => {
-            playerScores[player].totalPoints += score.team1Score;
-            playerScores[player].gamesPlayed += 1;
-          });
-          
-          // Team 2 players  
-          match.team2.forEach(player => {
-            playerScores[player].totalPoints += score.team2Score;
-            playerScores[player].gamesPlayed += 1;
-          });
-        }
-      });
-    });
-
-    return Object.entries(playerScores).map(([player, data]) => ({
-      player,
-      totalPoints: data.totalPoints,
-      gamesPlayed: data.gamesPlayed,
-      averageScore: data.gamesPlayed > 0 ? data.totalPoints / data.gamesPlayed : 0
-    }));
-  };
-
-  const handleScoreChange = (gameNumber: number, team1Score: number, team2Score: number) => {
-    setGameScores(prev => ({
-      ...prev,
-      [gameNumber]: { team1Score, team2Score }
-    }));
-  };
-
-  const allGamesHaveScores = () => {
-    const totalMatches = schedule.reduce((sum, round) => sum + round.matches.length, 0);
-    return Object.keys(gameScores).length === totalMatches;
-  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -143,20 +138,22 @@ export default function SharedTournament() {
             {status === 'cancelled' && <Badge variant="destructive">Cancelled</Badge>}
             {status === 'past' && <Badge variant="secondary">Past</Badge>}
             {status === 'active' && <Badge variant="default">Active</Badge>}
+            {tournament.registrationOpen && (
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                Open Registration
+              </Badge>
+            )}
           </div>
           <div className="flex flex-wrap justify-center gap-6 text-gray-600">
             {tournament.date && (
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                <span>
-                  {new Date(tournament.date).toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                  {tournament.time && ` at ${tournament.time}`}
-                </span>
+                <span>{new Date(tournament.date).toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}</span>
               </div>
             )}
             {tournament.location && (
@@ -179,6 +176,94 @@ export default function SharedTournament() {
             </div>
           </div>
         </div>
+
+        {/* Open Registration Section */}
+        {tournament.registrationOpen && (
+          <Card className="mb-8 border-blue-200 bg-blue-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-blue-800">
+                <UserPlus className="h-5 w-5" />
+                Tournament Registration
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-800 font-medium">
+                      {participants.length}/8 Players Registered
+                    </p>
+                    <p className="text-blue-600 text-sm">
+                      {8 - participants.length} spots remaining
+                    </p>
+                  </div>
+                  
+                  {user ? (
+                    isUserRegistered ? (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <Check className="h-4 w-4" />
+                        <span className="font-medium">You're registered!</span>
+                      </div>
+                    ) : isTournamentFull ? (
+                      <Badge variant="destructive">Tournament Full</Badge>
+                    ) : (
+                      <Button 
+                        onClick={() => joinTournamentMutation.mutate()}
+                        disabled={joinTournamentMutation.isPending}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {joinTournamentMutation.isPending ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Registering...
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Register for Tournament
+                          </>
+                        )}
+                      </Button>
+                    )
+                  ) : (
+                    <div className="text-center">
+                      <p className="text-blue-600 text-sm mb-2">Sign in to register</p>
+                      <Button 
+                        onClick={() => window.location.href = "/api/login"}
+                        variant="outline"
+                        className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+                      >
+                        Sign In
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Participant List */}
+                {participants.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-blue-800 mb-3">Registered Players:</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {participants.map((participant, index) => (
+                        <div
+                          key={participant.id}
+                          className="flex items-center gap-2 p-2 bg-white rounded border"
+                        >
+                          <Badge variant="outline" className="text-xs">
+                            {index + 1}
+                          </Badge>
+                          <span className="text-sm font-medium truncate">
+                            {participant.playerName || `Player ${index + 1}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tournament Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -210,19 +295,6 @@ export default function SharedTournament() {
           </Card>
         </div>
 
-        {/* Leaderboard Button */}
-        {allGamesHaveScores() && (
-          <div className="text-center mb-6">
-            <Button 
-              onClick={() => setShowLeaderboard(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg font-semibold w-full sm:w-auto"
-            >
-              <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              View Leaderboard
-            </Button>
-          </div>
-        )}
-
         {/* Schedule */}
         <Card>
           <CardHeader>
@@ -235,31 +307,20 @@ export default function SharedTournament() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Round {round.round}</h3>
                   <div className="grid gap-3">
                     {round.matches.map((match, matchIndex) => (
-                      <div key={matchIndex} className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
-                            <div className="bg-white rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-gray-700 flex-shrink-0">
+                      <div key={matchIndex} className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="bg-white rounded-full px-3 py-1 text-sm font-medium text-gray-700">
                               Court {match.court}
                             </div>
-                            <div className="text-gray-900 flex-1 min-w-0">
-                              <div className="block sm:inline">
-                                <span className="font-medium text-sm sm:text-base">{match.team1[0]} & {match.team1[1]}</span>
-                                <span className="mx-1 sm:mx-2 text-gray-500 text-sm">vs</span>
-                                <span className="font-medium text-sm sm:text-base">{match.team2[0]} & {match.team2[1]}</span>
-                              </div>
+                            <div className="text-gray-900">
+                              <span className="font-medium">{match.team1[0]} & {match.team1[1]}</span>
+                              <span className="mx-2 text-gray-500">vs</span>
+                              <span className="font-medium">{match.team2[0]} & {match.team2[1]}</span>
                             </div>
                           </div>
-                          <div className="flex-shrink-0">
-                            <SimpleScoreInput
-                              team1={match.team1}
-                              team2={match.team2}
-                              team1Score={gameScores[match.gameNumber]?.team1Score || 0}
-                              team2Score={gameScores[match.gameNumber]?.team2Score || 0}
-                              onScoreChange={(team1Score, team2Score) => 
-                                handleScoreChange(match.gameNumber, team1Score, team2Score)
-                              }
-                              gameNumber={match.gameNumber}
-                            />
+                          <div className="text-gray-400 text-sm">
+                            __ - __
                           </div>
                         </div>
                       </div>
@@ -284,8 +345,8 @@ export default function SharedTournament() {
             onClick={() => {
               const pdf = generateTournamentPDF({
                 tournamentName: tournament.name,
-                tournamentDate: tournament.date,
-                tournamentLocation: tournament.location,
+                tournamentDate: tournament.date || '',
+                tournamentLocation: tournament.location || '',
                 playersCount: tournament.playersCount,
                 courtsCount: tournament.courtsCount,
                 rounds: schedule,
@@ -312,29 +373,22 @@ export default function SharedTournament() {
         isOpen={showPDFPreview}
         onClose={() => setShowPDFPreview(false)}
         tournamentName={tournament.name}
-        tournamentDate={tournament.date}
-        tournamentLocation={tournament.location}
+        tournamentDate={tournament.date || ''}
+        tournamentLocation={tournament.location || ''}
         playersCount={tournament.playersCount}
         courtsCount={tournament.courtsCount}
         rounds={schedule}
         onDownload={() => {
           const pdf = generateTournamentPDF({
             tournamentName: tournament.name,
-            tournamentDate: tournament.date,
-            tournamentLocation: tournament.location,
+            tournamentDate: tournament.date ?? '',
+            tournamentLocation: tournament.location ?? '',
             playersCount: tournament.playersCount,
             courtsCount: tournament.courtsCount,
             rounds: schedule,
           });
           pdf.save(`${tournament.name.replace(/\s+/g, '_')}_schedule.pdf`);
         }}
-      />
-
-      <FinalsLeaderboard
-        isOpen={showLeaderboard}
-        onClose={() => setShowLeaderboard(false)}
-        playerScores={calculatePlayerScores()}
-        tournamentName={tournament.name}
       />
     </div>
   );

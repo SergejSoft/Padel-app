@@ -32,39 +32,12 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
 
   const saveTournamentMutation = useMutation({
     mutationFn: async (tournamentData: InsertTournament) => {
-      console.log('Saving tournament with data:', tournamentData);
       const response = await apiRequest("POST", "/api/tournaments", tournamentData);
       return response.json();
     },
-    onSuccess: (data) => {
-      console.log('Tournament saved successfully:', data);
+    onSuccess: () => {
       tournamentSavedRef.current = true;
       queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
-      toast({
-        title: "Tournament created successfully!",
-        description: "Your tournament has been created and can now be shared.",
-      });
-      // Clear the saved wizard state
-      localStorage.removeItem('tournament_wizard_state');
-    },
-    onError: (error: any) => {
-      console.error('Tournament save error:', error);
-      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
-        toast({
-          title: "Authentication Error",
-          description: "Please log in again to save the tournament.",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 1000);
-      } else {
-        toast({
-          title: "Error saving tournament",
-          description: error.message || "Please try again.",
-          variant: "destructive",
-        });
-      }
     },
   });
 
@@ -97,13 +70,66 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
     },
   });
 
+  const activateRegistrationMutation = useMutation({
+    mutationFn: async (tournamentId: number) => {
+      const response = await apiRequest("PATCH", `/api/tournaments/${tournamentId}/status`, { 
+        status: "active",
+        registrationOpen: true 
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+      toast({
+        title: "Registration Activated!",
+        description: "Players can now find and join this tournament.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error activating registration",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    },
+  });
+
   useEffect(() => {
     const generateSchedule = async () => {
       setIsGenerating(true);
       setError(null);
 
       try {
-        // Simulate processing time for better UX
+        // For Open Registration tournaments, save without schedule
+        if (tournamentSetup.registrationOpen && players.length === 0) {
+          // Save tournament without schedule for open registration
+          if (!tournamentSavedRef.current && !saveTournamentMutation.isPending) {
+            const tournamentData: InsertTournament = {
+              name: tournamentSetup.name,
+              date: tournamentSetup.date,
+              location: tournamentSetup.location,
+              playersCount: tournamentSetup.playersCount,
+              courtsCount: tournamentSetup.courtsCount,
+              players: [],
+              schedule: [] as any,
+              registrationOpen: true,
+            };
+
+            saveTournamentMutation.mutate(tournamentData);
+          }
+          setSchedule([]);
+          setIsGenerating(false);
+          return;
+        }
+
+        // Validate that we have exactly 8 players for schedule generation
+        if (players.length !== 8) {
+          setError("Exactly 8 players are required to generate a schedule.");
+          setIsGenerating(false);
+          return;
+        }
+
+        // Normal schedule generation with players
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         const generatedSchedule = generateAmericanFormat({
@@ -118,12 +144,12 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
           const tournamentData: InsertTournament = {
             name: tournamentSetup.name,
             date: tournamentSetup.date,
-            time: tournamentSetup.time,
             location: tournamentSetup.location,
             playersCount: tournamentSetup.playersCount,
             courtsCount: tournamentSetup.courtsCount,
             players,
-            schedule: generatedSchedule,
+            schedule: generatedSchedule as any,
+            registrationOpen: tournamentSetup.registrationOpen || false,
           };
 
           saveTournamentMutation.mutate(tournamentData);
@@ -142,7 +168,6 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
     const pdf = generateTournamentPDF({
       tournamentName: tournamentSetup.name,
       tournamentDate: tournamentSetup.date,
-      tournamentTime: tournamentSetup.time,
       tournamentLocation: tournamentSetup.location,
       playersCount: tournamentSetup.playersCount,
       courtsCount: tournamentSetup.courtsCount,
@@ -157,12 +182,11 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
     const tournamentData: InsertTournament = {
       name: tournamentSetup.name,
       date: tournamentSetup.date,
-      time: tournamentSetup.time,
       location: tournamentSetup.location,
       playersCount: tournamentSetup.playersCount,
       courtsCount: tournamentSetup.courtsCount,
       players: players,
-      schedule: schedule,
+      schedule: schedule as any,
     };
 
     try {
@@ -251,6 +275,71 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
     );
   }
 
+  // Show open registration interface for tournaments without players
+  if (tournamentSetup.registrationOpen && schedule.length === 0) {
+    return (
+      <CardContent className="p-8">
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-foreground mb-2">Tournament Created!</h2>
+          <p className="text-muted-foreground">
+            {tournamentSetup.name} • Open for Player Registration
+          </p>
+        </div>
+
+        <div className="bg-muted rounded-xl p-6 mb-8">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Tournament is Live!</h3>
+            <p className="text-muted-foreground mb-4">
+              Players can now find and join this tournament on the landing page.
+            </p>
+            <div className="bg-background border border-border rounded-lg p-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="text-center">
+                  <div className="font-semibold text-foreground">Date</div>
+                  <div className="text-muted-foreground">{new Date(tournamentSetup.date).toLocaleDateString()}</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold text-foreground">Location</div>
+                  <div className="text-muted-foreground">{tournamentSetup.location}</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold text-foreground">Format</div>
+                  <div className="text-muted-foreground">{tournamentSetup.playersCount} Players, {tournamentSetup.courtsCount} Courts</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-center space-y-4">
+          <div className="space-x-3">
+            <Button
+              variant="outline"
+              onClick={handleShare}
+              disabled={generateShareMutation.isPending}
+              className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
+            >
+              {generateShareMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : copySuccess ? (
+                <Check className="w-4 h-4 mr-2" />
+              ) : (
+                <Share className="w-4 h-4 mr-2" />
+              )}
+              {copySuccess ? "Copied!" : "Share Tournament"}
+            </Button>
+          </div>
+          <Button variant="outline" onClick={onReset} className="w-full">
+            Create Another Tournament
+          </Button>
+        </div>
+      </CardContent>
+    );
+  }
+
   return (
     <CardContent className="p-8">
       <div className="text-center mb-8">
@@ -265,6 +354,24 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
           Back to Players
         </Button>
         <div className="space-x-3">
+          {tournamentSetup.registrationOpen && (
+            <Button
+              onClick={() => {
+                if (saveTournamentMutation.data?.id) {
+                  activateRegistrationMutation.mutate(saveTournamentMutation.data.id);
+                }
+              }}
+              disabled={activateRegistrationMutation.isPending || !saveTournamentMutation.data?.id}
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              {activateRegistrationMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Check className="w-4 h-4 mr-2" />
+              )}
+              Activate Registration
+            </Button>
+          )}
           <Button
             variant="outline"
             onClick={() => setShowPDFPreview(true)}
