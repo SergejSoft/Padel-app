@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, json, timestamp, varchar, index, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, json, timestamp, varchar, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -20,7 +20,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role").default("player").notNull(), // 'admin', 'organizer', 'player'
+  role: varchar("role").default("organizer").notNull(), // 'admin', 'organizer'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -29,6 +29,7 @@ export const tournaments = pgTable("tournaments", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   date: text("date"),
+  time: text("time"), // Format: "HH:MM"
   location: text("location"),
   playersCount: integer("players_count").notNull(),
   courtsCount: integer("courts_count").notNull(),
@@ -37,49 +38,28 @@ export const tournaments = pgTable("tournaments", {
   shareId: text("share_id").unique(),
   urlSlug: text("url_slug").unique(), // Custom friendly URL slug
   status: text("status").notNull().default("active"), // active, cancelled, past
-  registrationOpen: boolean("registration_open").default(false).notNull(),
-  organizerId: varchar("organizer_id").references(() => users.id),
+  organizerId: text("organizer_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
-
-// Tournament participants table to track player registrations
-export const tournamentParticipants = pgTable("tournament_participants", {
-  id: serial("id").primaryKey(),
-  tournamentId: integer("tournament_id").notNull().references(() => tournaments.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull(),
-  playerName: varchar("player_name"),
-  joinedAt: timestamp("joined_at").defaultNow(),
-}, (table) => [
-  // Unique constraint to prevent duplicate registrations
-  index("unique_tournament_user").on(table.tournamentId, table.userId),
-]);
 
 export const insertTournamentSchema = createInsertSchema(tournaments).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertTournamentParticipantSchema = createInsertSchema(tournamentParticipants).omit({
-  id: true,
-  joinedAt: true,
-});
-
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type InsertTournament = z.infer<typeof insertTournamentSchema>;
 export type Tournament = typeof tournaments.$inferSelect;
-export type InsertTournamentParticipant = z.infer<typeof insertTournamentParticipantSchema>;
-export type TournamentParticipant = typeof tournamentParticipants.$inferSelect;
 
 // Validation schemas
 export const tournamentSetupSchema = z.object({
   name: z.string().min(1, "Tournament name is required"),
   date: z.string().min(1, "Tournament date is required"),
+  time: z.string().min(1, "Tournament time is required"),
   location: z.string().min(1, "Tournament location is required"),
   playersCount: z.literal(8, { errorMap: () => ({ message: "American format requires exactly 8 players" }) }),
   courtsCount: z.literal(2, { errorMap: () => ({ message: "American format requires exactly 2 courts" }) }),
-  registrationOpen: z.boolean().optional().default(false),
-  skipPlayerEntry: z.boolean().optional().default(false),
 });
 
 export const playersSchema = z.object({
@@ -96,9 +76,34 @@ export interface Match {
   team2: [string, string];
   round: number;
   gameNumber: number;
+  score?: MatchScore;
+  status?: 'pending' | 'in_progress' | 'completed';
+}
+
+export interface MatchScore {
+  team1Score: number;
+  team2Score: number;
+  sets?: SetScore[];
+}
+
+export interface SetScore {
+  team1: number;
+  team2: number;
 }
 
 export interface Round {
   round: number;
   matches: Match[];
+}
+
+export interface PlayerStats {
+  player: string;
+  matchesPlayed: number;
+  matchesWon: number;
+  setsWon: number;
+  setsLost: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  winPercentage: number;
+  totalPoints: number;
 }

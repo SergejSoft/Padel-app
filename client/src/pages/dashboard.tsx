@@ -4,45 +4,33 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Plus, Settings, Users, Calendar, Trash2, Edit, Crown, Shield, Ban, Play, Share, Copy, ExternalLink } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentWizard } from "@/components/tournament-wizard";
 import { EditTournamentModal } from "@/components/edit-tournament-modal";
 import { TournamentViewModal } from "@/components/tournament-view-modal";
-import { TournamentParticipantsModal } from "@/components/tournament-participants-modal";
-import { MyTournamentsTab } from "@/components/my-tournaments-tab";
 import { Footer } from "@/components/footer";
 import { apiRequest } from "@/lib/queryClient";
-import type { Tournament, TournamentParticipant } from "@shared/schema";
-
-// Component to display participant count for open registration tournaments
-function ParticipantCountDisplay({ tournamentId }: { tournamentId: number }) {
-  const { data: participants = [] } = useQuery<TournamentParticipant[]>({
-    queryKey: [`/api/tournaments/${tournamentId}/participants`],
-  });
-
-  return (
-    <span className="flex items-center text-blue-600">
-      <Users className="w-3 h-3 mr-1" />
-      {participants.length}/8 joined
-    </span>
-  );
-}
+import type { Tournament } from "@shared/schema";
 
 export default function Dashboard() {
-  const { user, isAdmin, isOrganizer } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showCreateTournament, setShowCreateTournament] = useState(false);
   const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
   const [viewingTournament, setViewingTournament] = useState<Tournament | null>(null);
-  const [managingParticipants, setManagingParticipants] = useState<Tournament | null>(null);
 
-  // Single query for tournaments based on user role
-  const { data: tournaments = [], isLoading } = useQuery<Tournament[]>({
-    queryKey: user?.role === 'player' ? ["/api/tournaments/participant"] : ["/api/tournaments"],
+  const { data: tournaments = [], isLoading, error } = useQuery<Tournament[]>({
+    queryKey: ["/api/tournaments"],
+    retry: false,
+    onError: (error) => {
+      console.error('Dashboard query error:', error);
+    },
+    onSuccess: (data) => {
+      console.log('Dashboard loaded tournaments:', data?.length || 0);
+    }
   });
 
   // Sort tournaments by date (newest first), then by creation order
@@ -130,48 +118,6 @@ export default function Dashboard() {
     },
   });
 
-  const joinTournamentMutation = useMutation({
-    mutationFn: async (tournamentId: number) => {
-      await apiRequest("POST", `/api/tournaments/${tournamentId}/join`, {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/participant"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/open"] });
-      toast({
-        title: "Tournament joined",
-        description: "You have successfully joined the tournament.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error joining tournament",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const leaveTournamentMutation = useMutation({
-    mutationFn: async (tournamentId: number) => {
-      await apiRequest("POST", `/api/tournaments/${tournamentId}/leave`, {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/participant"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tournaments/open"] });
-      toast({
-        title: "Tournament left",
-        description: "You have left the tournament.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error leaving tournament",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleDeleteTournament = (tournamentId: number, tournamentName: string) => {
     if (confirm(`Are you sure you want to delete "${tournamentName}"? This action cannot be undone.`)) {
       deleteMutation.mutate(tournamentId);
@@ -247,22 +193,20 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">
-                {isAdmin ? "Admin Dashboard" : user?.role === 'player' ? "My Tournaments" : "Tournament Dashboard"}
+                {isAdmin ? "Admin Dashboard" : "Tournament Dashboard"}
               </h1>
               <p className="text-muted-foreground">
                 Welcome back, {user?.firstName || user?.email}
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              {user?.role !== 'player' && (
-                <Button
-                  onClick={() => setShowCreateTournament(true)}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Tournament
-                </Button>
-              )}
+              <Button
+                onClick={() => setShowCreateTournament(true)}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Tournament
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => window.location.href = "/api/logout"}
@@ -325,19 +269,15 @@ export default function Dashboard() {
           </Card>
         </div>
 
-
-
         {/* Tournaments List */}
         <Card>
           <CardHeader>
             <CardTitle>
-              {isAdmin ? "All Tournaments" : user?.role === 'player' ? "My Tournaments" : "Your Tournaments"}
+              {isAdmin ? "All Tournaments" : "Your Tournaments"}
             </CardTitle>
             <CardDescription>
               {isAdmin 
                 ? "Manage all tournaments in the system" 
-                : user?.role === 'player'
-                ? "Tournaments you have joined"
                 : "Tournaments you have created and organized"
               }
             </CardDescription>
@@ -350,15 +290,11 @@ export default function Dashboard() {
               </div>
             ) : sortedTournaments.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">
-                  {user?.role === 'player' ? 'You have not joined any tournaments yet' : 'No tournaments found'}
-                </p>
-                {user?.role !== 'player' && (
-                  <Button onClick={() => setShowCreateTournament(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Your First Tournament
-                  </Button>
-                )}
+                <p className="text-muted-foreground mb-4">No tournaments found</p>
+                <Button onClick={() => setShowCreateTournament(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Tournament
+                </Button>
               </div>
             ) : (
               <div className="space-y-4">
@@ -376,19 +312,11 @@ export default function Dashboard() {
                         <Badge variant="outline">
                           {tournament.courtsCount} Courts
                         </Badge>
-                        {tournament.registrationOpen && (
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                            Open Registration
-                          </Badge>
-                        )}
                         {getStatusBadge(getTournamentStatus(tournament))}
                       </div>
                       <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
                         <span>📅 {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'No date set'}</span>
                         <span>📍 {tournament.location || 'No location set'}</span>
-                        {tournament.registrationOpen && (
-                          <ParticipantCountDisplay tournamentId={tournament.id} />
-                        )}
                         {tournament.shareId && (
                           <span className="flex items-center">
                             <Share className="w-3 h-3 mr-1" />
@@ -428,77 +356,45 @@ export default function Dashboard() {
                           View
                         </Button>
                       )}
-                      {user?.role === 'player' ? (
-                        // Player actions - only Leave button
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingTournament(tournament)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      {getTournamentStatus(tournament) === 'active' && (
                         <Button
-                          variant="destructive"
+                          variant="outline"
                           size="sm"
-                          onClick={() => leaveTournamentMutation.mutate(tournament.id)}
-                          disabled={leaveTournamentMutation.isPending}
+                          onClick={() => handleCancelTournament(tournament.id)}
+                          disabled={updateStatusMutation.isPending}
                         >
-                          {leaveTournamentMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            "Leave"
-                          )}
+                          <Ban className="w-4 h-4" />
                         </Button>
-                      ) : (
-                        // Organizer/Admin actions
-                        <>
-                          {tournament.registrationOpen && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setManagingParticipants(tournament)}
-                              className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
-                            >
-                              <Users className="w-4 h-4 mr-1" />
-                              Participants
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingTournament(tournament)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          {getTournamentStatus(tournament) === 'active' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleCancelTournament(tournament.id)}
-                              disabled={updateStatusMutation.isPending}
-                            >
-                              <Ban className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {getTournamentStatus(tournament) === 'cancelled' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleActivateTournament(tournament.id)}
-                              disabled={updateStatusMutation.isPending}
-                            >
-                              <Play className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {isAdmin && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteTournament(tournament.id, tournament.name)}
-                              disabled={deleteMutation.isPending}
-                            >
-                              {deleteMutation.isPending ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="w-4 h-4" />
-                              )}
-                            </Button>
-                          )}
-                        </>
                       )}
+                      {getTournamentStatus(tournament) === 'cancelled' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleActivateTournament(tournament.id)}
+                          disabled={updateStatusMutation.isPending}
+                        >
+                          <Play className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteTournament(tournament.id, tournament.name)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        {deleteMutation.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -519,13 +415,6 @@ export default function Dashboard() {
           tournament={viewingTournament}
           isOpen={!!viewingTournament}
           onClose={() => setViewingTournament(null)}
-        />
-
-        {/* Tournament Participants Modal */}
-        <TournamentParticipantsModal
-          tournament={managingParticipants}
-          isOpen={!!managingParticipants}
-          onClose={() => setManagingParticipants(null)}
         />
         </div>
       </div>

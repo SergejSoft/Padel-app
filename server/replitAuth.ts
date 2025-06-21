@@ -128,18 +128,9 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  // Check for development mock session first
-  if (req.session?.passport?.user) {
-    const mockUser = req.session.passport.user;
-    if (mockUser.expires_at && mockUser.expires_at > Math.floor(Date.now() / 1000)) {
-      req.user = mockUser;
-      return next();
-    }
-  }
-
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user?.expires_at) {
+  if (!req.isAuthenticated() || !user.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 

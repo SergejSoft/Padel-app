@@ -11,14 +11,17 @@ interface PlayerEntryProps {
   playersCount: number;
   onComplete: (players: string[]) => void;
   onBack: () => void;
+  initialPlayers?: string[];
 }
 
-export function PlayerEntry({ playersCount, onComplete, onBack }: PlayerEntryProps) {
+export function PlayerEntry({ playersCount, onComplete, onBack, initialPlayers }: PlayerEntryProps) {
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
   const form = useForm<Players>({
     defaultValues: {
-      players: Array(playersCount).fill(""),
+      players: initialPlayers?.length === playersCount 
+        ? initialPlayers 
+        : Array(playersCount).fill(""),
     },
     mode: "onChange",
   });

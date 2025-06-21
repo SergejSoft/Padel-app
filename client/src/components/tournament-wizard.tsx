@@ -1,9 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { TournamentSetup } from "./tournament-setup";
 import { PlayerEntry } from "./player-entry";
 import { ScheduleDisplay } from "./schedule-display";
 import type { TournamentSetup as TournamentSetupType } from "@shared/schema";
+
+interface WizardState {
+  step: number;
+  tournamentSetup: TournamentSetupType | null;
+  players: string[];
+}
+
+const STORAGE_KEY = 'tournament_wizard_state';
 
 export function TournamentWizard() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -16,16 +24,35 @@ export function TournamentWizard() {
     { number: 3, label: "Schedule" },
   ];
 
+  // Load saved state on component mount
+  useEffect(() => {
+    const savedState = localStorage.getItem(STORAGE_KEY);
+    if (savedState) {
+      try {
+        const parsedState: WizardState = JSON.parse(savedState);
+        setCurrentStep(parsedState.step);
+        setTournamentSetup(parsedState.tournamentSetup);
+        setPlayers(parsedState.players);
+      } catch (error) {
+        console.warn('Failed to parse saved wizard state:', error);
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+  }, []);
+
+  // Save state whenever it changes
+  useEffect(() => {
+    const state: WizardState = {
+      step: currentStep,
+      tournamentSetup,
+      players
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }, [currentStep, tournamentSetup, players]);
+
   const handleSetupComplete = (setup: TournamentSetupType) => {
     setTournamentSetup(setup);
-    if (setup.registrationOpen) {
-      // Open Registration Flow: Skip player entry and go directly to schedule with empty players
-      setPlayers([]);
-      setCurrentStep(3);
-    } else {
-      // Simple Flow: Continue to player entry
-      setCurrentStep(2);
-    }
+    setCurrentStep(2);
   };
 
   const handlePlayersComplete = (playerList: string[]) => {
@@ -37,6 +64,13 @@ export function TournamentWizard() {
     setCurrentStep(1);
     setTournamentSetup(null);
     setPlayers([]);
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
   };
 
   return (
@@ -80,6 +114,7 @@ export function TournamentWizard() {
           <TournamentSetup
             onComplete={handleSetupComplete}
             onBack={() => {}}
+            initialData={tournamentSetup || undefined}
           />
         )}
 
@@ -87,15 +122,16 @@ export function TournamentWizard() {
           <PlayerEntry
             playersCount={tournamentSetup.playersCount}
             onComplete={handlePlayersComplete}
-            onBack={() => setCurrentStep(1)}
+            onBack={handleBack}
+            initialPlayers={players.length > 0 ? players : undefined}
           />
         )}
 
-        {currentStep === 3 && tournamentSetup && (
+        {currentStep === 3 && tournamentSetup && players.length > 0 && (
           <ScheduleDisplay
             tournamentSetup={tournamentSetup}
             players={players}
-            onBack={() => setCurrentStep(2)}
+            onBack={handleBack}
             onReset={resetWizard}
           />
         )}

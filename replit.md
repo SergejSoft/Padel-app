@@ -97,39 +97,12 @@ This is a React-based Padel Tournament Scheduler that enables users to create an
 - **Port Configuration**: External port 80 mapped to internal port 5000
 - **Development Banner**: Replit development mode integration
 
-## Recent Changes
-- June 19, 2025: Implemented comprehensive participant management system for open registration tournaments
-  - Added tournament participants management modal for admins/organizers
-  - Created backend APIs for viewing, adding, and removing tournament participants
-  - Implemented manual player addition functionality for organizers
-  - Added participant count tracking and display in tournament management
-  - Enhanced tournament viewing to handle tournaments with partial participant lists
-  - Fixed American format algorithm to only generate schedules with exactly 8 players
-  - Added "Generate Schedule" functionality when tournament reaches full capacity
-  - Created "Manage Participants" button for open registration tournaments in dashboard
-  - Updated database schema to support participant names for manually added players
-  - Ensured Admin has the same privileges as Organizer throughout the system
-  - Added "Save & Open for Player Registration" button to skip player entry when Open Registration is enabled
-  - Implemented tournament creation without players for immediate open registration
-  - Enhanced tournament wizard to support skip-player-entry workflow
-  - Created success interface for tournaments saved with open registration
-  - Fixed tournament duplication issue in dashboard by removing redundant API queries
-  - Added "Activate Registration" button for organizers to enable player registration after tournament creation
-  - Enhanced tournament status management to support registration activation
-  - Completed tournament workflow: Create → Setup → Add Players → Generate Schedule → Activate Registration
-  - Players can now independently join tournaments through landing page after organizer activation
-  - Simplified landing page to show tournaments tab only when open tournaments exist
-  
-- June 18, 2025: Completed tournament registration system with open registration flow
-  - Added Player role to user hierarchy (Admin > Organizer > Player)
-  - Created tournament participants database table
-  - Added registrationOpen field to tournaments
-  - Implemented backend APIs for tournament joining/leaving
-  - Fixed landing page to display real tournaments with open registration
-  - Created development test interface for testing player registration flow
-  - Tournaments with "Open Registration" toggle now appear on landing page for player signup
-
 ## Changelog
+- June 21, 2025. Fixed tournament scheduling algorithm and added wizard state persistence to prevent data loss when navigating between steps
+- June 21, 2025. Prepared app for deployment: hidden dev-only tests, added time input to tournament creation
+- June 21, 2025. Added internal scoring algorithm validation test with simulated tournament scenarios
+- June 21, 2025. Implemented responsive mobile optimizations for score entry with touch-friendly inputs, compact layouts, and improved mobile UX
+- June 21, 2025. Added comprehensive scoring system visual proposal with live score tracking, leaderboards, and demo page
 - June 18, 2025. Initial setup
 
 ## User Preferences

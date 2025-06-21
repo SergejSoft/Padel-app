@@ -1,16 +1,13 @@
 import {
   tournaments,
   users,
-  tournamentParticipants,
   type Tournament,
   type InsertTournament,
   type User,
   type UpsertUser,
-  type InsertTournamentParticipant,
-  type TournamentParticipant,
 } from "@shared/schema";
-import { db, pool } from "./db";
-import { eq, and } from "drizzle-orm";
+import { db } from "./db";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -30,14 +27,6 @@ export interface IStorage {
   updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined>;
   deleteTournament(id: number): Promise<boolean>;
   getTournamentOwnerId(id: number): Promise<string | null>;
-  
-  // Tournament participant operations
-  joinTournament(participant: InsertTournamentParticipant): Promise<TournamentParticipant>;
-  leaveTournament(tournamentId: number, userId: string): Promise<boolean>;
-  getTournamentParticipants(tournamentId: number): Promise<TournamentParticipant[]>;
-  getTournamentsByParticipant(userId: string): Promise<Tournament[]>;
-  isUserRegisteredInTournament(tournamentId: number, userId: string): Promise<boolean>;
-  getOpenTournaments(): Promise<Tournament[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -119,13 +108,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllTournaments(): Promise<Tournament[]> {
-    return await db.select().from(tournaments);
+    return await db
+      .select()
+      .from(tournaments)
+      .orderBy(desc(tournaments.createdAt));
   }
 
   // User operations (required for Replit Auth)
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    try {
+      console.log(`Storage: Looking for user with id: "${id}"`);
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      console.log(`Storage: User found:`, user ? `${user.id} (${user.role})` : 'not found');
+      return user;
+    } catch (error) {
+      console.error('Storage error in getUser:', error);
+      throw error;
+    }
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -144,7 +143,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]> {
-    return db.select().from(tournaments).where(eq(tournaments.organizerId, organizerId));
+    try {
+      console.log(`Storage: Looking for tournaments with organizer_id: "${organizerId}"`);
+      
+      const result = await db
+        .select()
+        .from(tournaments)
+        .where(eq(tournaments.organizerId, organizerId))
+        .orderBy(desc(tournaments.createdAt));
+      
+      console.log(`Storage: Found ${result.length} tournaments for organizer "${organizerId}"`);
+      return result;
+    } catch (error) {
+      console.error('Storage error in getTournamentsByOrganizer:', error);
+      throw error;
+    }
   }
 
   async updateTournament(id: number, tournamentData: Partial<InsertTournament>): Promise<Tournament | undefined> {
@@ -211,102 +224,6 @@ export class DatabaseStorage implements IStorage {
       .from(tournaments)
       .where(eq(tournaments.id, id));
     return tournament?.organizerId || null;
-  }
-
-  // Tournament participant operations
-  async joinTournament(participant: InsertTournamentParticipant & { playerName?: string }): Promise<TournamentParticipant> {
-    const [newParticipant] = await db
-      .insert(tournamentParticipants)
-      .values(participant)
-      .returning();
-    return newParticipant;
-  }
-
-  async leaveTournament(tournamentId: number, userId: string): Promise<boolean> {
-    const result = await db
-      .delete(tournamentParticipants)
-      .where(
-        and(
-          eq(tournamentParticipants.tournamentId, tournamentId),
-          eq(tournamentParticipants.userId, userId)
-        )
-      );
-    return (result.rowCount || 0) > 0;
-  }
-
-  async getTournamentParticipants(tournamentId: number): Promise<TournamentParticipant[]> {
-    return db
-      .select()
-      .from(tournamentParticipants)
-      .where(eq(tournamentParticipants.tournamentId, tournamentId));
-  }
-
-  async getTournamentsByParticipant(userId: string): Promise<Tournament[]> {
-    const results = await db
-      .select({
-        id: tournaments.id,
-        name: tournaments.name,
-        date: tournaments.date,
-        location: tournaments.location,
-        playersCount: tournaments.playersCount,
-        courtsCount: tournaments.courtsCount,
-        players: tournaments.players,
-        schedule: tournaments.schedule,
-        shareId: tournaments.shareId,
-        urlSlug: tournaments.urlSlug,
-        status: tournaments.status,
-        registrationOpen: tournaments.registrationOpen,
-        organizerId: tournaments.organizerId,
-        createdAt: tournaments.createdAt,
-      })
-      .from(tournaments)
-      .innerJoin(
-        tournamentParticipants,
-        eq(tournaments.id, tournamentParticipants.tournamentId)
-      )
-      .where(eq(tournamentParticipants.userId, userId));
-    
-    return results;
-  }
-
-  async isUserRegisteredInTournament(tournamentId: number, userId: string): Promise<boolean> {
-    const [participant] = await db
-      .select()
-      .from(tournamentParticipants)
-      .where(
-        and(
-          eq(tournamentParticipants.tournamentId, tournamentId),
-          eq(tournamentParticipants.userId, userId)
-        )
-      );
-    return !!participant;
-  }
-
-  async getOpenTournaments(): Promise<Tournament[]> {
-    const tournamentsList = await db
-      .select()
-      .from(tournaments)
-      .where(and(
-        eq(tournaments.registrationOpen, true),
-        eq(tournaments.status, "active")
-      ));
-
-    // Get participant count for each tournament
-    const tournamentsWithParticipants = await Promise.all(
-      tournamentsList.map(async (tournament) => {
-        const participants = await db
-          .select()
-          .from(tournamentParticipants)
-          .where(eq(tournamentParticipants.tournamentId, tournament.id));
-
-        return {
-          ...tournament,
-          participantCount: participants.length,
-        };
-      })
-    );
-
-    return tournamentsWithParticipants;
   }
 }
 
