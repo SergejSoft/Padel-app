@@ -55,11 +55,18 @@ export class DatabaseStorage implements IStorage {
     const [tournament] = await db
       .insert(tournaments)
       .values({
-        ...insertTournament,
-        shareId,
-        urlSlug,
+        name: insertTournament.name,
+        date: insertTournament.date,
+        time: insertTournament.time,
+        location: insertTournament.location,
+        playersCount: insertTournament.playersCount,
+        courtsCount: insertTournament.courtsCount,
         players: insertTournament.players as any,
         schedule: insertTournament.schedule as any,
+        organizerId: insertTournament.organizerId,
+        status: insertTournament.status || 'active',
+        shareId,
+        urlSlug
       })
       .returning();
     return tournament;
@@ -178,13 +185,18 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    const updateData: any = {};
+    if (tournamentData.name) updateData.name = tournamentData.name;
+    if (tournamentData.date) updateData.date = tournamentData.date;
+    if (tournamentData.time) updateData.time = tournamentData.time;
+    if (tournamentData.location) updateData.location = tournamentData.location;
+    if (tournamentData.players) updateData.players = tournamentData.players as any;
+    if (tournamentData.schedule) updateData.schedule = tournamentData.schedule as any;
+    if (tournamentData.status) updateData.status = tournamentData.status;
+
     const [tournament] = await db
       .update(tournaments)
-      .set({
-        ...tournamentData,
-        players: tournamentData.players as any,
-        schedule: tournamentData.schedule as any,
-      })
+      .set(updateData)
       .where(eq(tournaments.id, id))
       .returning();
     return tournament;

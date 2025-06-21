@@ -9,6 +9,7 @@ import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Tournament from "@/pages/tournament";
 import SharedTournament from "@/pages/shared-tournament";
+import Leaderboard from "@/pages/leaderboard";
 import AmericanFormatRules from "@/pages/american-format-rules";
 import ScoringDemo from "@/pages/scoring-demo";
 import NotFound from "@/pages/not-found";
@@ -19,7 +20,8 @@ function Router() {
   // Only show loading for protected routes, not for public pages like scoring demo
   const isPublicRoute = window.location.pathname.includes('/scoring-demo') || 
                        window.location.pathname.includes('/american-format-rules') ||
-                       window.location.pathname.includes('/shared/');
+                       window.location.pathname.includes('/shared/') ||
+                       window.location.pathname.includes('/leaderboard/');
 
   if (isLoading && !isPublicRoute) {
     return (
@@ -37,6 +39,7 @@ function Router() {
       <Route path="/" component={!isAuthenticated ? Landing : Dashboard} />
       <Route path="/login" component={Login} />
       <Route path="/shared/:shareId" component={SharedTournament} />
+      <Route path="/leaderboard/:leaderboardId" component={Leaderboard} />
       <Route path="/american-format-rules" component={AmericanFormatRules} />
       <Route path="/scoring-demo" component={ScoringDemo} />
       {isAuthenticated && <Route path="/tournament" component={Tournament} />}
