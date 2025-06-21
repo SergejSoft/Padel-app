@@ -118,6 +118,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
           const tournamentData: InsertTournament = {
             name: tournamentSetup.name,
             date: tournamentSetup.date,
+            time: tournamentSetup.time,
             location: tournamentSetup.location,
             playersCount: tournamentSetup.playersCount,
             courtsCount: tournamentSetup.courtsCount,
@@ -141,6 +142,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
     const pdf = generateTournamentPDF({
       tournamentName: tournamentSetup.name,
       tournamentDate: tournamentSetup.date,
+      tournamentTime: tournamentSetup.time,
       tournamentLocation: tournamentSetup.location,
       playersCount: tournamentSetup.playersCount,
       courtsCount: tournamentSetup.courtsCount,
@@ -155,6 +157,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
     const tournamentData: InsertTournament = {
       name: tournamentSetup.name,
       date: tournamentSetup.date,
+      time: tournamentSetup.time,
       location: tournamentSetup.location,
       playersCount: tournamentSetup.playersCount,
       courtsCount: tournamentSetup.courtsCount,

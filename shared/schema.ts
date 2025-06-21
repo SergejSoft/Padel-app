@@ -56,7 +56,7 @@ export type Tournament = typeof tournaments.$inferSelect;
 export const tournamentSetupSchema = z.object({
   name: z.string().min(1, "Tournament name is required"),
   date: z.string().min(1, "Tournament date is required"),
-  time: z.string().optional(),
+  time: z.string().min(1, "Tournament time is required"),
   location: z.string().min(1, "Tournament location is required"),
   playersCount: z.literal(8, { errorMap: () => ({ message: "American format requires exactly 8 players" }) }),
   courtsCount: z.literal(2, { errorMap: () => ({ message: "American format requires exactly 2 courts" }) }),
