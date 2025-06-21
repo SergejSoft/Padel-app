@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Plus, Settings, Users, Calendar, Trash2, Edit, Crown, Shield, Ban, Play, Share, Copy, ExternalLink } from "lucide-react";
+import { Loader2, Plus, Settings, Users, Calendar, Trash2, Edit, Crown, Shield, Ban, Play, Share, Copy, ExternalLink, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentWizard } from "@/components/tournament-wizard";
