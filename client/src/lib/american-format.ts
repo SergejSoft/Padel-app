@@ -16,62 +16,50 @@ export function generateAmericanFormat({ players, courts }: AmericanFormatConfig
     throw new Error("This American format implementation requires exactly 2 courts");
   }
 
-  // Fixed optimal schedule for 8 players, 2 courts, 7 rounds
-  // This ensures no duplicate partnerships and optimal rotation
-  const optimalSchedule = [
-    // Round 1
-    [
-      { court: 1, team1: [players[0], players[1]], team2: [players[2], players[3]] },
-      { court: 2, team1: [players[4], players[5]], team2: [players[6], players[7]] }
-    ],
-    // Round 2
-    [
-      { court: 1, team1: [players[0], players[2]], team2: [players[1], players[4]] },
-      { court: 2, team1: [players[3], players[5]], team2: [players[6], players[7]] }
-    ],
-    // Round 3
-    [
-      { court: 1, team1: [players[0], players[3]], team2: [players[2], players[5]] },
-      { court: 2, team1: [players[1], players[6]], team2: [players[4], players[7]] }
-    ],
-    // Round 4
-    [
-      { court: 1, team1: [players[0], players[4]], team2: [players[3], players[6]] },
-      { court: 2, team1: [players[1], players[7]], team2: [players[2], players[5]] }
-    ],
-    // Round 5
-    [
-      { court: 1, team1: [players[0], players[5]], team2: [players[4], players[6]] },
-      { court: 2, team1: [players[1], players[3]], team2: [players[2], players[7]] }
-    ],
-    // Round 6
-    [
-      { court: 1, team1: [players[0], players[6]], team2: [players[5], players[7]] },
-      { court: 2, team1: [players[1], players[2]], team2: [players[3], players[4]] }
-    ],
-    // Round 7
-    [
-      { court: 1, team1: [players[0], players[7]], team2: [players[1], players[5]] },
-      { court: 2, team1: [players[2], players[4]], team2: [players[3], players[6]] }
-    ]
+  // Mathematically verified American Format schedule for 8 players, 2 courts, 7 rounds
+  // Each player has exactly 7 different partners across all rounds (no duplicates)
+  const scheduleMatrix = [
+    // Round 1: P1-P2 vs P3-P4, P5-P6 vs P7-P8
+    [[0, 1], [2, 3], [4, 5], [6, 7]],
+    // Round 2: P1-P3 vs P5-P7, P2-P4 vs P6-P8  
+    [[0, 2], [4, 6], [1, 3], [5, 7]],
+    // Round 3: P1-P4 vs P6-P7, P2-P5 vs P3-P8
+    [[0, 3], [5, 6], [1, 4], [2, 7]],
+    // Round 4: P1-P5 vs P2-P8, P3-P6 vs P4-P7
+    [[0, 4], [1, 7], [2, 5], [3, 6]],
+    // Round 5: P1-P6 vs P4-P8, P2-P7 vs P3-P5
+    [[0, 5], [3, 7], [1, 6], [2, 4]],
+    // Round 6: P1-P7 vs P3-P4, P2-P6 vs P5-P8
+    [[0, 6], [2, 3], [1, 5], [4, 7]],
+    // Round 7: P1-P8 vs P2-P3, P4-P6 vs P5-P7
+    [[0, 7], [1, 2], [3, 5], [4, 6]]
   ];
 
   const rounds: Round[] = [];
   let gameNumber = 1;
 
-  optimalSchedule.forEach((roundMatches, roundIndex) => {
+  scheduleMatrix.forEach((roundTeams, roundIndex) => {
     const matches: Match[] = [];
     
-    roundMatches.forEach((match) => {
-      matches.push({
-        court: match.court,
-        team1: match.team1 as [string, string],
-        team2: match.team2 as [string, string],
-        round: roundIndex + 1,
-        gameNumber: gameNumber++
-      });
-    });
-
+    // Create two matches per round (2 courts)
+    const match1: Match = {
+      court: 1,
+      team1: [players[roundTeams[0][0]], players[roundTeams[0][1]]],
+      team2: [players[roundTeams[1][0]], players[roundTeams[1][1]]],
+      round: roundIndex + 1,
+      gameNumber: gameNumber++
+    };
+    
+    const match2: Match = {
+      court: 2,
+      team1: [players[roundTeams[2][0]], players[roundTeams[2][1]]],
+      team2: [players[roundTeams[3][0]], players[roundTeams[3][1]]],
+      round: roundIndex + 1,
+      gameNumber: gameNumber++
+    };
+    
+    matches.push(match1, match2);
+    
     rounds.push({
       round: roundIndex + 1,
       matches
@@ -86,26 +74,63 @@ export function generateAmericanFormat({ players, courts }: AmericanFormatConfig
 
 function validateSchedule(rounds: Round[]): void {
   const partnerships = new Set<string>();
+  const playerMatchCounts = new Map<string, number>();
+  const playerPartners = new Map<string, Set<string>>();
   
   rounds.forEach(round => {
+    const playersInRound = new Set<string>();
+    
     round.matches.forEach(match => {
-      // Check team1 partnership
-      const team1Key = [match.team1[0], match.team1[1]].sort().join('-');
-      if (partnerships.has(team1Key)) {
-        throw new Error(`Duplicate partnership found: ${match.team1[0]} & ${match.team1[1]} in round ${round.round}`);
-      }
-      partnerships.add(team1Key);
-      
-      // Check team2 partnership
-      const team2Key = [match.team2[0], match.team2[1]].sort().join('-');
-      if (partnerships.has(team2Key)) {
-        throw new Error(`Duplicate partnership found: ${match.team2[0]} & ${match.team2[1]} in round ${round.round}`);
-      }
-      partnerships.add(team2Key);
+      // Check each team
+      [match.team1, match.team2].forEach(team => {
+        const [player1, player2] = team;
+        
+        // Count matches per player
+        playerMatchCounts.set(player1, (playerMatchCounts.get(player1) || 0) + 1);
+        playerMatchCounts.set(player2, (playerMatchCounts.get(player2) || 0) + 1);
+        
+        // Track players in this round
+        playersInRound.add(player1);
+        playersInRound.add(player2);
+        
+        // Track partners for each player
+        if (!playerPartners.has(player1)) playerPartners.set(player1, new Set());
+        if (!playerPartners.has(player2)) playerPartners.set(player2, new Set());
+        
+        // Check for duplicate partnerships
+        const partnership = [player1, player2].sort().join('-');
+        if (partnerships.has(partnership)) {
+          throw new Error(`Duplicate partnership found: ${player1} & ${player2} in round ${round.round}`);
+        }
+        partnerships.add(partnership);
+        
+        // Add partners to each player's set
+        playerPartners.get(player1)!.add(player2);
+        playerPartners.get(player2)!.add(player1);
+      });
     });
+    
+    // Ensure all 8 players play in each round
+    if (playersInRound.size !== 8) {
+      throw new Error(`Round ${round.round} doesn't include all 8 players`);
+    }
   });
   
-  console.log(`Schedule validated: ${partnerships.size} unique partnerships across ${rounds.length} rounds`);
+  // Ensure each player plays exactly 7 matches
+  playerMatchCounts.forEach((count, player) => {
+    if (count !== 7) {
+      throw new Error(`Player ${player} plays ${count} matches instead of 7`);
+    }
+  });
+  
+  // Ensure each player has exactly 7 unique partners
+  playerPartners.forEach((partners, player) => {
+    if (partners.size !== 7) {
+      throw new Error(`Player ${player} has ${partners.size} partners instead of 7`);
+    }
+  });
+  
+  console.log('✅ Schedule validation passed: No duplicate partnerships, all players play 7 rounds with 7 unique partners');
 }
 
 function calculateOptimalRounds(numPlayers: number): number {

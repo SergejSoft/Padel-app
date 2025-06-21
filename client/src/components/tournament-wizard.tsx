@@ -114,6 +114,7 @@ export function TournamentWizard() {
           <TournamentSetup
             onComplete={handleSetupComplete}
             onBack={() => {}}
+            initialData={tournamentSetup || undefined}
           />
         )}
 
@@ -121,15 +122,16 @@ export function TournamentWizard() {
           <PlayerEntry
             playersCount={tournamentSetup.playersCount}
             onComplete={handlePlayersComplete}
-            onBack={() => setCurrentStep(1)}
+            onBack={handleBack}
+            initialPlayers={players.length > 0 ? players : undefined}
           />
         )}
 
-        {currentStep === 3 && tournamentSetup && (
+        {currentStep === 3 && tournamentSetup && players.length > 0 && (
           <ScheduleDisplay
             tournamentSetup={tournamentSetup}
             players={players}
-            onBack={() => setCurrentStep(2)}
+            onBack={handleBack}
             onReset={resetWizard}
           />
         )}

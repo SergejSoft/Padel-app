@@ -136,32 +136,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]> {
-    console.log(`Storage: Looking for tournaments with organizer_id: "${organizerId}" (type: ${typeof organizerId})`);
+    console.log(`Storage: Looking for tournaments with organizer_id: "${organizerId}"`);
     
-    // Try both string and number comparisons to handle type mismatches
-    const stringResult = await db
+    const result = await db
       .select()
       .from(tournaments)
       .where(eq(tournaments.organizerId, organizerId))
       .orderBy(desc(tournaments.createdAt));
     
-    console.log(`Storage: Found ${stringResult.length} tournaments for organizer "${organizerId}"`);
+    console.log(`Storage: Found ${result.length} tournaments for organizer "${organizerId}"`);
+    console.log('Tournament IDs:', result.map(t => `${t.id}: ${t.name}`));
     
-    // If no results with string, try converting to number and back
-    if (stringResult.length === 0) {
-      const numericId = parseInt(organizerId);
-      if (!isNaN(numericId)) {
-        const numericResult = await db
-          .select()
-          .from(tournaments)
-          .where(eq(tournaments.organizerId, numericId.toString()))
-          .orderBy(desc(tournaments.createdAt));
-        console.log(`Storage: Found ${numericResult.length} tournaments with numeric conversion`);
-        return numericResult;
-      }
-    }
-    
-    return stringResult;
+    return result;
   }
 
   async updateTournament(id: number, tournamentData: Partial<InsertTournament>): Promise<Tournament | undefined> {
