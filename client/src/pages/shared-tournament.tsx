@@ -4,17 +4,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, MapPin, Users, Target, Clock, Ban, Download, Eye } from "lucide-react";
+import { Calendar, MapPin, Users, Target, Clock, Ban, Download, Eye, Trophy } from "lucide-react";
 import { generateAmericanFormat } from "@/lib/american-format";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import { PDFPreviewModal } from "@/components/pdf-preview-modal";
+import { SimpleScoreInput } from "@/components/simple-score-input";
+import { FinalsLeaderboard } from "@/components/finals-leaderboard";
 import { Footer } from "@/components/footer";
 import type { Tournament } from "@shared/schema";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function SharedTournament() {
   const { shareId } = useParams();
   const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const [gameScores, setGameScores] = useState<Record<number, { team1Score: number; team2Score: number }>>({});
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   const { data: tournament, isLoading, error } = useQuery({
     queryKey: ['/api/shared', shareId],
@@ -69,6 +73,55 @@ export default function SharedTournament() {
   const totalGames = schedule.reduce((sum, round) => sum + round.matches.length, 0);
   const gamesPerPlayer = Math.floor(totalGames * 4 / tournament.playersCount);
   const avgGameMinutes = 13; // Average game length
+
+  // Calculate player scores for leaderboard
+  const calculatePlayerScores = () => {
+    const playerScores: Record<string, { totalPoints: number; gamesPlayed: number }> = {};
+    
+    // Initialize all players
+    tournament.players.forEach((player: string) => {
+      playerScores[player] = { totalPoints: 0, gamesPlayed: 0 };
+    });
+
+    // Calculate scores from games
+    schedule.forEach(round => {
+      round.matches.forEach(match => {
+        const score = gameScores[match.gameNumber];
+        if (score) {
+          // Team 1 players
+          match.team1.forEach(player => {
+            playerScores[player].totalPoints += score.team1Score;
+            playerScores[player].gamesPlayed += 1;
+          });
+          
+          // Team 2 players  
+          match.team2.forEach(player => {
+            playerScores[player].totalPoints += score.team2Score;
+            playerScores[player].gamesPlayed += 1;
+          });
+        }
+      });
+    });
+
+    return Object.entries(playerScores).map(([player, data]) => ({
+      player,
+      totalPoints: data.totalPoints,
+      gamesPlayed: data.gamesPlayed,
+      averageScore: data.gamesPlayed > 0 ? data.totalPoints / data.gamesPlayed : 0
+    }));
+  };
+
+  const handleScoreChange = (gameNumber: number, team1Score: number, team2Score: number) => {
+    setGameScores(prev => ({
+      ...prev,
+      [gameNumber]: { team1Score, team2Score }
+    }));
+  };
+
+  const allGamesHaveScores = () => {
+    const totalMatches = schedule.reduce((sum, round) => sum + round.matches.length, 0);
+    return Object.keys(gameScores).length === totalMatches;
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -154,6 +207,19 @@ export default function SharedTournament() {
           </Card>
         </div>
 
+        {/* Leaderboard Button */}
+        {allGamesHaveScores() && (
+          <div className="text-center mb-6">
+            <Button 
+              onClick={() => setShowLeaderboard(true)}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-lg font-semibold"
+            >
+              <Trophy className="h-5 w-5 mr-2" />
+              View Leaderboard
+            </Button>
+          </div>
+        )}
+
         {/* Schedule */}
         <Card>
           <CardHeader>
@@ -172,15 +238,22 @@ export default function SharedTournament() {
                             <div className="bg-white rounded-full px-3 py-1 text-sm font-medium text-gray-700">
                               Court {match.court}
                             </div>
-                            <div className="text-gray-900">
+                            <div className="text-gray-900 flex-1">
                               <span className="font-medium">{match.team1[0]} & {match.team1[1]}</span>
                               <span className="mx-2 text-gray-500">vs</span>
                               <span className="font-medium">{match.team2[0]} & {match.team2[1]}</span>
                             </div>
                           </div>
-                          <div className="text-gray-400 text-sm">
-                            __ - __
-                          </div>
+                          <SimpleScoreInput
+                            team1={match.team1}
+                            team2={match.team2}
+                            team1Score={gameScores[match.gameNumber]?.team1Score || 0}
+                            team2Score={gameScores[match.gameNumber]?.team2Score || 0}
+                            onScoreChange={(team1Score, team2Score) => 
+                              handleScoreChange(match.gameNumber, team1Score, team2Score)
+                            }
+                            gameNumber={match.gameNumber}
+                          />
                         </div>
                       </div>
                     ))}
@@ -248,6 +321,13 @@ export default function SharedTournament() {
           });
           pdf.save(`${tournament.name.replace(/\s+/g, '_')}_schedule.pdf`);
         }}
+      />
+
+      <FinalsLeaderboard
+        isOpen={showLeaderboard}
+        onClose={() => setShowLeaderboard(false)}
+        playerScores={calculatePlayerScores()}
+        tournamentName={tournament.name}
       />
     </div>
   );

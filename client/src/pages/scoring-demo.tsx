@@ -7,8 +7,19 @@ import { ArrowLeft, Users, Calendar, MapPin } from "lucide-react";
 import type { Round, Match, MatchScore } from "@shared/schema";
 
 export default function ScoringDemo() {
+  const [gameScores, setGameScores] = useState<Record<number, { team1Score: number; team2Score: number }>>({
+    1: { team1Score: 12, team2Score: 8 },
+    2: { team1Score: 15, team2Score: 10 },
+    3: { team1Score: 9, team2Score: 14 },
+    4: { team1Score: 11, team2Score: 7 },
+    5: { team1Score: 13, team2Score: 6 },
+    6: { team1Score: 8, team2Score: 12 },
+    7: { team1Score: 16, team2Score: 9 }
+  });
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+
   // Demo tournament data with sample scores
-  const [rounds, setRounds] = useState<Round[]>([
+  const [rounds] = useState<Round[]>([
     {
       round: 1,
       matches: [
@@ -17,33 +28,14 @@ export default function ScoringDemo() {
           team1: ["Alex Rodriguez", "Maria Santos"],
           team2: ["Carlos Mendez", "Ana Garcia"],
           round: 1,
-          gameNumber: 1,
-          score: {
-            team1Score: 2,
-            team2Score: 1,
-            sets: [
-              { team1: 6, team2: 4 },
-              { team1: 4, team2: 6 },
-              { team1: 6, team2: 3 }
-            ]
-          },
-          status: 'completed' as const
+          gameNumber: 1
         },
         {
           court: 2,
           team1: ["Diego Silva", "Elena Rodriguez"],
           team2: ["Miguel Torres", "Sofia Vargas"],
           round: 1,
-          gameNumber: 2,
-          score: {
-            team1Score: 2,
-            team2Score: 0,
-            sets: [
-              { team1: 6, team2: 3 },
-              { team1: 6, team2: 4 }
-            ]
-          },
-          status: 'completed' as const
+          gameNumber: 2
         }
       ]
     },
@@ -55,25 +47,14 @@ export default function ScoringDemo() {
           team1: ["Alex Rodriguez", "Carlos Mendez"],
           team2: ["Maria Santos", "Diego Silva"],
           round: 2,
-          gameNumber: 3,
-          score: {
-            team1Score: 1,
-            team2Score: 2,
-            sets: [
-              { team1: 6, team2: 4 },
-              { team1: 3, team2: 6 },
-              { team1: 4, team2: 6 }
-            ]
-          },
-          status: 'completed' as const
+          gameNumber: 3
         },
         {
           court: 2,
           team1: ["Ana Garcia", "Elena Rodriguez"],
           team2: ["Miguel Torres", "Sofia Vargas"],
           round: 2,
-          gameNumber: 4,
-          status: 'in_progress' as const
+          gameNumber: 4
         }
       ]
     },
@@ -85,16 +66,14 @@ export default function ScoringDemo() {
           team1: ["Alex Rodriguez", "Ana Garcia"],
           team2: ["Carlos Mendez", "Elena Rodriguez"],
           round: 3,
-          gameNumber: 5,
-          status: 'pending' as const
+          gameNumber: 5
         },
         {
           court: 2,
           team1: ["Maria Santos", "Miguel Torres"],
           team2: ["Diego Silva", "Sofia Vargas"],
           round: 3,
-          gameNumber: 6,
-          status: 'pending' as const
+          gameNumber: 6
         }
       ]
     }
