@@ -255,6 +255,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Save tournament results
+  app.patch("/api/tournaments/:id/results", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid tournament ID" });
+      }
+
+      const { results, schedule } = req.body;
+      
+      if (!results || !schedule) {
+        return res.status(400).json({ error: "Results and schedule are required" });
+      }
+
+      // Check if user owns tournament or is admin
+      const userId = req.user?.id;
+      const tournamentOwnerId = await storage.getTournamentOwnerId(id);
+      const user = await storage.getUser(userId!);
+      
+      if (tournamentOwnerId !== userId && user?.role !== 'admin') {
+        return res.status(403).json({ error: "Not authorized to save results for this tournament" });
+      }
+
+      const tournament = await storage.updateTournamentResults(id, results, schedule);
+      
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+
+      res.json(tournament);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

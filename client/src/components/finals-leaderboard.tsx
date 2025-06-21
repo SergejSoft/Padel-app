@@ -15,9 +15,18 @@ interface FinalsLeaderboardProps {
   onClose: () => void;
   playerScores: PlayerScore[];
   tournamentName: string;
+  onSaveResults?: () => void;
+  canSaveResults?: boolean;
 }
 
-export function FinalsLeaderboard({ isOpen, onClose, playerScores, tournamentName }: FinalsLeaderboardProps) {
+export function FinalsLeaderboard({ 
+  isOpen, 
+  onClose, 
+  playerScores, 
+  tournamentName, 
+  onSaveResults,
+  canSaveResults = false 
+}: FinalsLeaderboardProps) {
   // Sort players by total points (descending)
   const sortedPlayers = [...playerScores].sort((a, b) => b.totalPoints - a.totalPoints);
   
@@ -118,6 +127,19 @@ export function FinalsLeaderboard({ isOpen, onClose, playerScores, tournamentNam
               </div>
             </CardContent>
           </Card>
+
+          {/* Save Results Button */}
+          {canSaveResults && onSaveResults && (
+            <div className="flex justify-center pt-4">
+              <Button 
+                onClick={onSaveResults}
+                className="bg-green-600 hover:bg-green-700 text-white px-8 py-2"
+              >
+                <Trophy className="h-4 w-4 mr-2" />
+                Save Tournament Results
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

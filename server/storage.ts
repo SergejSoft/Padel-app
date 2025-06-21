@@ -25,6 +25,7 @@ export interface IStorage {
   getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]>;
   updateTournament(id: number, tournament: Partial<InsertTournament>): Promise<Tournament | undefined>;
   updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined>;
+  updateTournamentResults(id: number, results: any, schedule: any): Promise<Tournament | undefined>;
   deleteTournament(id: number): Promise<boolean>;
   getTournamentOwnerId(id: number): Promise<string | null>;
 }
@@ -216,6 +217,24 @@ export class DatabaseStorage implements IStorage {
   async deleteTournament(id: number): Promise<boolean> {
     const result = await db.delete(tournaments).where(eq(tournaments.id, id));
     return (result.rowCount || 0) > 0;
+  }
+
+  async updateTournamentResults(id: number, results: any, schedule: any): Promise<Tournament | undefined> {
+    try {
+      const [tournament] = await db
+        .update(tournaments)
+        .set({ 
+          results: results,
+          schedule: schedule,
+          status: 'completed'
+        })
+        .where(eq(tournaments.id, id))
+        .returning();
+      return tournament || undefined;
+    } catch (error) {
+      console.error('Storage error in updateTournamentResults:', error);
+      throw error;
+    }
   }
 
   async getTournamentOwnerId(id: number): Promise<string | null> {
