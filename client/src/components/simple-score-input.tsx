@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useState, useEffect } from "react";
 
 interface SimpleScoreInputProps {
   team1: [string, string];
@@ -18,80 +19,95 @@ export function SimpleScoreInput({
   onScoreChange,
   gameNumber 
 }: SimpleScoreInputProps) {
+  const [team1Input, setTeam1Input] = useState(team1Score.toString());
+  const [team2Input, setTeam2Input] = useState(team2Score.toString());
+  const [isValid, setIsValid] = useState(true);
+
+  useEffect(() => {
+    setTeam1Input(team1Score.toString());
+    setTeam2Input(team2Score.toString());
+  }, [team1Score, team2Score]);
+
+  const validateAndUpdate = (newTeam1: string, newTeam2: string) => {
+    const score1 = parseInt(newTeam1) || 0;
+    const score2 = parseInt(newTeam2) || 0;
+    const sum = score1 + score2;
+    
+    // Validate scores are in range and sum is 16
+    const valid = score1 >= 0 && score1 <= 16 && score2 >= 0 && score2 <= 16 && sum === 16;
+    setIsValid(valid);
+    
+    if (valid) {
+      onScoreChange(score1, score2);
+    }
+  };
+
   const handleTeam1Change = (value: string) => {
-    const score = Math.max(0, Math.min(16, parseInt(value) || 0));
-    onScoreChange(score, team2Score);
+    setTeam1Input(value);
+    validateAndUpdate(value, team2Input);
   };
 
   const handleTeam2Change = (value: string) => {
-    const score = Math.max(0, Math.min(16, parseInt(value) || 0));
-    onScoreChange(team1Score, score);
+    setTeam2Input(value);
+    validateAndUpdate(team1Input, value);
   };
 
+  const currentSum = (parseInt(team1Input) || 0) + (parseInt(team2Input) || 0);
+
   return (
-    <div className="space-y-3 min-w-[120px]">
+    <div className="space-y-3 min-w-[160px]">
       <div className="text-xs font-medium text-muted-foreground text-center">
-        Game #{gameNumber} Score
+        Game #{gameNumber}
       </div>
       
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Label className="text-xs text-right w-8">{team1[0]}</Label>
+      <div className="space-y-3">
+        {/* Team 1 Input */}
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">
+            {team1[0]} & {team1[1]}
+          </Label>
           <Input
             type="number"
             min="0"
             max="16"
-            value={team1Score}
+            value={team1Input}
             onChange={(e) => handleTeam1Change(e.target.value)}
-            className="w-12 h-8 text-center text-sm"
+            className={`h-9 text-center font-medium ${!isValid ? 'border-red-500' : ''}`}
             placeholder="0"
           />
         </div>
-        
-        <div className="flex items-center gap-2">
-          <Label className="text-xs text-right w-8">{team1[1]}</Label>
+
+        {/* VS Divider */}
+        <div className="text-center text-xs text-muted-foreground font-medium">
+          VS
+        </div>
+
+        {/* Team 2 Input */}
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">
+            {team2[0]} & {team2[1]}
+          </Label>
           <Input
             type="number"
             min="0"
             max="16"
-            value={team1Score}
-            onChange={(e) => handleTeam1Change(e.target.value)}
-            className="w-12 h-8 text-center text-sm bg-muted/50"
+            value={team2Input}
+            onChange={(e) => handleTeam2Change(e.target.value)}
+            className={`h-9 text-center font-medium ${!isValid ? 'border-red-500' : ''}`}
             placeholder="0"
-            disabled
           />
         </div>
       </div>
 
-      <div className="text-center text-xs text-muted-foreground">vs</div>
-
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Label className="text-xs text-right w-8">{team2[0]}</Label>
-          <Input
-            type="number"
-            min="0"
-            max="16"
-            value={team2Score}
-            onChange={(e) => handleTeam2Change(e.target.value)}
-            className="w-12 h-8 text-center text-sm"
-            placeholder="0"
-          />
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Label className="text-xs text-right w-8">{team2[1]}</Label>
-          <Input
-            type="number"
-            min="0"
-            max="16"
-            value={team2Score}
-            onChange={(e) => handleTeam2Change(e.target.value)}
-            className="w-12 h-8 text-center text-sm bg-muted/50"
-            placeholder="0"
-            disabled
-          />
-        </div>
+      {/* Validation Message */}
+      <div className="text-center">
+        {currentSum === 16 && isValid ? (
+          <div className="text-xs text-green-600 font-medium">✓ Valid</div>
+        ) : (
+          <div className="text-xs text-red-500">
+            Sum: {currentSum}/16
+          </div>
+        )}
       </div>
     </div>
   );

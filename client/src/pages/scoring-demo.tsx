@@ -9,13 +9,13 @@ import type { Round } from "@shared/schema";
 
 export default function ScoringDemo() {
   const [gameScores, setGameScores] = useState<Record<number, { team1Score: number; team2Score: number }>>({
-    1: { team1Score: 12, team2Score: 8 },
-    2: { team1Score: 15, team2Score: 10 },
-    3: { team1Score: 9, team2Score: 14 },
-    4: { team1Score: 11, team2Score: 7 },
-    5: { team1Score: 13, team2Score: 6 },
-    6: { team1Score: 8, team2Score: 12 },
-    7: { team1Score: 16, team2Score: 9 }
+    1: { team1Score: 12, team2Score: 4 },
+    2: { team1Score: 10, team2Score: 6 },
+    3: { team1Score: 9, team2Score: 7 },
+    4: { team1Score: 11, team2Score: 5 },
+    5: { team1Score: 13, team2Score: 3 },
+    6: { team1Score: 8, team2Score: 8 },
+    7: { team1Score: 14, team2Score: 2 }
   });
   const [showLeaderboard, setShowLeaderboard] = useState(false);
 
@@ -295,11 +295,11 @@ export default function ScoringDemo() {
             <CardTitle className="text-orange-900">How to Use the Scoring System</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-orange-800 space-y-2">
-            <div><strong>1. Enter Scores:</strong> Input scores from 0-16 for each team using the number inputs on the right side of each game</div>
-            <div><strong>2. Live Updates:</strong> Player scores are calculated automatically as you enter game results</div>
-            <div><strong>3. View Leaderboard:</strong> Once all 7 games have scores, click "View Leaderboard" to see final rankings</div>
-            <div><strong>4. Finals Groups:</strong> The leaderboard separates the best 4 and worst 4 players for finals competition</div>
-            <div><strong>5. Easy Scoring:</strong> Simple 0-16 point system makes score entry quick and intuitive</div>
+            <div><strong>1. Enter Scores:</strong> Input scores for each team using two number inputs - one per pair</div>
+            <div><strong>2. Validation:</strong> The sum of both scores must equal 16 (validated automatically)</div>
+            <div><strong>3. Live Updates:</strong> Player scores are calculated automatically as you enter game results</div>
+            <div><strong>4. View Leaderboard:</strong> Once all 7 games have valid scores, click "View Leaderboard"</div>
+            <div><strong>5. Finals Groups:</strong> The leaderboard separates the best 4 and worst 4 players for finals competition</div>
           </CardContent>
         </Card>
       </div>
