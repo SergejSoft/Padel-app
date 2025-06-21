@@ -14,9 +14,14 @@ import ScoringDemo from "@/pages/scoring-demo";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, error } = useAuth();
 
-  if (isLoading) {
+  // Only show loading for protected routes, not for public pages like scoring demo
+  const isPublicRoute = window.location.pathname.includes('/scoring-demo') || 
+                       window.location.pathname.includes('/american-format-rules') ||
+                       window.location.pathname.includes('/shared/');
+
+  if (isLoading && !isPublicRoute) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

@@ -12,7 +12,15 @@ import type { Round } from "@shared/schema";
 
 export default function ScoringDemo() {
   const [, setLocation] = useLocation();
-  const { isAuthenticated } = useAuth();
+  // Use optional auth check for navigation only - don't fail if user is not authenticated
+  let isAuthenticated = false;
+  try {
+    const authResult = useAuth();
+    isAuthenticated = authResult?.isAuthenticated || false;
+  } catch (error) {
+    // Ignore auth errors for public demo page
+    console.warn('Auth check failed for scoring demo, continuing as unauthenticated');
+  }
   const [gameScores, setGameScores] = useState<Record<number, { team1Score: number; team2Score: number }>>({
     1: { team1Score: 12, team2Score: 4 },
     2: { team1Score: 10, team2Score: 6 },
