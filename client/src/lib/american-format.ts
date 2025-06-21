@@ -16,43 +16,43 @@ export function generateAmericanFormat({ players, courts }: AmericanFormatConfig
     throw new Error("This American format implementation requires exactly 2 courts");
   }
 
-  // Predefined optimal schedule for 8 players, 2 courts, 7 rounds
-  // This ensures optimal partner and opponent distribution
+  // Fixed optimal schedule for 8 players, 2 courts, 7 rounds
+  // This ensures no duplicate partnerships and optimal rotation
   const optimalSchedule = [
     // Round 1
     [
-      { court: 1, team1: [players[7], players[2]], team2: [players[6], players[5]] },
-      { court: 2, team1: [players[1], players[4]], team2: [players[0], players[3]] }
+      { court: 1, team1: [players[0], players[1]], team2: [players[2], players[3]] },
+      { court: 2, team1: [players[4], players[5]], team2: [players[6], players[7]] }
     ],
     // Round 2
     [
-      { court: 1, team1: [players[0], players[5]], team2: [players[1], players[2]] },
-      { court: 2, team1: [players[3], players[6]], team2: [players[4], players[7]] }
+      { court: 1, team1: [players[0], players[2]], team2: [players[1], players[4]] },
+      { court: 2, team1: [players[3], players[5]], team2: [players[6], players[7]] }
     ],
     // Round 3
     [
-      { court: 1, team1: [players[2], players[3]], team2: [players[0], players[7]] },
-      { court: 2, team1: [players[4], players[5]], team2: [players[1], players[6]] }
+      { court: 1, team1: [players[0], players[3]], team2: [players[2], players[5]] },
+      { court: 2, team1: [players[1], players[6]], team2: [players[4], players[7]] }
     ],
     // Round 4
     [
-      { court: 1, team1: [players[1], players[7]], team2: [players[4], players[2]] },
-      { court: 2, team1: [players[0], players[6]], team2: [players[3], players[5]] }
+      { court: 1, team1: [players[0], players[4]], team2: [players[3], players[6]] },
+      { court: 2, team1: [players[1], players[7]], team2: [players[2], players[5]] }
     ],
     // Round 5
     [
-      { court: 1, team1: [players[3], players[4]], team2: [players[1], players[5]] },
-      { court: 2, team1: [players[2], players[6]], team2: [players[0], players[7]] }
+      { court: 1, team1: [players[0], players[5]], team2: [players[4], players[6]] },
+      { court: 2, team1: [players[1], players[3]], team2: [players[2], players[7]] }
     ],
     // Round 6
     [
-      { court: 1, team1: [players[0], players[1]], team2: [players[6], players[7]] },
-      { court: 2, team1: [players[2], players[4]], team2: [players[3], players[5]] }
+      { court: 1, team1: [players[0], players[6]], team2: [players[5], players[7]] },
+      { court: 2, team1: [players[1], players[2]], team2: [players[3], players[4]] }
     ],
     // Round 7
     [
-      { court: 1, team1: [players[5], players[6]], team2: [players[3], players[1]] },
-      { court: 2, team1: [players[7], players[4]], team2: [players[0], players[2]] }
+      { court: 1, team1: [players[0], players[7]], team2: [players[1], players[5]] },
+      { court: 2, team1: [players[2], players[4]], team2: [players[3], players[6]] }
     ]
   ];
 
@@ -78,7 +78,34 @@ export function generateAmericanFormat({ players, courts }: AmericanFormatConfig
     });
   });
 
+  // Validate the schedule to ensure no duplicate partnerships
+  validateSchedule(rounds);
+  
   return rounds;
+}
+
+function validateSchedule(rounds: Round[]): void {
+  const partnerships = new Set<string>();
+  
+  rounds.forEach(round => {
+    round.matches.forEach(match => {
+      // Check team1 partnership
+      const team1Key = [match.team1[0], match.team1[1]].sort().join('-');
+      if (partnerships.has(team1Key)) {
+        throw new Error(`Duplicate partnership found: ${match.team1[0]} & ${match.team1[1]} in round ${round.round}`);
+      }
+      partnerships.add(team1Key);
+      
+      // Check team2 partnership
+      const team2Key = [match.team2[0], match.team2[1]].sort().join('-');
+      if (partnerships.has(team2Key)) {
+        throw new Error(`Duplicate partnership found: ${match.team2[0]} & ${match.team2[1]} in round ${round.round}`);
+      }
+      partnerships.add(team2Key);
+    });
+  });
+  
+  console.log(`Schedule validated: ${partnerships.size} unique partnerships across ${rounds.length} rounds`);
 }
 
 function calculateOptimalRounds(numPlayers: number): number {
