@@ -229,9 +229,9 @@ export class DatabaseStorage implements IStorage {
       const [tournament] = await db
         .update(tournaments)
         .set({ 
-          results: results,
-          finalScores: schedule,
-          schedule: schedule,
+          results: results as any,
+          finalScores: schedule as any,
+          schedule: schedule as any,
           status: 'completed',
           leaderboardId: leaderboardId,
           completedAt: new Date()

@@ -130,7 +130,7 @@ export function FinalsLeaderboard({
 
           {/* Save Results Button */}
           {canSaveResults && onSaveResults && (
-            <div className="flex justify-center pt-4">
+            <div className="flex flex-col items-center gap-4 pt-4">
               <Button 
                 onClick={onSaveResults}
                 className="bg-green-600 hover:bg-green-700 text-white px-8 py-2"
@@ -138,6 +138,9 @@ export function FinalsLeaderboard({
                 <Trophy className="h-4 w-4 mr-2" />
                 Save Tournament Results
               </Button>
+              <p className="text-sm text-muted-foreground text-center">
+                Saving results will create a permanent leaderboard link that can be shared with players
+              </p>
             </div>
           )}
         </div>
