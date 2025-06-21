@@ -65,7 +65,7 @@ export function SimpleScoreInput({
         max="16"
         value={team1Input}
         onChange={(e) => handleTeam1Change(e.target.value)}
-        className={`w-10 sm:w-12 h-7 sm:h-8 text-center text-xs sm:text-sm font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation`}
+        className={`w-10 sm:w-12 h-7 sm:h-8 text-center text-xs sm:text-sm font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
         placeholder="0"
       />
       
@@ -81,7 +81,7 @@ export function SimpleScoreInput({
         max="16"
         value={team2Input}
         onChange={(e) => handleTeam2Change(e.target.value)}
-        className={`w-10 sm:w-12 h-7 sm:h-8 text-center text-xs sm:text-sm font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation`}
+        className={`w-10 sm:w-12 h-7 sm:h-8 text-center text-xs sm:text-sm font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
         placeholder="0"
       />
 
