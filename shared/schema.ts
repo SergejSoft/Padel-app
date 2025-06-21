@@ -35,9 +35,10 @@ export const tournaments = pgTable("tournaments", {
   courtsCount: integer("courts_count").notNull(),
   players: json("players").$type<string[]>().notNull(),
   schedule: json("schedule").$type<any[]>().notNull(),
+  results: json("results").$type<PlayerStats[]>(), // Final leaderboard results
   shareId: text("share_id").unique(),
   urlSlug: text("url_slug").unique(), // Custom friendly URL slug
-  status: text("status").notNull().default("active"), // active, cancelled, past
+  status: text("status").notNull().default("active"), // active, cancelled, past, completed
   organizerId: text("organizer_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });

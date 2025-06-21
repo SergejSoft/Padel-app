@@ -190,28 +190,33 @@ export default function Dashboard() {
       {/* Header */}
       <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
                 {isAdmin ? "Admin Dashboard" : "Tournament Dashboard"}
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-sm sm:text-base text-muted-foreground truncate">
                 Welcome back, {user?.firstName || user?.email}
               </p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
               <Button
                 onClick={() => setShowCreateTournament(true)}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 text-sm sm:text-base"
+                size="sm"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                New Tournament
+                <Plus className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">New Tournament</span>
+                <span className="sm:hidden">New</span>
               </Button>
               <Button
                 variant="outline"
                 onClick={() => window.location.href = "/api/logout"}
+                size="sm"
+                className="text-sm sm:text-base"
               >
-                Sign Out
+                <span className="hidden sm:inline">Sign Out</span>
+                <span className="sm:hidden">Out</span>
               </Button>
             </div>
           </div>
@@ -235,14 +240,14 @@ export default function Dashboard() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Tournaments</CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{tournaments.length}</div>
+              <div className="text-xl lg:text-2xl font-bold">{tournaments.length}</div>
             </CardContent>
           </Card>
 
@@ -252,19 +257,19 @@ export default function Dashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-xl lg:text-2xl font-bold">
                 {tournaments.filter(t => new Date(t.date || '') >= new Date()).length}
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="sm:col-span-2 lg:col-span-1">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Your Role</CardTitle>
               <Settings className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold capitalize">{user?.role}</div>
+              <div className="text-xl lg:text-2xl font-bold capitalize">{user?.role}</div>
             </CardContent>
           </Card>
         </div>
@@ -301,22 +306,28 @@ export default function Dashboard() {
                 {sortedTournaments.map((tournament) => (
                   <div
                     key={tournament.id}
-                    className="flex items-center justify-between p-4 border border-border rounded-lg"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border border-border rounded-lg gap-4"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <h3 className="font-semibold text-foreground">{tournament.name}</h3>
-                        <Badge variant="outline">
-                          {tournament.playersCount} Players
-                        </Badge>
-                        <Badge variant="outline">
-                          {tournament.courtsCount} Courts
-                        </Badge>
-                        {getStatusBadge(getTournamentStatus(tournament))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h3 className="font-semibold text-foreground truncate flex-shrink-0">{tournament.name}</h3>
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant="outline" className="text-xs">
+                            {tournament.playersCount} Players
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {tournament.courtsCount} Courts
+                          </Badge>
+                          {getStatusBadge(getTournamentStatus(tournament))}
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
-                        <span>📅 {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'No date set'}</span>
-                        <span>📍 {tournament.location || 'No location set'}</span>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center">
+                          📅 {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'No date set'}
+                        </span>
+                        <span className="flex items-center truncate">
+                          📍 {tournament.location || 'No location set'}
+                        </span>
                         {tournament.shareId && (
                           <span className="flex items-center">
                             <Share className="w-3 h-3 mr-1" />
@@ -325,7 +336,7 @@ export default function Dashboard() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-wrap sm:flex-nowrap">
                       {tournament.shareId ? (
                         <>
                           <Button
@@ -335,14 +346,16 @@ export default function Dashboard() {
                               const identifier = tournament.urlSlug || tournament.shareId;
                               window.open(`/shared/${identifier}`, '_blank');
                             }}
+                            className="text-xs sm:text-sm"
                           >
-                            <ExternalLink className="w-4 h-4 mr-1" />
-                            View
+                            <ExternalLink className="w-4 h-4 sm:mr-1" />
+                            <span className="hidden sm:inline">View</span>
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleCopyLink(tournament)}
+                            className="text-xs sm:text-sm"
                           >
                             <Copy className="w-4 h-4" />
                           </Button>
@@ -352,14 +365,17 @@ export default function Dashboard() {
                           variant="outline"
                           size="sm"
                           onClick={() => setViewingTournament(tournament)}
+                          className="text-xs sm:text-sm"
                         >
-                          View
+                          <span className="sm:hidden">View</span>
+                          <span className="hidden sm:inline">View</span>
                         </Button>
                       )}
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setEditingTournament(tournament)}
+                        className="text-xs sm:text-sm"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -369,6 +385,7 @@ export default function Dashboard() {
                           size="sm"
                           onClick={() => handleCancelTournament(tournament.id)}
                           disabled={updateStatusMutation.isPending}
+                          className="text-xs sm:text-sm"
                         >
                           <Ban className="w-4 h-4" />
                         </Button>
@@ -379,6 +396,7 @@ export default function Dashboard() {
                           size="sm"
                           onClick={() => handleActivateTournament(tournament.id)}
                           disabled={updateStatusMutation.isPending}
+                          className="text-xs sm:text-sm"
                         >
                           <Play className="w-4 h-4" />
                         </Button>
@@ -388,6 +406,7 @@ export default function Dashboard() {
                         size="sm"
                         onClick={() => handleDeleteTournament(tournament.id, tournament.name)}
                         disabled={deleteMutation.isPending}
+                        className="text-xs sm:text-sm"
                       >
                         {deleteMutation.isPending ? (
                           <Loader2 className="w-4 h-4 animate-spin" />

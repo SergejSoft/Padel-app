@@ -19,13 +19,13 @@ export function SimpleScoreInput({
   onScoreChange,
   gameNumber 
 }: SimpleScoreInputProps) {
-  const [team1Input, setTeam1Input] = useState(team1Score.toString());
-  const [team2Input, setTeam2Input] = useState(team2Score.toString());
+  const [team1Input, setTeam1Input] = useState(team1Score === 0 ? "" : team1Score.toString());
+  const [team2Input, setTeam2Input] = useState(team2Score === 0 ? "" : team2Score.toString());
   const [isValid, setIsValid] = useState(true);
 
   useEffect(() => {
-    setTeam1Input(team1Score.toString());
-    setTeam2Input(team2Score.toString());
+    setTeam1Input(team1Score === 0 ? "" : team1Score.toString());
+    setTeam2Input(team2Score === 0 ? "" : team2Score.toString());
   }, [team1Score, team2Score]);
 
   const validateAndUpdate = (newTeam1: string, newTeam2: string) => {
@@ -66,7 +66,7 @@ export function SimpleScoreInput({
         value={team1Input}
         onChange={(e) => handleTeam1Change(e.target.value)}
         className={`w-10 sm:w-12 h-7 sm:h-8 text-center text-xs sm:text-sm font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
-        placeholder="0"
+        placeholder=""
       />
       
       {/* Separator */}
@@ -82,7 +82,7 @@ export function SimpleScoreInput({
         value={team2Input}
         onChange={(e) => handleTeam2Change(e.target.value)}
         className={`w-10 sm:w-12 h-7 sm:h-8 text-center text-xs sm:text-sm font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
-        placeholder="0"
+        placeholder=""
       />
 
       {/* Validation Indicator */}

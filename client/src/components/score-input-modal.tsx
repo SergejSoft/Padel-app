@@ -140,10 +140,11 @@ export function ScoreInputModal({ match, isOpen, onClose, onSave }: ScoreInputMo
                       </Button>
                       <Input
                         type="number"
-                        value={set.team1}
+                        value={set.team1 === 0 ? "" : set.team1}
                         onChange={(e) => updateSetScore(index, 'team1', parseInt(e.target.value) || 0)}
                         className="text-center w-16"
                         min="0"
+                        placeholder=""
                       />
                       <Button
                         type="button"
@@ -169,10 +170,11 @@ export function ScoreInputModal({ match, isOpen, onClose, onSave }: ScoreInputMo
                       </Button>
                       <Input
                         type="number"
-                        value={set.team2}
+                        value={set.team2 === 0 ? "" : set.team2}
                         onChange={(e) => updateSetScore(index, 'team2', parseInt(e.target.value) || 0)}
                         className="text-center w-16"
                         min="0"
+                        placeholder=""
                       />
                       <Button
                         type="button"
