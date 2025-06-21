@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -34,7 +33,6 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
       location: "",
       playersCount: 8,
       courtsCount: 2,
-      registrationOpen: false,
     },
   });
 
@@ -50,7 +48,7 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
     }
   };
 
-  const watchRegistrationOpen = form.watch("registrationOpen");
+  const watchedValues = form.watch();
 
   return (
     <CardContent className="p-8">
@@ -153,67 +151,6 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
                 )}
               />
 
-              <div className="space-y-4">
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold mb-2">Tournament Type</h3>
-                  <p className="text-sm text-muted-foreground">Choose how players will join your tournament</p>
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="registrationOpen"
-                  render={({ field }) => (
-                    <FormItem className="space-y-4">
-                      <div className="grid grid-cols-1 gap-4">
-                        {/* Simple Flow Option */}
-                        <div 
-                          className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                            !field.value 
-                              ? 'border-primary bg-primary/5' 
-                              : 'border-border hover:border-primary/50'
-                          }`}
-                          onClick={() => field.onChange(false)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className={`w-4 h-4 rounded-full border-2 ${
-                              !field.value ? 'border-primary bg-primary' : 'border-border'
-                            }`} />
-                            <div>
-                              <div className="font-semibold">Simple Flow</div>
-                              <div className="text-sm text-muted-foreground">
-                                Add all 8 players now and generate schedule immediately
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Open Registration Option */}
-                        <div 
-                          className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                            field.value 
-                              ? 'border-primary bg-primary/5' 
-                              : 'border-border hover:border-primary/50'
-                          }`}
-                          onClick={() => field.onChange(true)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className={`w-4 h-4 rounded-full border-2 ${
-                              field.value ? 'border-primary bg-primary' : 'border-border'
-                            }`} />
-                            <div>
-                              <div className="font-semibold">Open Registration</div>
-                              <div className="text-sm text-muted-foreground">
-                                Let players register themselves, generate schedule when full
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
               {validationError && (
                 <Alert variant="destructive">
                   <AlertDescription>{validationError}</AlertDescription>
@@ -232,25 +169,13 @@ export function TournamentSetup({ onComplete, onBack }: TournamentSetupProps) {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                {watchRegistrationOpen ? (
-                  <Button
-                    type="submit"
-                    className="w-full bg-green-600 text-white hover:bg-green-700"
-                    disabled={!!validationError || !form.formState.isValid}
-                  >
-                    Create Tournament & Open Registration
-                  </Button>
-                ) : (
-                  <Button
-                    type="submit"
-                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                    disabled={!!validationError || !form.formState.isValid}
-                  >
-                    Continue to Add Players
-                  </Button>
-                )}
-              </div>
+              <Button
+                type="submit"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={!!validationError || !form.formState.isValid}
+              >
+                Continue to Players
+              </Button>
             </form>
           </Form>
         </div>

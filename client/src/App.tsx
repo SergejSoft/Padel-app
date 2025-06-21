@@ -10,7 +10,6 @@ import Dashboard from "@/pages/dashboard";
 import Tournament from "@/pages/tournament";
 import SharedTournament from "@/pages/shared-tournament";
 import AmericanFormatRules from "@/pages/american-format-rules";
-import DevTest from "@/pages/dev-test";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -31,7 +30,6 @@ function Router() {
     <Switch>
       <Route path="/" component={!isAuthenticated ? Landing : Dashboard} />
       <Route path="/login" component={Login} />
-      <Route path="/dev-test" component={DevTest} />
       <Route path="/shared/:shareId" component={SharedTournament} />
       <Route path="/american-format-rules" component={AmericanFormatRules} />
       {!isAuthenticated && <Route path="/tournament" component={Tournament} />}

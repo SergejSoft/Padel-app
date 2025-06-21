@@ -1,17 +1,9 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/footer";
 import { FeaturePreviewModal } from "@/components/feature-preview-modal";
-import { RegistrationSuccessAnimation } from "@/components/registration-success-animation";
-import { Calendar, Users, Trophy, Share, Heart, Eye, UserPlus, Clock, CheckCircle, AlertCircle } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import type { Tournament } from "@shared/schema";
+import { Calendar, Users, Trophy, Share, Heart, Eye } from "lucide-react";
 import setupPreviewImage from "@assets/1_1749482036883.png";
 import playersPreviewImage from "@assets/2_1749482562652.png";
 import schedulePreviewImage from "@assets/3_1749482762994.png";
@@ -56,7 +48,6 @@ export const TennisIcon = ({ size = "1em", color = 'currentColor', ...props }) =
 );
 
 export default function Landing() {
-  const { toast } = useToast();
   const [previewModal, setPreviewModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -69,12 +60,6 @@ export default function Landing() {
     description: "",
     imageSrc: "",
     imageAlt: ""
-  });
-
-  // Fetch open tournaments for display
-  const { data: openTournaments = [], isLoading: isLoadingTournaments } = useQuery<Tournament[]>({
-    queryKey: ["/api/tournaments/open"],
-    retry: false,
   });
 
   const showPreview = (title: string, description: string, imageSrc: string, imageAlt: string) => {
@@ -120,148 +105,71 @@ export default function Landing() {
               </Button>
               <BouncingBallIcon size="2rem" className="text-primary" />
             </div>
+
+            
           </div>
 
-          {/* Tournament Registration Section */}
-          <div className="mb-16">
-            <Tabs defaultValue="features" className="w-full">
-              <TabsList className={`grid w-full ${openTournaments.length > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                <TabsTrigger value="features">Features</TabsTrigger>
-                {openTournaments.length > 0 && (
-                  <TabsTrigger value="tournaments">Upcoming Tournaments</TabsTrigger>
-                )}
-              </TabsList>
-              
-              <TabsContent value="features" className="mt-8">
-                <div className="grid md:grid-cols-3 gap-6">
-                  <Card 
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => showPreview(
-                      "Smart Scheduling",
-                      "See how our American Format algorithm automatically creates optimal tournament schedules for 8 players and 2 courts",
-                      setupPreviewImage,
-                      "Tournament Setup Interface"
-                    )}
-                  >
-                    <CardHeader className="text-center">
-                      <Calendar className="h-12 w-12 mx-auto mb-4 text-primary" />
-                      <CardTitle>Smart Scheduling</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-center">
-                        Automatic American Format scheduling for 8 players and 2 courts
-                      </CardDescription>
-                    </CardContent>
-                  </Card>
-
-                  <Card 
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => showPreview(
-                      "Player Management",
-                      "Easily manage tournament participants with our intuitive player entry system",
-                      playersPreviewImage,
-                      "Player Entry Interface"
-                    )}
-                  >
-                    <CardHeader className="text-center">
-                      <Users className="h-12 w-12 mx-auto mb-4 text-primary" />
-                      <CardTitle>Player Management</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-center">
-                        Simple player registration and tournament participation
-                      </CardDescription>
-                    </CardContent>
-                  </Card>
-
-                  <Card 
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => showPreview(
-                      "Tournament Results",
-                      "Generate professional tournament schedules and scorecards with PDF export",
-                      schedulePreviewImage,
-                      "Tournament Schedule Display"
-                    )}
-                  >
-                    <CardHeader className="text-center">
-                      <Trophy className="h-12 w-12 mx-auto mb-4 text-primary" />
-                      <CardTitle>Professional Output</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-center">
-                        PDF export for schedules and scorecards
-                      </CardDescription>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              {openTournaments.length > 0 && (
-                <TabsContent value="tournaments" className="mt-8">
-                  <div className="text-center mb-8">
-                    <h3 className="text-2xl font-bold mb-4">Upcoming Tournaments</h3>
-                    <p className="text-muted-foreground">Join tournaments or view upcoming events in your area</p>
-                  </div>
-                  
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {isLoadingTournaments ? (
-                      <div className="col-span-full text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                        <p className="mt-2 text-gray-600">Loading tournaments...</p>
-                      </div>
-                    ) : (
-                      openTournaments.map((tournament) => (
-                        <Card key={tournament.id} className="hover:shadow-lg transition-shadow">
-                          <CardHeader>
-                            <div className="flex justify-between items-start">
-                              <CardTitle className="text-lg">{tournament.name}</CardTitle>
-                              <Badge variant="outline" className="text-green-600 border-green-600">
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Open
-                              </Badge>
-                            </div>
-                            <CardDescription>
-                              {tournament.date ? new Date(tournament.date).toLocaleDateString() : 'Date TBD'} • {tournament.location}
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="space-y-2 mb-4">
-                              <div className="flex justify-between text-sm">
-                                <span>Players:</span>
-                                <span>{(tournament as any).participantCount || 0}/{tournament.playersCount}</span>
-                              </div>
-                              <div className="flex justify-between text-sm">
-                                <span>Courts:</span>
-                                <span>{tournament.courtsCount}</span>
-                              </div>
-                            </div>
-                            <Button 
-                              className="w-full" 
-                              onClick={() => window.location.href = "/login"}
-                            >
-                              <UserPlus className="w-4 h-4 mr-2" />
-                              Join Tournament
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      ))
-                    )}
-                  </div>
-
-                  <div className="text-center mt-8">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => window.location.href = "/login"}
-                    >
-                      Sign In to View More Tournaments
-                    </Button>
-                  </div>
-                </TabsContent>
+          <div className="grid md:grid-cols-3 gap-6 mb-16">
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => showPreview(
+                "Smart Scheduling",
+                "See how our American Format algorithm automatically creates optimal tournament schedules for 8 players and 2 courts",
+                setupPreviewImage,
+                "Tournament Setup Interface"
               )}
-            </Tabs>
-          </div>
+            >
+              <CardHeader className="text-center">
+                <Calendar className="h-12 w-12 mx-auto mb-4 text-primary" />
+                <CardTitle>Smart Scheduling</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-center">
+                  Automatic American Format scheduling for 8 players and 2 courts
+                </CardDescription>
+              </CardContent>
+            </Card>
 
-          
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => showPreview(
+                "Player Management",
+                "Easily add and manage all tournament participants with our intuitive player registration system",
+                playersPreviewImage,
+                "Player Names Interface"
+              )}
+            >
+              <CardHeader className="text-center">
+                <Users className="h-12 w-12 mx-auto mb-4 text-primary" />
+                <CardTitle>Player Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-center">
+                  Easy player registration and tournament organization
+                </CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className="cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => showPreview(
+                "Share Tournaments",
+                "Generate shareable links that display professional tournament schedules with real-time updates and match results",
+                schedulePreviewImage,
+                "Tournament Schedule Interface"
+              )}
+            >
+              <CardHeader className="text-center">
+                <Share className="h-12 w-12 mx-auto mb-4 text-primary" />
+                <CardTitle>Share Tournaments</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="text-center">
+                  Generate shareable links for players to view schedules
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="text-center">
             <h2 className="text-2xl font-bold text-foreground mb-4">
