@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { EnhancedScheduleDisplay } from "@/components/enhanced-schedule-display";
-import { ArrowLeft, Users, Calendar, MapPin } from "lucide-react";
-import type { Round, Match, MatchScore } from "@shared/schema";
+import { SimpleScoreInput } from "@/components/simple-score-input";
+import { FinalsLeaderboard } from "@/components/finals-leaderboard";
+import { ArrowLeft, Users, Calendar, MapPin, Trophy } from "lucide-react";
+import type { Round } from "@shared/schema";
 
 export default function ScoringDemo() {
   const [gameScores, setGameScores] = useState<Record<number, { team1Score: number; team2Score: number }>>({
@@ -75,21 +76,72 @@ export default function ScoringDemo() {
           round: 3,
           gameNumber: 6
         }
+      ],
+    },
+    {
+      round: 4,
+      matches: [
+        {
+          court: 1,
+          team1: ["Alex Rodriguez", "Miguel Torres"],
+          team2: ["Carlos Mendez", "Sofia Vargas"],
+          round: 4,
+          gameNumber: 7
+        }
       ]
     }
   ]);
 
-  const handleScoreUpdate = async (gameNumber: number, score: MatchScore) => {
-    setRounds(prevRounds => 
-      prevRounds.map(round => ({
-        ...round,
-        matches: round.matches.map(match => 
-          match.gameNumber === gameNumber 
-            ? { ...match, score, status: 'completed' as const }
-            : match
-        )
-      }))
-    );
+  const players = ["Alex Rodriguez", "Maria Santos", "Carlos Mendez", "Ana Garcia", 
+                  "Diego Silva", "Elena Rodriguez", "Miguel Torres", "Sofia Vargas"];
+
+  // Calculate player scores for leaderboard
+  const calculatePlayerScores = () => {
+    const playerScores: Record<string, { totalPoints: number; gamesPlayed: number }> = {};
+    
+    // Initialize all players
+    players.forEach(player => {
+      playerScores[player] = { totalPoints: 0, gamesPlayed: 0 };
+    });
+
+    // Calculate scores from games
+    rounds.forEach(round => {
+      round.matches.forEach(match => {
+        const score = gameScores[match.gameNumber];
+        if (score) {
+          // Team 1 players
+          match.team1.forEach(player => {
+            playerScores[player].totalPoints += score.team1Score;
+            playerScores[player].gamesPlayed += 1;
+          });
+          
+          // Team 2 players  
+          match.team2.forEach(player => {
+            playerScores[player].totalPoints += score.team2Score;
+            playerScores[player].gamesPlayed += 1;
+          });
+        }
+      });
+    });
+
+    return Object.entries(playerScores).map(([player, data]) => ({
+      player,
+      totalPoints: data.totalPoints,
+      gamesPlayed: data.gamesPlayed,
+      averageScore: data.gamesPlayed > 0 ? data.totalPoints / data.gamesPlayed : 0
+    }));
+  };
+
+  const handleScoreChange = (gameNumber: number, team1Score: number, team2Score: number) => {
+    setGameScores(prev => ({
+      ...prev,
+      [gameNumber]: { team1Score, team2Score }
+    }));
+  };
+
+  const allGamesHaveScores = () => {
+    const totalMatches = rounds.reduce((sum, round) => sum + round.matches.length, 0);
+    return Object.keys(gameScores).length === totalMatches;
   };
 
   return (
@@ -173,11 +225,68 @@ export default function ScoringDemo() {
           </Card>
         </div>
 
-        {/* Enhanced Schedule with Scoring */}
-        <EnhancedScheduleDisplay
-          rounds={rounds}
+        {/* Leaderboard Button */}
+        {allGamesHaveScores() && (
+          <div className="text-center mb-6">
+            <Button 
+              onClick={() => setShowLeaderboard(true)}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 text-lg font-semibold"
+            >
+              <Trophy className="h-5 w-5 mr-2" />
+              View Leaderboard
+            </Button>
+          </div>
+        )}
+
+        {/* Tournament Schedule with Scoring */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Tournament Schedule with Live Scoring</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {rounds.map((round) => (
+                <div key={round.round} className="border-l-2 border-gray-200 pl-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Round {round.round}</h3>
+                  <div className="grid gap-3">
+                    {round.matches.map((match, matchIndex) => (
+                      <div key={matchIndex} className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="bg-white rounded-full px-3 py-1 text-sm font-medium text-gray-700">
+                              Court {match.court}
+                            </div>
+                            <div className="text-gray-900 flex-1">
+                              <span className="font-medium">{match.team1[0]} & {match.team1[1]}</span>
+                              <span className="mx-2 text-gray-500">vs</span>
+                              <span className="font-medium">{match.team2[0]} & {match.team2[1]}</span>
+                            </div>
+                          </div>
+                          <SimpleScoreInput
+                            team1={match.team1}
+                            team2={match.team2}
+                            team1Score={gameScores[match.gameNumber]?.team1Score || 0}
+                            team2Score={gameScores[match.gameNumber]?.team2Score || 0}
+                            onScoreChange={(team1Score, team2Score) => 
+                              handleScoreChange(match.gameNumber, team1Score, team2Score)
+                            }
+                            gameNumber={match.gameNumber}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <FinalsLeaderboard
+          isOpen={showLeaderboard}
+          onClose={() => setShowLeaderboard(false)}
+          playerScores={calculatePlayerScores()}
           tournamentName="Summer Championship 2024"
-          onScoreUpdate={handleScoreUpdate}
         />
 
         {/* Instructions */}
@@ -186,11 +295,11 @@ export default function ScoringDemo() {
             <CardTitle className="text-orange-900">How to Use the Scoring System</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-orange-800 space-y-2">
-            <div><strong>1. Add Scores:</strong> Click "Add Score" on any match to open the scoring modal</div>
-            <div><strong>2. Set-by-Set Entry:</strong> Input individual set scores (e.g., 6-4, 6-2) using the intuitive interface</div>
-            <div><strong>3. View Leaderboard:</strong> Click "View Leaderboard" to see live player rankings and statistics</div>
-            <div><strong>4. Track Progress:</strong> Monitor tournament completion with the visual progress bar</div>
-            <div><strong>5. Edit Scores:</strong> Completed matches can be edited if needed by clicking "Edit Score"</div>
+            <div><strong>1. Enter Scores:</strong> Input scores from 0-16 for each team using the number inputs on the right side of each game</div>
+            <div><strong>2. Live Updates:</strong> Player scores are calculated automatically as you enter game results</div>
+            <div><strong>3. View Leaderboard:</strong> Once all 7 games have scores, click "View Leaderboard" to see final rankings</div>
+            <div><strong>4. Finals Groups:</strong> The leaderboard separates the best 4 and worst 4 players for finals competition</div>
+            <div><strong>5. Easy Scoring:</strong> Simple 0-16 point system makes score entry quick and intuitive</div>
           </CardContent>
         </Card>
       </div>
