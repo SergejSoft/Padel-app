@@ -32,6 +32,9 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
 
   const saveTournamentMutation = useMutation({
     mutationFn: async (tournamentData: InsertTournament) => {
+      if (tournamentSavedRef.current) {
+        throw new Error('Tournament already saved');
+      }
       console.log('Saving tournament with data:', tournamentData);
       const response = await apiRequest("POST", "/api/tournaments", tournamentData);
       return response.json();
