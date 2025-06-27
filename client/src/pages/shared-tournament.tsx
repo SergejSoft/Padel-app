@@ -13,12 +13,14 @@ import { FinalsLeaderboard } from "@/components/finals-leaderboard";
 import { Footer } from "@/components/footer";
 import type { Tournament } from "@shared/schema";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SharedTournament() {
   const { shareId } = useParams();
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [gameScores, setGameScores] = useState<Record<number, { team1Score: number; team2Score: number }>>({});
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const { user } = useAuth();
 
   const { data: tournament, isLoading, error } = useQuery({
     queryKey: ['/api/shared', shareId],
@@ -111,7 +113,14 @@ export default function SharedTournament() {
     }));
   };
 
+  // Check if current user can edit scores (is organizer or admin)
+  const canEditScores = () => {
+    if (!user || !tournament) return false;
+    return user.role === 'admin' || user.id === tournament.organizerId;
+  };
+
   const handleScoreChange = (gameNumber: number, team1Score: number, team2Score: number) => {
+    if (!canEditScores()) return; // Prevent score changes for non-organizers
     setGameScores(prev => ({
       ...prev,
       [gameNumber]: { team1Score, team2Score }
@@ -210,8 +219,8 @@ export default function SharedTournament() {
           </Card>
         </div>
 
-        {/* Leaderboard Button */}
-        {allGamesHaveScores() && (
+        {/* Leaderboard Button - only show if user can edit scores and all games have scores */}
+        {canEditScores() && allGamesHaveScores() && (
           <div className="text-center mb-6">
             <Button 
               onClick={() => setShowLeaderboard(true)}
@@ -220,6 +229,18 @@ export default function SharedTournament() {
               <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               View Leaderboard
             </Button>
+          </div>
+        )}
+
+        {/* Access Info Banner */}
+        {!canEditScores() && (
+          <div className="text-center mb-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-blue-800 text-sm">
+                <Eye className="h-4 w-4 inline mr-2" />
+                You're viewing this tournament as a guest. Only the organizer can update scores.
+              </p>
+            </div>
           </div>
         )}
 
@@ -250,16 +271,26 @@ export default function SharedTournament() {
                             </div>
                           </div>
                           <div className="flex-shrink-0">
-                            <SimpleScoreInput
-                              team1={match.team1}
-                              team2={match.team2}
-                              team1Score={gameScores[match.gameNumber]?.team1Score || 0}
-                              team2Score={gameScores[match.gameNumber]?.team2Score || 0}
-                              onScoreChange={(team1Score, team2Score) => 
-                                handleScoreChange(match.gameNumber, team1Score, team2Score)
-                              }
-                              gameNumber={match.gameNumber}
-                            />
+                            {canEditScores() ? (
+                              <SimpleScoreInput
+                                team1={match.team1}
+                                team2={match.team2}
+                                team1Score={gameScores[match.gameNumber]?.team1Score || 0}
+                                team2Score={gameScores[match.gameNumber]?.team2Score || 0}
+                                onScoreChange={(team1Score, team2Score) => 
+                                  handleScoreChange(match.gameNumber, team1Score, team2Score)
+                                }
+                                gameNumber={match.gameNumber}
+                              />
+                            ) : (
+                              <div className="bg-gray-100 rounded px-3 py-2 text-sm text-gray-600">
+                                <div className="flex items-center gap-2">
+                                  <span>{gameScores[match.gameNumber]?.team1Score || 0}</span>
+                                  <span>-</span>
+                                  <span>{gameScores[match.gameNumber]?.team2Score || 0}</span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
