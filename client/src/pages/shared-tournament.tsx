@@ -143,13 +143,13 @@ export default function SharedTournament() {
   const handleScoreChange = async (gameNumber: number, team1Score: number, team2Score: number) => {
     if (!canEditScores()) return; // Prevent score changes for non-organizers
     
-    // Update local state
+    // Update local state immediately for responsive UI
     setGameScores(prev => ({
       ...prev,
       [gameNumber]: { team1Score, team2Score }
     }));
     
-    // Save to database
+    // Save to database in background
     try {
       const updatedSchedule = schedule.map(round => ({
         ...round,
@@ -175,9 +175,11 @@ export default function SharedTournament() {
       if (!response.ok) {
         throw new Error('Failed to save score');
       }
+      
+      console.log(`Score saved: Game ${gameNumber} - ${team1Score}:${team2Score}`);
     } catch (error) {
       console.error('Error saving score:', error);
-      // Optionally show error message to user
+      // Could add a visual indicator here if needed
     }
   };
 
