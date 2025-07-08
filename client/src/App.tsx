@@ -8,7 +8,7 @@ import Landing from "@/pages/landing";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Tournament from "@/pages/tournament";
-import SharedTournament from "@/pages/shared-tournament-simple";
+import SharedTournament from "@/pages/shared-tournament-minimal";
 import SharedLeaderboard from "@/pages/shared-leaderboard";
 import Leaderboard from "@/pages/leaderboard";
 import AmericanFormatRules from "@/pages/american-format-rules";
