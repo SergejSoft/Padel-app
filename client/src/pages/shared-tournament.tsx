@@ -127,6 +127,32 @@ export default function SharedTournament() {
     }));
   };
 
+  // Save final scores when tournament is completed
+  const saveFinalScores = async () => {
+    if (!tournament || !canEditScores()) return;
+    
+    const finalScores = calculatePlayerScores();
+    
+    try {
+      const response = await fetch(`/api/tournaments/${tournament.id}/final-scores`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ finalScores }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save final scores');
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error saving final scores:', error);
+      throw error;
+    }
+  };
+
   const allGamesHaveScores = () => {
     const totalMatches = schedule.reduce((sum, round) => sum + round.matches.length, 0);
     return Object.keys(gameScores).length === totalMatches;
@@ -219,16 +245,17 @@ export default function SharedTournament() {
           </Card>
         </div>
 
-        {/* Leaderboard Button - only show if user can edit scores and all games have scores */}
-        {canEditScores() && allGamesHaveScores() && (
+        {/* Leaderboard Button - always show if results available */}
+        {allGamesHaveScores() && (
           <div className="text-center mb-6">
-            <Button 
-              onClick={() => setShowLeaderboard(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg font-semibold w-full sm:w-auto"
-            >
-              <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              View Leaderboard
-            </Button>
+            <Link href={`/shared/${shareId}/scores`}>
+              <Button 
+                className="bg-green-600 hover:bg-green-700 text-white px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg font-semibold w-full sm:w-auto"
+              >
+                <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                View Leaderboard
+              </Button>
+            </Link>
           </div>
         )}
 
@@ -366,6 +393,8 @@ export default function SharedTournament() {
         onClose={() => setShowLeaderboard(false)}
         playerScores={calculatePlayerScores()}
         tournamentName={tournament.name}
+        onSaveResults={canEditScores() ? saveFinalScores : undefined}
+        canSaveResults={canEditScores()}
       />
     </div>
   );

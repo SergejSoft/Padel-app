@@ -26,6 +26,7 @@ export interface IStorage {
   updateTournament(id: number, tournament: Partial<InsertTournament>): Promise<Tournament | undefined>;
   updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined>;
   updateTournamentResults(id: number, results: any, schedule: any): Promise<Tournament | undefined>;
+  updateTournamentFinalScores(id: number, finalScores: any): Promise<Tournament | undefined>;
   getTournamentByLeaderboardId(leaderboardId: string): Promise<Tournament | undefined>;
   generateLeaderboardId(tournamentId: number): Promise<string>;
   deleteTournament(id: number): Promise<boolean>;
@@ -279,6 +280,24 @@ export class DatabaseStorage implements IStorage {
       return leaderboardId;
     } catch (error) {
       console.error('Storage error in generateLeaderboardId:', error);
+      throw error;
+    }
+  }
+
+  async updateTournamentFinalScores(id: number, finalScores: any): Promise<Tournament | undefined> {
+    try {
+      const [tournament] = await db
+        .update(tournaments)
+        .set({
+          finalScores,
+          status: 'completed',
+          completedAt: new Date()
+        })
+        .where(eq(tournaments.id, id))
+        .returning();
+      return tournament || undefined;
+    } catch (error) {
+      console.error('Storage error in updateTournamentFinalScores:', error);
       throw error;
     }
   }

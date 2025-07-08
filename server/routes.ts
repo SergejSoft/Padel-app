@@ -255,6 +255,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shared leaderboard view (public)
+  app.get("/api/shared/:identifier/scores", async (req, res) => {
+    try {
+      const { identifier } = req.params;
+      
+      // Try to find by shareId first, then by urlSlug
+      let tournament = await storage.getTournamentByShareId(identifier);
+      if (!tournament) {
+        tournament = await storage.getTournamentByUrlSlug(identifier);
+      }
+      
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      if (!tournament.finalScores && !tournament.results) {
+        return res.status(404).json({ error: "Tournament results not available yet" });
+      }
+      
+      res.json({
+        tournament: {
+          id: tournament.id,
+          name: tournament.name,
+          date: tournament.date,
+          location: tournament.location,
+          status: tournament.status
+        },
+        finalScores: tournament.finalScores,
+        results: tournament.results
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update tournament final scores
+  app.post("/api/tournaments/:id/final-scores", isAuthenticated, async (req: any, res) => {
+    try {
+      const tournamentId = parseInt(req.params.id);
+      const { finalScores } = req.body;
+      
+      // Check if user is organizer or admin
+      const ownerId = await storage.getTournamentOwnerId(tournamentId);
+      if (!ownerId || (req.user.id !== ownerId && req.user.role !== 'admin')) {
+        return res.status(403).json({ error: "Not authorized to update this tournament" });
+      }
+      
+      const updatedTournament = await storage.updateTournamentFinalScores(tournamentId, finalScores);
+      if (!updatedTournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      res.json(updatedTournament);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Save tournament results
   app.patch("/api/tournaments/:id/results", isAuthenticated, async (req, res) => {
     try {
