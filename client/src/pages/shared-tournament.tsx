@@ -119,12 +119,45 @@ export default function SharedTournament() {
     return user.role === 'admin' || user.id === tournament.organizerId;
   };
 
-  const handleScoreChange = (gameNumber: number, team1Score: number, team2Score: number) => {
+  const handleScoreChange = async (gameNumber: number, team1Score: number, team2Score: number) => {
     if (!canEditScores()) return; // Prevent score changes for non-organizers
+    
+    // Update local state
     setGameScores(prev => ({
       ...prev,
       [gameNumber]: { team1Score, team2Score }
     }));
+    
+    // Save to database
+    try {
+      const updatedSchedule = schedule.map(round => ({
+        ...round,
+        matches: round.matches.map(match => {
+          if (match.gameNumber === gameNumber) {
+            return {
+              ...match,
+              score: { team1Score, team2Score }
+            };
+          }
+          return match;
+        })
+      }));
+      
+      const response = await fetch(`/api/tournaments/${tournament.id}/schedule`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ schedule: updatedSchedule }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to save score');
+      }
+    } catch (error) {
+      console.error('Error saving score:', error);
+      // Optionally show error message to user
+    }
   };
 
   // Save final scores when tournament is completed
