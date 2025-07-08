@@ -67,7 +67,15 @@ export default function SharedLeaderboard() {
   // Use results if available, otherwise calculate from finalScores
   const playerScores: PlayerScore[] = results || finalScores || [];
 
-  const sortedPlayers = [...playerScores].sort((a, b) => b.totalPoints - a.totalPoints);
+  // Transform PlayerStats to PlayerScore if needed
+  const transformedScores = playerScores.map(score => ({
+    player: score.player,
+    totalPoints: score.totalPoints,
+    gamesPlayed: score.matchesPlayed || score.gamesPlayed || 0,
+    averageScore: score.matchesPlayed > 0 ? score.totalPoints / score.matchesPlayed : 0
+  }));
+
+  const sortedPlayers = [...transformedScores].sort((a, b) => b.totalPoints - a.totalPoints);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -123,17 +131,20 @@ export default function SharedLeaderboard() {
           </Link>
         </div>
 
-        {/* Leaderboard */}
-        <Card>
+        {/* Championship Finals - Top 4 */}
+        <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-center">
-              <Trophy className="h-6 w-6 inline mr-2" />
-              Final Leaderboard
+            <CardTitle className="text-center flex items-center justify-center gap-2">
+              <Trophy className="h-6 w-6 text-green-600" />
+              Championship Finals
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-normal">
+                Top 4 Players
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {sortedPlayers.map((player, index) => {
+            <div className="space-y-3">
+              {sortedPlayers.slice(0, 4).map((player, index) => {
                 const rank = index + 1;
                 return (
                   <div
@@ -150,7 +161,7 @@ export default function SharedLeaderboard() {
                             {player.player}
                           </h3>
                           <p className="text-sm text-gray-600">
-                            {player.gamesPlayed} games played
+                            {player.gamesPlayed} games • Avg: {player.averageScore.toFixed(1)}
                           </p>
                         </div>
                       </div>
@@ -159,7 +170,57 @@ export default function SharedLeaderboard() {
                           {player.totalPoints}
                         </div>
                         <div className="text-sm text-gray-600">
-                          {player.averageScore.toFixed(1)} avg
+                          total points
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Consolation Finals - Bottom 4 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center flex items-center justify-center gap-2">
+              <Trophy className="h-6 w-6 text-orange-600" />
+              Consolation Finals
+              <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-sm font-normal">
+                Bottom 4 Players
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {sortedPlayers.slice(4, 8).map((player, index) => {
+                const rank = index + 5;
+                return (
+                  <div
+                    key={player.player}
+                    className="p-4 rounded-lg border-2 bg-white border-gray-200 transition-all duration-200"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="flex-shrink-0">
+                          <span className="text-lg font-bold text-gray-600">#{rank}</span>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {player.player}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {player.gamesPlayed} games • Avg: {player.averageScore.toFixed(1)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-gray-900">
+                          {player.totalPoints}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          total points
                         </div>
                       </div>
                     </div>

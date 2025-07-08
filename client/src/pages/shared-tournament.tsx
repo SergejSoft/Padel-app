@@ -119,12 +119,119 @@ export default function SharedTournament() {
     return user.role === 'admin' || user.id === tournament.organizerId;
   };
 
-  const handleScoreChange = (gameNumber: number, team1Score: number, team2Score: number) => {
+  const handleScoreChange = async (gameNumber: number, team1Score: number, team2Score: number) => {
     if (!canEditScores()) return; // Prevent score changes for non-organizers
-    setGameScores(prev => ({
-      ...prev,
+    
+    const newScores = {
+      ...gameScores,
       [gameNumber]: { team1Score, team2Score }
-    }));
+    };
+    
+    setGameScores(newScores);
+    
+    // Auto-save results to database
+    await saveResultsToDatabase(newScores);
+  };
+
+  // Auto-save results when scores change
+  const saveResultsToDatabase = async (scores: Record<number, { team1Score: number; team2Score: number }>) => {
+    if (!tournament || !canEditScores()) return;
+    
+    // Calculate player stats from current scores
+    const playerStats = calculatePlayerScoresFromScores(scores);
+    
+    try {
+      const response = await fetch(`/api/tournaments/${tournament.id}/results`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          results: playerStats,
+          gameScores: scores 
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to save results');
+      }
+    } catch (error) {
+      console.error('Error saving results:', error);
+    }
+  };
+
+  // Calculate player scores from game scores
+  const calculatePlayerScoresFromScores = (scores: Record<number, { team1Score: number; team2Score: number }>) => {
+    const playerStats: { [key: string]: PlayerStats } = {};
+    
+    // Initialize all players
+    tournament.players.forEach(player => {
+      playerStats[player] = {
+        player,
+        matchesPlayed: 0,
+        matchesWon: 0,
+        setsWon: 0,
+        setsLost: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        winPercentage: 0,
+        totalPoints: 0
+      };
+    });
+
+    // Process each match
+    schedule.forEach(round => {
+      round.matches.forEach(match => {
+        const score = scores[match.gameNumber];
+        if (!score) return;
+
+        const { team1Score, team2Score } = score;
+        const [team1Player1, team1Player2] = match.team1;
+        const [team2Player1, team2Player2] = match.team2;
+
+        // Update stats for all players in the match
+        [team1Player1, team1Player2, team2Player1, team2Player2].forEach(player => {
+          if (playerStats[player]) {
+            playerStats[player].matchesPlayed++;
+            playerStats[player].pointsFor += (match.team1.includes(player) ? team1Score : team2Score);
+            playerStats[player].pointsAgainst += (match.team1.includes(player) ? team2Score : team1Score);
+          }
+        });
+
+        // Determine winner and update match wins
+        if (team1Score > team2Score) {
+          playerStats[team1Player1].matchesWon++;
+          playerStats[team1Player2].matchesWon++;
+          playerStats[team1Player1].totalPoints += 3;
+          playerStats[team1Player2].totalPoints += 3;
+        } else if (team2Score > team1Score) {
+          playerStats[team2Player1].matchesWon++;
+          playerStats[team2Player2].matchesWon++;
+          playerStats[team2Player1].totalPoints += 3;
+          playerStats[team2Player2].totalPoints += 3;
+        }
+
+        // Add points for sets won (simplified - using game score as set score)
+        [team1Player1, team1Player2].forEach(player => {
+          playerStats[player].setsWon += team1Score;
+          playerStats[player].setsLost += team2Score;
+          playerStats[player].totalPoints += team1Score;
+        });
+
+        [team2Player1, team2Player2].forEach(player => {
+          playerStats[player].setsWon += team2Score;
+          playerStats[player].setsLost += team1Score;
+          playerStats[player].totalPoints += team2Score;
+        });
+      });
+    });
+
+    // Calculate win percentages
+    Object.values(playerStats).forEach(stats => {
+      stats.winPercentage = stats.matchesPlayed > 0 ? (stats.matchesWon / stats.matchesPlayed) * 100 : 0;
+    });
+
+    return Object.values(playerStats);
   };
 
   // Save final scores when tournament is completed
