@@ -12,7 +12,7 @@ import { SimpleScoreInput } from "@/components/simple-score-input";
 import { FinalsLeaderboard } from "@/components/finals-leaderboard";
 import { Footer } from "@/components/footer";
 import type { Tournament } from "@shared/schema";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function SharedTournament() {
@@ -67,17 +67,17 @@ export default function SharedTournament() {
 
   const status = getTournamentStatus(tournament);
 
-  const schedule = generateAmericanFormat({
+  const schedule = useMemo(() => generateAmericanFormat({
     players: tournament.players,
     courts: tournament.courtsCount,
-  });
+  }), [tournament.players, tournament.courtsCount]);
 
   const totalGames = schedule.reduce((sum, round) => sum + round.matches.length, 0);
   const gamesPerPlayer = Math.floor(totalGames * 4 / tournament.playersCount);
   const avgGameMinutes = 13; // Average game length
 
   // Calculate player scores for leaderboard
-  const calculatePlayerScores = () => {
+  const calculatePlayerScores = useCallback(() => {
     const playerScores: Record<string, { totalPoints: number; gamesPlayed: number }> = {};
     
     // Initialize all players
@@ -111,7 +111,7 @@ export default function SharedTournament() {
       gamesPlayed: data.gamesPlayed,
       averageScore: data.gamesPlayed > 0 ? data.totalPoints / data.gamesPlayed : 0
     }));
-  };
+  }, [tournament.players, schedule, gameScores]);
 
   // Check if current user can edit scores (is organizer or admin)
   const canEditScores = () => {
@@ -130,14 +130,18 @@ export default function SharedTournament() {
     setGameScores(newScores);
     
     // Auto-save results to database (non-blocking)
-    saveResultsToDatabase(newScores).catch(error => {
-      console.error('Error auto-saving results:', error);
-    });
+    // Use setTimeout to avoid state update during render
+    setTimeout(() => {
+      saveResultsToDatabase(newScores).catch(error => {
+        console.error('Error auto-saving results:', error);
+      });
+    }, 0);
   };
 
   // Auto-save results when scores change
-  const saveResultsToDatabase = async (scores: Record<number, { team1Score: number; team2Score: number }>) => {
-    if (!tournament || !canEditScores()) return;
+  const saveResultsToDatabase = useCallback(async (scores: Record<number, { team1Score: number; team2Score: number }>) => {
+    if (!tournament || !user) return;
+    if (user.role !== 'admin' && user.id !== tournament.organizerId) return;
     
     // Calculate player stats from current scores
     const playerStats = calculatePlayerScoresFromScores(scores);
@@ -160,10 +164,10 @@ export default function SharedTournament() {
     } catch (error) {
       console.error('Error saving results:', error);
     }
-  };
+  }, [tournament, user, calculatePlayerScoresFromScores]);
 
   // Calculate player scores from game scores
-  const calculatePlayerScoresFromScores = (scores: Record<number, { team1Score: number; team2Score: number }>) => {
+  const calculatePlayerScoresFromScores = useCallback((scores: Record<number, { team1Score: number; team2Score: number }>) => {
     if (!tournament || !schedule) return [];
     
     const playerStats: { [key: string]: PlayerStats } = {};
@@ -240,7 +244,7 @@ export default function SharedTournament() {
     });
 
     return Object.values(playerStats);
-  };
+  }, [tournament, schedule]);
 
   // Save final scores when tournament is completed
   const saveFinalScores = async () => {
