@@ -12,7 +12,7 @@ import { SimpleScoreInput } from "@/components/simple-score-input";
 import { FinalsLeaderboard } from "@/components/finals-leaderboard";
 import { Footer } from "@/components/footer";
 import type { Tournament } from "@shared/schema";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function SharedTournament() {
@@ -67,17 +67,17 @@ export default function SharedTournament() {
 
   const status = getTournamentStatus(tournament);
 
-  const schedule = useMemo(() => generateAmericanFormat({
+  const schedule = generateAmericanFormat({
     players: tournament.players,
     courts: tournament.courtsCount,
-  }), [tournament.players, tournament.courtsCount]);
+  });
 
   const totalGames = schedule.reduce((sum, round) => sum + round.matches.length, 0);
   const gamesPerPlayer = Math.floor(totalGames * 4 / tournament.playersCount);
   const avgGameMinutes = 13; // Average game length
 
   // Calculate player scores for leaderboard
-  const calculatePlayerScores = useCallback(() => {
+  const calculatePlayerScores = () => {
     const playerScores: Record<string, { totalPoints: number; gamesPlayed: number }> = {};
     
     // Initialize all players
@@ -111,7 +111,7 @@ export default function SharedTournament() {
       gamesPlayed: data.gamesPlayed,
       averageScore: data.gamesPlayed > 0 ? data.totalPoints / data.gamesPlayed : 0
     }));
-  }, [tournament.players, schedule, gameScores]);
+  };
 
   // Check if current user can edit scores (is organizer or admin)
   const canEditScores = () => {
@@ -121,155 +121,10 @@ export default function SharedTournament() {
 
   const handleScoreChange = (gameNumber: number, team1Score: number, team2Score: number) => {
     if (!canEditScores()) return; // Prevent score changes for non-organizers
-    
-    const newScores = {
-      ...gameScores,
+    setGameScores(prev => ({
+      ...prev,
       [gameNumber]: { team1Score, team2Score }
-    };
-    
-    setGameScores(newScores);
-    
-    // Auto-save results to database (non-blocking)
-    // Use setTimeout to avoid state update during render
-    setTimeout(() => {
-      saveResultsToDatabase(newScores).catch(error => {
-        console.error('Error auto-saving results:', error);
-      });
-    }, 0);
-  };
-
-  // Auto-save results when scores change
-  const saveResultsToDatabase = useCallback(async (scores: Record<number, { team1Score: number; team2Score: number }>) => {
-    if (!tournament || !user) return;
-    if (user.role !== 'admin' && user.id !== tournament.organizerId) return;
-    
-    // Calculate player stats from current scores
-    const playerStats = calculatePlayerScoresFromScores(scores);
-    
-    try {
-      const response = await fetch(`/api/tournaments/${tournament.id}/results`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          results: playerStats,
-          gameScores: scores 
-        }),
-      });
-      
-      if (!response.ok) {
-        console.error('Failed to save results');
-      }
-    } catch (error) {
-      console.error('Error saving results:', error);
-    }
-  }, [tournament, user, calculatePlayerScoresFromScores]);
-
-  // Calculate player scores from game scores
-  const calculatePlayerScoresFromScores = useCallback((scores: Record<number, { team1Score: number; team2Score: number }>) => {
-    if (!tournament || !schedule) return [];
-    
-    const playerStats: { [key: string]: PlayerStats } = {};
-    
-    // Initialize all players
-    tournament.players.forEach(player => {
-      playerStats[player] = {
-        player,
-        matchesPlayed: 0,
-        matchesWon: 0,
-        setsWon: 0,
-        setsLost: 0,
-        pointsFor: 0,
-        pointsAgainst: 0,
-        winPercentage: 0,
-        totalPoints: 0
-      };
-    });
-
-    // Process each match
-    schedule.forEach(round => {
-      round.matches.forEach(match => {
-        const score = scores[match.gameNumber];
-        if (!score) return;
-
-        const { team1Score, team2Score } = score;
-        const [team1Player1, team1Player2] = match.team1;
-        const [team2Player1, team2Player2] = match.team2;
-
-        // Update stats for all players in the match
-        [team1Player1, team1Player2, team2Player1, team2Player2].forEach(player => {
-          if (playerStats[player]) {
-            playerStats[player].matchesPlayed++;
-            playerStats[player].pointsFor += (match.team1.includes(player) ? team1Score : team2Score);
-            playerStats[player].pointsAgainst += (match.team1.includes(player) ? team2Score : team1Score);
-          }
-        });
-
-        // Determine winner and update match wins
-        if (team1Score > team2Score) {
-          if (playerStats[team1Player1]) playerStats[team1Player1].matchesWon++;
-          if (playerStats[team1Player2]) playerStats[team1Player2].matchesWon++;
-          if (playerStats[team1Player1]) playerStats[team1Player1].totalPoints += 3;
-          if (playerStats[team1Player2]) playerStats[team1Player2].totalPoints += 3;
-        } else if (team2Score > team1Score) {
-          if (playerStats[team2Player1]) playerStats[team2Player1].matchesWon++;
-          if (playerStats[team2Player2]) playerStats[team2Player2].matchesWon++;
-          if (playerStats[team2Player1]) playerStats[team2Player1].totalPoints += 3;
-          if (playerStats[team2Player2]) playerStats[team2Player2].totalPoints += 3;
-        }
-
-        // Add points for sets won (simplified - using game score as set score)
-        [team1Player1, team1Player2].forEach(player => {
-          if (playerStats[player]) {
-            playerStats[player].setsWon += team1Score;
-            playerStats[player].setsLost += team2Score;
-            playerStats[player].totalPoints += team1Score;
-          }
-        });
-
-        [team2Player1, team2Player2].forEach(player => {
-          if (playerStats[player]) {
-            playerStats[player].setsWon += team2Score;
-            playerStats[player].setsLost += team1Score;
-            playerStats[player].totalPoints += team2Score;
-          }
-        });
-      });
-    });
-
-    // Calculate win percentages
-    Object.values(playerStats).forEach(stats => {
-      stats.winPercentage = stats.matchesPlayed > 0 ? (stats.matchesWon / stats.matchesPlayed) * 100 : 0;
-    });
-
-    return Object.values(playerStats);
-  }, [tournament, schedule]);
-
-  // Save final scores when tournament is completed
-  const saveFinalScores = async () => {
-    if (!tournament || !canEditScores()) return;
-    
-    const finalScores = calculatePlayerScores();
-    
-    try {
-      const response = await fetch(`/api/tournaments/${tournament.id}/final-scores`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ finalScores }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to save final scores');
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error saving final scores:', error);
-      throw error;
-    }
+    }));
   };
 
   const allGamesHaveScores = () => {
@@ -364,17 +219,16 @@ export default function SharedTournament() {
           </Card>
         </div>
 
-        {/* Leaderboard Button - always show if results available */}
-        {allGamesHaveScores() && (
+        {/* Leaderboard Button - only show if user can edit scores and all games have scores */}
+        {canEditScores() && allGamesHaveScores() && (
           <div className="text-center mb-6">
-            <Link href={`/shared/${shareId}/scores`}>
-              <Button 
-                className="bg-green-600 hover:bg-green-700 text-white px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg font-semibold w-full sm:w-auto"
-              >
-                <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-                View Leaderboard
-              </Button>
-            </Link>
+            <Button 
+              onClick={() => setShowLeaderboard(true)}
+              className="bg-green-600 hover:bg-green-700 text-white px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg font-semibold w-full sm:w-auto"
+            >
+              <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+              View Leaderboard
+            </Button>
           </div>
         )}
 
@@ -512,8 +366,6 @@ export default function SharedTournament() {
         onClose={() => setShowLeaderboard(false)}
         playerScores={calculatePlayerScores()}
         tournamentName={tournament.name}
-        onSaveResults={canEditScores() ? saveFinalScores : undefined}
-        canSaveResults={canEditScores()}
       />
     </div>
   );
