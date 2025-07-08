@@ -9,6 +9,7 @@ import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Tournament from "@/pages/tournament";
 import SharedTournamentMinimal from "@/pages/shared-tournament-minimal";
+import SharedTournamentScores from "@/pages/shared-tournament-scores";
 import Leaderboard from "@/pages/leaderboard";
 import AmericanFormatRules from "@/pages/american-format-rules";
 import ScoringDemo from "@/pages/scoring-demo";
@@ -38,6 +39,7 @@ function Router() {
     <Switch>
       <Route path="/" component={!isAuthenticated ? Landing : Dashboard} />
       <Route path="/login" component={Login} />
+      <Route path="/shared/:shareId/scores" component={SharedTournamentScores} />
       <Route path="/shared/:shareId" component={SharedTournamentMinimal} />
       <Route path="/leaderboard/:leaderboardId" component={Leaderboard} />
       <Route path="/american-format-rules" component={AmericanFormatRules} />

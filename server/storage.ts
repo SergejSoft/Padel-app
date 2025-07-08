@@ -26,6 +26,8 @@ export interface IStorage {
   updateTournament(id: number, tournament: Partial<InsertTournament>): Promise<Tournament | undefined>;
   updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined>;
   updateTournamentResults(id: number, results: any, schedule: any): Promise<Tournament | undefined>;
+  updateTournamentScores(id: number, gameNumber: number, team1Score: number, team2Score: number, updatedBy: string): Promise<Tournament | undefined>;
+  completeTournament(id: number, finalResults: any[]): Promise<Tournament | undefined>;
   getTournamentByLeaderboardId(leaderboardId: string): Promise<Tournament | undefined>;
   generateLeaderboardId(tournamentId: number): Promise<string>;
   deleteTournament(id: number): Promise<boolean>;
@@ -289,6 +291,52 @@ export class DatabaseStorage implements IStorage {
       .from(tournaments)
       .where(eq(tournaments.id, id));
     return tournament?.organizerId || null;
+  }
+
+  async updateTournamentScores(id: number, gameNumber: number, team1Score: number, team2Score: number, updatedBy: string): Promise<Tournament | undefined> {
+    const tournament = await this.getTournament(id);
+    if (!tournament) return undefined;
+
+    // Get existing scores or initialize empty array
+    const existingScores = tournament.finalScores || [];
+    
+    // Find existing score for this game or create new one
+    const scoreIndex = existingScores.findIndex((score: any) => score.gameNumber === gameNumber);
+    const scoreEntry = {
+      gameNumber,
+      team1Score,
+      team2Score,
+      updatedAt: new Date().toISOString(),
+      updatedBy
+    };
+
+    if (scoreIndex >= 0) {
+      existingScores[scoreIndex] = scoreEntry;
+    } else {
+      existingScores.push(scoreEntry);
+    }
+
+    const [updatedTournament] = await db
+      .update(tournaments)
+      .set({ finalScores: existingScores })
+      .where(eq(tournaments.id, id))
+      .returning();
+
+    return updatedTournament;
+  }
+
+  async completeTournament(id: number, finalResults: any[]): Promise<Tournament | undefined> {
+    const [updatedTournament] = await db
+      .update(tournaments)
+      .set({ 
+        results: finalResults,
+        status: 'completed',
+        completedAt: new Date()
+      })
+      .where(eq(tournaments.id, id))
+      .returning();
+
+    return updatedTournament;
   }
 }
 

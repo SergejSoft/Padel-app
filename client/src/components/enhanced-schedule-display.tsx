@@ -26,13 +26,15 @@ interface EnhancedScheduleDisplayProps {
   tournamentName: string;
   tournamentId?: number;
   onScoreUpdate: (gameNumber: number, score: MatchScore) => void;
+  readOnly?: boolean;
 }
 
 export function EnhancedScheduleDisplay({ 
   rounds, 
   tournamentName, 
   tournamentId,
-  onScoreUpdate 
+  onScoreUpdate,
+  readOnly = false
 }: EnhancedScheduleDisplayProps) {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [showScoreModal, setShowScoreModal] = useState(false);

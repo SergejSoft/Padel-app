@@ -1,6 +1,10 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { Save } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 interface SimpleScoreInputProps {
   team1: [string, string];
@@ -9,6 +13,8 @@ interface SimpleScoreInputProps {
   team2Score: number;
   onScoreChange: (team1Score: number, team2Score: number) => void;
   gameNumber: number;
+  tournamentId?: number;
+  readOnly?: boolean;
 }
 
 export function SimpleScoreInput({ 
@@ -17,11 +23,55 @@ export function SimpleScoreInput({
   team1Score, 
   team2Score, 
   onScoreChange,
-  gameNumber 
+  gameNumber,
+  tournamentId,
+  readOnly = false
 }: SimpleScoreInputProps) {
   const [team1Input, setTeam1Input] = useState(team1Score === 0 ? "" : team1Score.toString());
   const [team2Input, setTeam2Input] = useState(team2Score === 0 ? "" : team2Score.toString());
   const [isValid, setIsValid] = useState(true);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const saveScoreMutation = useMutation({
+    mutationFn: async ({ gameNumber, team1Score, team2Score }: { gameNumber: number; team1Score: number; team2Score: number }) => {
+      const response = await fetch(`/api/tournaments/${tournamentId}/scores`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          gameNumber,
+          team1Score,
+          team2Score,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save score');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Score Saved",
+        description: "Game score has been saved successfully.",
+      });
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ['/api/tournaments', tournamentId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shared'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   useEffect(() => {
     setTeam1Input(team1Score === 0 ? "" : team1Score.toString());
@@ -50,6 +100,14 @@ export function SimpleScoreInput({
   const handleTeam2Change = (value: string) => {
     setTeam2Input(value);
     validateAndUpdate(team1Input, value);
+  };
+
+  const handleSave = () => {
+    if (isValid && tournamentId) {
+      const t1Score = parseInt(team1Input) || 0;
+      const t2Score = parseInt(team2Input) || 0;
+      saveScoreMutation.mutate({ gameNumber, team1Score: t1Score, team2Score: t2Score });
+    }
   };
 
   const currentSum = (parseInt(team1Input) || 0) + (parseInt(team2Input) || 0);
@@ -93,6 +151,19 @@ export function SimpleScoreInput({
           <div className="text-red-500 text-xs">{currentSum}/16</div>
         )}
       </div>
+
+      {/* Save Button (only for organizers) */}
+      {!readOnly && tournamentId && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSave}
+          disabled={!isValid || saveScoreMutation.isPending}
+          className="ml-2 h-7 w-8 p-0 flex items-center justify-center"
+        >
+          <Save className="h-3 w-3" />
+        </Button>
+      )}
     </div>
   );
 }

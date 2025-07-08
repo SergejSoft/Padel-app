@@ -197,6 +197,14 @@ export default function SharedTournamentMinimal() {
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
           <Button 
+            onClick={() => window.open(`/shared/${shareId}/scores`, '_blank')}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Trophy className="h-4 w-4" />
+            Live Scores
+          </Button>
+          <Button 
             onClick={() => {
               const pdf = generateTournamentPDF({
                 tournamentName: tournament.name,

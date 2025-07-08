@@ -234,6 +234,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update tournament scores (requires owner or admin)
+  app.put("/api/tournaments/:id/scores", isAuthenticated, isOwnerOrAdmin(async (req) => {
+    const id = parseInt(req.params.id);
+    return await storage.getTournamentOwnerId(id);
+  }), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { gameNumber, team1Score, team2Score } = req.body;
+      
+      // Validate input
+      if (!gameNumber || team1Score === undefined || team2Score === undefined) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      // Validate 16-point total
+      if (team1Score + team2Score !== 16) {
+        return res.status(400).json({ error: "Total score must equal 16 points" });
+      }
+      
+      if (team1Score < 0 || team2Score < 0 || team1Score > 16 || team2Score > 16) {
+        return res.status(400).json({ error: "Individual scores must be between 0 and 16" });
+      }
+
+      const userId = req.user.claims.sub;
+      const updatedTournament = await storage.updateTournamentScores(id, gameNumber, team1Score, team2Score, userId);
+      
+      if (!updatedTournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      res.json(updatedTournament);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Complete tournament and generate final leaderboard (requires owner or admin)
+  app.post("/api/tournaments/:id/complete", isAuthenticated, isOwnerOrAdmin(async (req) => {
+    const id = parseInt(req.params.id);
+    return await storage.getTournamentOwnerId(id);
+  }), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { finalResults } = req.body;
+      
+      if (!finalResults || !Array.isArray(finalResults)) {
+        return res.status(400).json({ error: "Final results array is required" });
+      }
+
+      const updatedTournament = await storage.completeTournament(id, finalResults);
+      
+      if (!updatedTournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      res.json(updatedTournament);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get tournament by share ID or URL slug
   app.get("/api/shared/:identifier", async (req, res) => {
     try {
@@ -318,6 +379,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get tournament scores page (public access)
+  app.get("/api/shared/:identifier/scores", async (req, res) => {
+    try {
+      const { identifier } = req.params;
+      
+      // Try to find by shareId first, then by urlSlug
+      let tournament = await storage.getTournamentByShareId(identifier);
+      if (!tournament) {
+        tournament = await storage.getTournamentByUrlSlug(identifier);
+      }
+      
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      // Return tournament with finalScores and results
+      res.json({
+        ...tournament,
+        finalScores: tournament.finalScores || [],
+        results: tournament.results || []
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
     }
   });
 
