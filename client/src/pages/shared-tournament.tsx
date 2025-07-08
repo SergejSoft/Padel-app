@@ -119,7 +119,7 @@ export default function SharedTournament() {
     return user.role === 'admin' || user.id === tournament.organizerId;
   };
 
-  const handleScoreChange = async (gameNumber: number, team1Score: number, team2Score: number) => {
+  const handleScoreChange = (gameNumber: number, team1Score: number, team2Score: number) => {
     if (!canEditScores()) return; // Prevent score changes for non-organizers
     
     const newScores = {
@@ -129,8 +129,10 @@ export default function SharedTournament() {
     
     setGameScores(newScores);
     
-    // Auto-save results to database
-    await saveResultsToDatabase(newScores);
+    // Auto-save results to database (non-blocking)
+    saveResultsToDatabase(newScores).catch(error => {
+      console.error('Error auto-saving results:', error);
+    });
   };
 
   // Auto-save results when scores change
@@ -162,6 +164,8 @@ export default function SharedTournament() {
 
   // Calculate player scores from game scores
   const calculatePlayerScoresFromScores = (scores: Record<number, { team1Score: number; team2Score: number }>) => {
+    if (!tournament || !schedule) return [];
+    
     const playerStats: { [key: string]: PlayerStats } = {};
     
     // Initialize all players
@@ -200,28 +204,32 @@ export default function SharedTournament() {
 
         // Determine winner and update match wins
         if (team1Score > team2Score) {
-          playerStats[team1Player1].matchesWon++;
-          playerStats[team1Player2].matchesWon++;
-          playerStats[team1Player1].totalPoints += 3;
-          playerStats[team1Player2].totalPoints += 3;
+          if (playerStats[team1Player1]) playerStats[team1Player1].matchesWon++;
+          if (playerStats[team1Player2]) playerStats[team1Player2].matchesWon++;
+          if (playerStats[team1Player1]) playerStats[team1Player1].totalPoints += 3;
+          if (playerStats[team1Player2]) playerStats[team1Player2].totalPoints += 3;
         } else if (team2Score > team1Score) {
-          playerStats[team2Player1].matchesWon++;
-          playerStats[team2Player2].matchesWon++;
-          playerStats[team2Player1].totalPoints += 3;
-          playerStats[team2Player2].totalPoints += 3;
+          if (playerStats[team2Player1]) playerStats[team2Player1].matchesWon++;
+          if (playerStats[team2Player2]) playerStats[team2Player2].matchesWon++;
+          if (playerStats[team2Player1]) playerStats[team2Player1].totalPoints += 3;
+          if (playerStats[team2Player2]) playerStats[team2Player2].totalPoints += 3;
         }
 
         // Add points for sets won (simplified - using game score as set score)
         [team1Player1, team1Player2].forEach(player => {
-          playerStats[player].setsWon += team1Score;
-          playerStats[player].setsLost += team2Score;
-          playerStats[player].totalPoints += team1Score;
+          if (playerStats[player]) {
+            playerStats[player].setsWon += team1Score;
+            playerStats[player].setsLost += team2Score;
+            playerStats[player].totalPoints += team1Score;
+          }
         });
 
         [team2Player1, team2Player2].forEach(player => {
-          playerStats[player].setsWon += team2Score;
-          playerStats[player].setsLost += team1Score;
-          playerStats[player].totalPoints += team2Score;
+          if (playerStats[player]) {
+            playerStats[player].setsWon += team2Score;
+            playerStats[player].setsLost += team1Score;
+            playerStats[player].totalPoints += team2Score;
+          }
         });
       });
     });
