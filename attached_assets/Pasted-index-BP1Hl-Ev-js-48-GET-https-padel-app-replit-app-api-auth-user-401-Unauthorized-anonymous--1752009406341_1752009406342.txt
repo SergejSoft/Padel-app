@@ -1,0 +1,121 @@
+index-BP1Hl_Ev.js:48  GET https://padel-app.replit.app/api/auth/user 401 (Unauthorized)
+(anonymous) @ index-BP1Hl_Ev.js:48
+i @ index-BP1Hl_Ev.js:48
+A @ index-BP1Hl_Ev.js:48
+start @ index-BP1Hl_Ev.js:48
+fetch @ index-BP1Hl_Ev.js:48
+Vd @ index-BP1Hl_Ev.js:48
+onSubscribe @ index-BP1Hl_Ev.js:48
+subscribe @ index-BP1Hl_Ev.js:48
+(anonymous) @ index-BP1Hl_Ev.js:48
+P6 @ index-BP1Hl_Ev.js:38
+l1 @ index-BP1Hl_Ev.js:40
+Uc @ index-BP1Hl_Ev.js:40
+Nx @ index-BP1Hl_Ev.js:40
+zo @ index-BP1Hl_Ev.js:38
+RL @ index-BP1Hl_Ev.js:40
+tl @ index-BP1Hl_Ev.js:40
+i_ @ index-BP1Hl_Ev.js:40
+B @ index-BP1Hl_Ev.js:25
+C @ index-BP1Hl_Ev.js:25
+index-BP1Hl_Ev.js:40 Error: Minified React error #310; visit https://reactjs.org/docs/error-decoder.html?invariant=310 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at Rs (index-BP1Hl_Ev.js:38:17615)
+    at a1 (index-BP1Hl_Ev.js:38:20561)
+    at Object.Wv [as useEffect] (index-BP1Hl_Ev.js:38:20819)
+    at Ct.useEffect (index-BP1Hl_Ev.js:9:5880)
+    at OB (index-BP1Hl_Ev.js:507:37686)
+    at Uv (index-BP1Hl_Ev.js:38:17018)
+    at l2 (index-BP1Hl_Ev.js:40:3139)
+    at d_ (index-BP1Hl_Ev.js:40:44833)
+    at l_ (index-BP1Hl_Ev.js:40:39790)
+    at FL (index-BP1Hl_Ev.js:40:39718)
+overrideMethod @ hook.js:608
+o2 @ index-BP1Hl_Ev.js:40
+U6.n.callback @ index-BP1Hl_Ev.js:40
+rx @ index-BP1Hl_Ev.js:38
+xx @ index-BP1Hl_Ev.js:40
+s_ @ index-BP1Hl_Ev.js:40
+EL @ index-BP1Hl_Ev.js:40
+RL @ index-BP1Hl_Ev.js:40
+tl @ index-BP1Hl_Ev.js:40
+Nx @ index-BP1Hl_Ev.js:40
+zo @ index-BP1Hl_Ev.js:38
+(anonymous) @ index-BP1Hl_Ev.js:40
+setTimeout
+s @ index-BP1Hl_Ev.js:48
+a @ index-BP1Hl_Ev.js:48
+batch @ index-BP1Hl_Ev.js:48
+ca @ index-BP1Hl_Ev.js:48
+setData @ index-BP1Hl_Ev.js:48
+onSuccess @ index-BP1Hl_Ev.js:48
+p @ index-BP1Hl_Ev.js:48
+Promise.then
+A @ index-BP1Hl_Ev.js:48
+start @ index-BP1Hl_Ev.js:48
+fetch @ index-BP1Hl_Ev.js:48
+Vd @ index-BP1Hl_Ev.js:48
+onSubscribe @ index-BP1Hl_Ev.js:48
+subscribe @ index-BP1Hl_Ev.js:48
+(anonymous) @ index-BP1Hl_Ev.js:48
+P6 @ index-BP1Hl_Ev.js:38
+l1 @ index-BP1Hl_Ev.js:40
+Uc @ index-BP1Hl_Ev.js:40
+Nx @ index-BP1Hl_Ev.js:40
+zo @ index-BP1Hl_Ev.js:38
+RL @ index-BP1Hl_Ev.js:40
+tl @ index-BP1Hl_Ev.js:40
+i_ @ index-BP1Hl_Ev.js:40
+B @ index-BP1Hl_Ev.js:25
+C @ index-BP1Hl_Ev.js:25
+index-BP1Hl_Ev.js:38 Uncaught Error: Minified React error #310; visit https://reactjs.org/docs/error-decoder.html?invariant=310 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+    at Rs (index-BP1Hl_Ev.js:38:17615)
+    at a1 (index-BP1Hl_Ev.js:38:20561)
+    at Object.Wv [as useEffect] (index-BP1Hl_Ev.js:38:20819)
+    at Ct.useEffect (index-BP1Hl_Ev.js:9:5880)
+    at OB (index-BP1Hl_Ev.js:507:37686)
+    at Uv (index-BP1Hl_Ev.js:38:17018)
+    at l2 (index-BP1Hl_Ev.js:40:3139)
+    at d_ (index-BP1Hl_Ev.js:40:44833)
+    at l_ (index-BP1Hl_Ev.js:40:39790)
+    at FL (index-BP1Hl_Ev.js:40:39718)
+Rs @ index-BP1Hl_Ev.js:38
+a1 @ index-BP1Hl_Ev.js:38
+Wv @ index-BP1Hl_Ev.js:38
+Ct.useEffect @ index-BP1Hl_Ev.js:9
+OB @ index-BP1Hl_Ev.js:507
+Uv @ index-BP1Hl_Ev.js:38
+l2 @ index-BP1Hl_Ev.js:40
+d_ @ index-BP1Hl_Ev.js:40
+l_ @ index-BP1Hl_Ev.js:40
+FL @ index-BP1Hl_Ev.js:40
+Sm @ index-BP1Hl_Ev.js:40
+x2 @ index-BP1Hl_Ev.js:40
+Nx @ index-BP1Hl_Ev.js:40
+zo @ index-BP1Hl_Ev.js:38
+(anonymous) @ index-BP1Hl_Ev.js:40
+setTimeout
+s @ index-BP1Hl_Ev.js:48
+a @ index-BP1Hl_Ev.js:48
+batch @ index-BP1Hl_Ev.js:48
+ca @ index-BP1Hl_Ev.js:48
+setData @ index-BP1Hl_Ev.js:48
+onSuccess @ index-BP1Hl_Ev.js:48
+p @ index-BP1Hl_Ev.js:48
+Promise.then
+A @ index-BP1Hl_Ev.js:48
+start @ index-BP1Hl_Ev.js:48
+fetch @ index-BP1Hl_Ev.js:48
+Vd @ index-BP1Hl_Ev.js:48
+onSubscribe @ index-BP1Hl_Ev.js:48
+subscribe @ index-BP1Hl_Ev.js:48
+(anonymous) @ index-BP1Hl_Ev.js:48
+P6 @ index-BP1Hl_Ev.js:38
+l1 @ index-BP1Hl_Ev.js:40
+Uc @ index-BP1Hl_Ev.js:40
+Nx @ index-BP1Hl_Ev.js:40
+zo @ index-BP1Hl_Ev.js:38
+RL @ index-BP1Hl_Ev.js:40
+tl @ index-BP1Hl_Ev.js:40
+i_ @ index-BP1Hl_Ev.js:40
+B @ index-BP1Hl_Ev.js:25
+C @ index-BP1Hl_Ev.js:25
