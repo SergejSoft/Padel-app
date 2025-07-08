@@ -305,7 +305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ error: "Tournament results not available yet" });
         }
         
-        // Calculate player stats from schedule
+        // Calculate player stats from schedule - Simple total score calculation
         const calculatePlayerStats = (rounds: any[]) => {
           const playerStats: any = {};
           
@@ -319,46 +319,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   if (!playerStats[player]) {
                     playerStats[player] = {
                       player,
-                      matchesPlayed: 0,
-                      matchesWon: 0,
-                      setsWon: 0,
-                      setsLost: 0,
-                      pointsFor: 0,
-                      pointsAgainst: 0,
-                      totalPoints: 0
+                      totalPoints: 0,
+                      gamesPlayed: 0
                     };
                   }
                 });
                 
-                // Update stats
+                // Add points for team1 players
                 team1.forEach(player => {
-                  playerStats[player].matchesPlayed++;
-                  playerStats[player].pointsFor += score.team1Score;
-                  playerStats[player].pointsAgainst += score.team2Score;
-                  
-                  if (score.team1Score > score.team2Score) {
-                    playerStats[player].matchesWon++;
-                    playerStats[player].totalPoints += 3; // 3 points for win
-                  }
-                  
-                  playerStats[player].setsWon += score.team1Score;
-                  playerStats[player].setsLost += score.team2Score;
-                  playerStats[player].totalPoints += score.team1Score; // 1 point per set won
+                  playerStats[player].totalPoints += score.team1Score;
+                  playerStats[player].gamesPlayed++;
                 });
                 
+                // Add points for team2 players
                 team2.forEach(player => {
-                  playerStats[player].matchesPlayed++;
-                  playerStats[player].pointsFor += score.team2Score;
-                  playerStats[player].pointsAgainst += score.team1Score;
-                  
-                  if (score.team2Score > score.team1Score) {
-                    playerStats[player].matchesWon++;
-                    playerStats[player].totalPoints += 3; // 3 points for win
-                  }
-                  
-                  playerStats[player].setsWon += score.team2Score;
-                  playerStats[player].setsLost += score.team1Score;
-                  playerStats[player].totalPoints += score.team2Score; // 1 point per set won
+                  playerStats[player].totalPoints += score.team2Score;
+                  playerStats[player].gamesPlayed++;
                 });
               }
             });
@@ -367,8 +343,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return Object.values(playerStats).map((stats: any) => ({
             player: stats.player,
             totalPoints: stats.totalPoints,
-            gamesPlayed: stats.matchesPlayed,
-            averageScore: stats.matchesPlayed > 0 ? stats.totalPoints / stats.matchesPlayed : 0
+            gamesPlayed: stats.gamesPlayed,
+            averageScore: stats.gamesPlayed > 0 ? stats.totalPoints / stats.gamesPlayed : 0
           }));
         };
         

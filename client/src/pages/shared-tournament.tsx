@@ -67,10 +67,31 @@ export default function SharedTournament() {
 
   const status = getTournamentStatus(tournament);
 
-  const schedule = generateAmericanFormat({
-    players: tournament.players,
-    courts: tournament.courtsCount,
-  });
+  // Use stored schedule if available, otherwise generate new one
+  const schedule = tournament.schedule && tournament.schedule.length > 0 
+    ? tournament.schedule 
+    : generateAmericanFormat({
+        players: tournament.players,
+        courts: tournament.courtsCount,
+      });
+
+  // Load existing scores from the stored schedule
+  useEffect(() => {
+    if (tournament.schedule && tournament.schedule.length > 0) {
+      const existingScores: Record<number, { team1Score: number; team2Score: number }> = {};
+      tournament.schedule.forEach((round: any) => {
+        round.matches?.forEach((match: any) => {
+          if (match.score) {
+            existingScores[match.gameNumber] = {
+              team1Score: match.score.team1Score,
+              team2Score: match.score.team2Score
+            };
+          }
+        });
+      });
+      setGameScores(existingScores);
+    }
+  }, [tournament.schedule]);
 
   const totalGames = schedule.reduce((sum, round) => sum + round.matches.length, 0);
   const gamesPerPlayer = Math.floor(totalGames * 4 / tournament.playersCount);
@@ -167,6 +188,7 @@ export default function SharedTournament() {
     const finalScores = calculatePlayerScores();
     
     try {
+      // First, save the final scores
       const response = await fetch(`/api/tournaments/${tournament.id}/final-scores`, {
         method: 'POST',
         headers: {
@@ -178,6 +200,29 @@ export default function SharedTournament() {
       if (!response.ok) {
         throw new Error('Failed to save final scores');
       }
+
+      // Also save the current schedule with all scores
+      const updatedSchedule = schedule.map(round => ({
+        ...round,
+        matches: round.matches.map(match => {
+          const score = gameScores[match.gameNumber];
+          if (score) {
+            return {
+              ...match,
+              score: { team1Score: score.team1Score, team2Score: score.team2Score }
+            };
+          }
+          return match;
+        })
+      }));
+      
+      await fetch(`/api/tournaments/${tournament.id}/schedule`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ schedule: updatedSchedule }),
+      });
       
       return true;
     } catch (error) {
