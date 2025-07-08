@@ -98,6 +98,7 @@ This is a React-based Padel Tournament Scheduler that enables users to create an
 - **Development Banner**: Replit development mode integration
 
 ## Changelog
+- July 8, 2025. Fixed leaderboard scoring calculation to use simple score summation (e.g., Sergiej: 12+8+12+12+8+9+7 = 68 total points) instead of complex tournament algorithms, ensuring accurate player total calculations with database persistence
 - July 8, 2025. Implemented shared leaderboard URLs at `/shared/{shareId}/scores` for permanent tournament result sharing with database persistence across redeployments
 - June 27, 2025. Fixed Button component import error preventing tournament display and added duplicate prevention in tournament creation
 - June 21, 2025. Added permanent leaderboard functionality with database storage for final results and dedicated leaderboard page access via unique URLs
