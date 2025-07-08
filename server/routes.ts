@@ -144,25 +144,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update tournament schedule (owner or admin only)
-  app.patch("/api/tournaments/:id/schedule", isOwnerOrAdmin(async (req: any) => {
-    return await storage.getTournamentOwnerId(parseInt(req.params.id));
-  }), async (req: any, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const { schedule } = req.body;
-      
-      const tournament = await storage.updateTournament(id, { schedule });
-      if (!tournament) {
-        return res.status(404).json({ error: "Tournament not found" });
-      }
-      
-      res.json(tournament);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   // Delete tournament (owner or admin only)
   app.delete("/api/tournaments/:id", isOwnerOrAdmin(async (req: any) => {
     return await storage.getTournamentOwnerId(parseInt(req.params.id));
@@ -289,79 +270,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Tournament not found" });
       }
       
-      // Check if tournament has saved results
-      if ((!tournament.finalScores || tournament.finalScores.length === 0) && 
-          (!tournament.results || tournament.results.length === 0)) {
-        // Calculate results from current schedule if it has scores
-        const schedule = tournament.schedule || [];
-        const hasScores = schedule.some((round: any) => 
-          round.matches && round.matches.some((match: any) => match.score)
-        );
-        
-        console.log('Schedule:', JSON.stringify(schedule, null, 2));
-        console.log('Has scores:', hasScores);
-        
-        if (!hasScores) {
-          return res.status(404).json({ error: "Tournament results not available yet" });
-        }
-        
-        // Calculate player stats from schedule - Simple total score calculation
-        const calculatePlayerStats = (rounds: any[]) => {
-          const playerStats: any = {};
-          
-          rounds.forEach((round: any) => {
-            round.matches?.forEach((match: any) => {
-              if (match.score) {
-                const { team1, team2, score } = match;
-                
-                // Initialize players if not exists
-                [...team1, ...team2].forEach(player => {
-                  if (!playerStats[player]) {
-                    playerStats[player] = {
-                      player,
-                      totalPoints: 0,
-                      gamesPlayed: 0
-                    };
-                  }
-                });
-                
-                // Add points for team1 players
-                team1.forEach(player => {
-                  playerStats[player].totalPoints += score.team1Score;
-                  playerStats[player].gamesPlayed++;
-                });
-                
-                // Add points for team2 players
-                team2.forEach(player => {
-                  playerStats[player].totalPoints += score.team2Score;
-                  playerStats[player].gamesPlayed++;
-                });
-              }
-            });
-          });
-          
-          return Object.values(playerStats).map((stats: any) => ({
-            player: stats.player,
-            totalPoints: stats.totalPoints,
-            gamesPlayed: stats.gamesPlayed,
-            averageScore: stats.gamesPlayed > 0 ? stats.totalPoints / stats.gamesPlayed : 0
-          }));
-        };
-        
-        const calculatedScores = calculatePlayerStats(schedule);
-        
-        res.json({
-          tournament: {
-            id: tournament.id,
-            name: tournament.name,
-            date: tournament.date,
-            location: tournament.location,
-            status: tournament.status
-          },
-          finalScores: calculatedScores,
-          results: calculatedScores
-        });
-        return;
+      if (!tournament.finalScores && !tournament.results) {
+        return res.status(404).json({ error: "Tournament results not available yet" });
       }
       
       res.json({

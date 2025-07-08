@@ -24,13 +24,8 @@ export function SimpleScoreInput({
   const [isValid, setIsValid] = useState(true);
 
   useEffect(() => {
-    // Only update if the props have actually changed and are not zero (empty scores)
-    if (team1Score > 0 || team1Input === "") {
-      setTeam1Input(team1Score === 0 ? "" : team1Score.toString());
-    }
-    if (team2Score > 0 || team2Input === "") {
-      setTeam2Input(team2Score === 0 ? "" : team2Score.toString());
-    }
+    setTeam1Input(team1Score === 0 ? "" : team1Score.toString());
+    setTeam2Input(team2Score === 0 ? "" : team2Score.toString());
   }, [team1Score, team2Score]);
 
   const validateAndUpdate = (newTeam1: string, newTeam2: string) => {

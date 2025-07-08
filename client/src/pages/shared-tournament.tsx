@@ -67,31 +67,10 @@ export default function SharedTournament() {
 
   const status = getTournamentStatus(tournament);
 
-  // Use stored schedule if available, otherwise generate new one
-  const schedule = tournament.schedule && tournament.schedule.length > 0 
-    ? tournament.schedule 
-    : generateAmericanFormat({
-        players: tournament.players,
-        courts: tournament.courtsCount,
-      });
-
-  // Load existing scores from the stored schedule
-  useEffect(() => {
-    if (tournament.schedule && tournament.schedule.length > 0) {
-      const existingScores: Record<number, { team1Score: number; team2Score: number }> = {};
-      tournament.schedule.forEach((round: any) => {
-        round.matches?.forEach((match: any) => {
-          if (match.score) {
-            existingScores[match.gameNumber] = {
-              team1Score: match.score.team1Score,
-              team2Score: match.score.team2Score
-            };
-          }
-        });
-      });
-      setGameScores(existingScores);
-    }
-  }, [tournament.schedule]);
+  const schedule = generateAmericanFormat({
+    players: tournament.players,
+    courts: tournament.courtsCount,
+  });
 
   const totalGames = schedule.reduce((sum, round) => sum + round.matches.length, 0);
   const gamesPerPlayer = Math.floor(totalGames * 4 / tournament.playersCount);
@@ -140,47 +119,12 @@ export default function SharedTournament() {
     return user.role === 'admin' || user.id === tournament.organizerId;
   };
 
-  const handleScoreChange = async (gameNumber: number, team1Score: number, team2Score: number) => {
+  const handleScoreChange = (gameNumber: number, team1Score: number, team2Score: number) => {
     if (!canEditScores()) return; // Prevent score changes for non-organizers
-    
-    // Update local state immediately for responsive UI
     setGameScores(prev => ({
       ...prev,
       [gameNumber]: { team1Score, team2Score }
     }));
-    
-    // Save to database in background
-    try {
-      const updatedSchedule = schedule.map(round => ({
-        ...round,
-        matches: round.matches.map(match => {
-          if (match.gameNumber === gameNumber) {
-            return {
-              ...match,
-              score: { team1Score, team2Score }
-            };
-          }
-          return match;
-        })
-      }));
-      
-      const response = await fetch(`/api/tournaments/${tournament.id}/schedule`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ schedule: updatedSchedule }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to save score');
-      }
-      
-      console.log(`Score saved: Game ${gameNumber} - ${team1Score}:${team2Score}`);
-    } catch (error) {
-      console.error('Error saving score:', error);
-      // Could add a visual indicator here if needed
-    }
   };
 
   // Save final scores when tournament is completed
@@ -190,7 +134,6 @@ export default function SharedTournament() {
     const finalScores = calculatePlayerScores();
     
     try {
-      // First, save the final scores
       const response = await fetch(`/api/tournaments/${tournament.id}/final-scores`, {
         method: 'POST',
         headers: {
@@ -202,29 +145,6 @@ export default function SharedTournament() {
       if (!response.ok) {
         throw new Error('Failed to save final scores');
       }
-
-      // Also save the current schedule with all scores
-      const updatedSchedule = schedule.map(round => ({
-        ...round,
-        matches: round.matches.map(match => {
-          const score = gameScores[match.gameNumber];
-          if (score) {
-            return {
-              ...match,
-              score: { team1Score: score.team1Score, team2Score: score.team2Score }
-            };
-          }
-          return match;
-        })
-      }));
-      
-      await fetch(`/api/tournaments/${tournament.id}/schedule`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ schedule: updatedSchedule }),
-      });
       
       return true;
     } catch (error) {
