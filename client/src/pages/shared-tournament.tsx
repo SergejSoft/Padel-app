@@ -67,13 +67,19 @@ export default function SharedTournament() {
 
   const status = getTournamentStatus(tournament);
 
-  const schedule = generateAmericanFormat({
-    players: tournament.players,
-    courts: tournament.courtsCount,
-  });
+  // Check if tournament is in registration mode
+  const isRegistrationMode = tournament.tournamentMode === 'registration' && (!tournament.schedule || tournament.schedule.length === 0);
 
-  const totalGames = schedule.reduce((sum, round) => sum + round.matches.length, 0);
-  const gamesPerPlayer = Math.floor(totalGames * 4 / tournament.playersCount);
+  // Only generate schedule if not in registration mode and has enough players
+  const schedule = !isRegistrationMode && tournament.players && tournament.players.length >= 4 
+    ? generateAmericanFormat({
+        players: tournament.players,
+        courts: tournament.courtsCount,
+      })
+    : [];
+
+  const totalGames = schedule.length > 0 ? schedule.reduce((sum, round) => sum + round.matches.length, 0) : 0;
+  const gamesPerPlayer = tournament.playersCount > 0 ? Math.floor(totalGames * 4 / tournament.playersCount) : 0;
   const avgGameMinutes = 13; // Average game length
 
   // Calculate player scores for leaderboard
@@ -190,34 +196,68 @@ export default function SharedTournament() {
         </div>
 
         {/* Tournament Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{schedule.length}</div>
-                <div className="text-sm text-gray-600">Rounds</div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{totalGames}</div>
-                <div className="text-sm text-gray-600">Total Games</div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{gamesPerPlayer}</div>
-                <div className="text-sm text-gray-600">Games per Player</div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {isRegistrationMode ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">{tournament.registeredParticipants?.length || 0}</div>
+                  <div className="text-sm text-gray-600">Registered</div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">{tournament.playersCount}</div>
+                  <div className="text-sm text-gray-600">Max Players</div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {tournament.registrationStatus === 'open' ? 'Open' : 
+                     tournament.registrationStatus === 'full' ? 'Full' : 'Closed'}
+                  </div>
+                  <div className="text-sm text-gray-600">Registration</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">{schedule.length}</div>
+                  <div className="text-sm text-gray-600">Rounds</div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">{totalGames}</div>
+                  <div className="text-sm text-gray-600">Total Games</div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">{gamesPerPlayer}</div>
+                  <div className="text-sm text-gray-600">Games per Player</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Leaderboard Button - only show if user can edit scores and all games have scores */}
         {canEditScores() && allGamesHaveScores() && (
@@ -244,14 +284,76 @@ export default function SharedTournament() {
           </div>
         )}
 
-        {/* Schedule */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tournament Schedule</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {schedule.map((round) => (
+        {/* Registration Mode - Show Registered Participants */}
+        {isRegistrationMode ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Registration Status</span>
+                <Badge variant="outline" className="text-sm">
+                  {tournament.registeredParticipants?.length || 0} / {tournament.playersCount} Registered
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Alert className="border-blue-200 bg-blue-50">
+                  <AlertDescription>
+                    <p className="text-blue-800">
+                      This tournament is accepting registrations. Once {tournament.playersCount} players have registered, 
+                      the organizer will generate the tournament schedule.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+                
+                {tournament.registrationId && (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-600 mb-2">Share this registration link:</p>
+                    <code className="bg-gray-100 px-3 py-1 rounded text-sm">
+                      {window.location.origin}/register/{tournament.registrationId}
+                    </code>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <h4 className="font-medium">Registered Players:</h4>
+                  {tournament.registeredParticipants && tournament.registeredParticipants.length > 0 ? (
+                    <div className="space-y-2">
+                      {tournament.registeredParticipants.map((participant: any, index: number) => (
+                        <div key={participant.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                              <span className="text-purple-600 font-medium text-sm">{index + 1}</span>
+                            </div>
+                            <div>
+                              <div className="font-medium">{participant.name}</div>
+                              <div className="text-sm text-gray-500">
+                                Registered {new Date(participant.registeredAt).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            {participant.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-8">No players registered yet</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          /* Schedule */
+          <Card>
+            <CardHeader>
+              <CardTitle>Tournament Schedule</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {schedule.map((round) => (
                 <div key={round.round} className="border-l-2 border-gray-200 pl-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Round {round.round}</h3>
                   <div className="grid gap-3">
@@ -301,34 +403,39 @@ export default function SharedTournament() {
             </div>
           </CardContent>
         </Card>
+        )}
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
-          <Button 
-            onClick={() => setShowPDFPreview(true)}
-            className="flex items-center gap-2"
-          >
-            <Eye className="h-4 w-4" />
-            Preview Schedule
-          </Button>
-          <Button 
-            onClick={() => {
-              const pdf = generateTournamentPDF({
-                tournamentName: tournament.name,
-                tournamentDate: tournament.date,
-                tournamentLocation: tournament.location,
-                playersCount: tournament.playersCount,
-                courtsCount: tournament.courtsCount,
-                rounds: schedule,
-              });
-              pdf.save(`${tournament.name.replace(/\s+/g, '_')}_schedule.pdf`);
-            }}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Download PDF
-          </Button>
+          {!isRegistrationMode && (
+            <>
+              <Button 
+                onClick={() => setShowPDFPreview(true)}
+                className="flex items-center gap-2"
+              >
+                <Eye className="h-4 w-4" />
+                Preview Schedule
+              </Button>
+              <Button 
+                onClick={() => {
+                  const pdf = generateTournamentPDF({
+                    tournamentName: tournament.name,
+                    tournamentDate: tournament.date,
+                    tournamentLocation: tournament.location,
+                    playersCount: tournament.playersCount,
+                    courtsCount: tournament.courtsCount,
+                    rounds: schedule,
+                  });
+                  pdf.save(`${tournament.name.replace(/\s+/g, '_')}_schedule.pdf`);
+                }}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download PDF
+              </Button>
+            </>
+          )}
           <Link href="/">
             <Button variant="outline" size="lg">
               Create New Tournament
