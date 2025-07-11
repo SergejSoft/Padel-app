@@ -11,6 +11,8 @@ import {
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
 import { TOURNAMENT_CONFIG, type RegistrationStatus } from "@shared/tournament-config";
+import { generateAmericanFormatTournament } from "@shared/american-format-generator";
+import type { AmericanFormatConfig } from "@shared/tournament-types";
 import { nanoid } from "nanoid";
 
 export interface IStorage {
@@ -500,11 +502,25 @@ export class DatabaseStorage implements IStorage {
       .filter(p => p.status === 'registered' || p.status === 'confirmed')
       .map(p => p.name);
 
-    // Close registration and update to traditional tournament mode
+    // Generate the tournament schedule
+    const config: AmericanFormatConfig = {
+      players: playerNames,
+      courts: tournament.courtsCount,
+      pointsPerMatch: tournament.pointsPerMatch
+    };
+
+    const { rounds, validation } = generateAmericanFormatTournament(config);
+    
+    if (!validation.isValid) {
+      throw new Error(`Failed to generate schedule: ${validation.errors.join(', ')}`);
+    }
+
+    // Close registration and update to traditional tournament mode with schedule
     const [updated] = await db
       .update(tournaments)
       .set({ 
         players: playerNames as any,
+        schedule: rounds as any,
         tournamentMode: TOURNAMENT_CONFIG.TOURNAMENT_MODE.FIXED_PLAYERS,
         registrationStatus: TOURNAMENT_CONFIG.REGISTRATION_STATUS.CLOSED
       })

@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { TournamentSetup } from "./tournament-setup";
-import { PlayerEntry } from "./player-entry";
-import { ScheduleDisplay } from "./schedule-display";
+import { TournamentCreationSummary } from "./tournament-creation-summary";
 import type { TournamentSetup as TournamentSetupType } from "@shared/schema";
 
 interface WizardState {
@@ -20,8 +19,7 @@ export function TournamentWizard() {
 
   const steps = [
     { number: 1, label: "Setup" },
-    { number: 2, label: "Players" },
-    { number: 3, label: "Schedule" },
+    { number: 2, label: "Create Tournament" },
   ];
 
   // Load saved state on component mount
@@ -119,20 +117,9 @@ export function TournamentWizard() {
         )}
 
         {currentStep === 2 && tournamentSetup && (
-          <PlayerEntry
-            playersCount={tournamentSetup.playersCount}
-            onComplete={handlePlayersComplete}
-            onBack={handleBack}
-            initialPlayers={players.length > 0 ? players : undefined}
-          />
-        )}
-
-        {currentStep === 3 && tournamentSetup && players.length > 0 && (
-          <ScheduleDisplay
+          <TournamentCreationSummary
             tournamentSetup={tournamentSetup}
-            players={players}
             onBack={handleBack}
-            onReset={resetWizard}
           />
         )}
       </Card>

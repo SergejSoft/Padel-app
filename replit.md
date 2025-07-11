@@ -106,6 +106,7 @@ This is a React-based Padel Tournament Scheduler that enables users to create an
 - **Development Banner**: Replit development mode integration
 
 ## Changelog
+- July 11, 2025. **Two-Phase Tournament Workflow**: Restructured tournament creation to support self-registration flow. Phase 1: Create tournament with basic details and generate registration link. Phase 2: Generate schedule after participants register. Added registration management dialog to dashboard.
 - July 11, 2025. ✅ **FOUNDATION COMPLETE**: Established and validated comprehensive tournament system with configurable scoring rules, immutable data structures, pure calculation functions, comprehensive validation, unit tests, and flexible American format generator supporting 4-16 players with strict rule adherence. All 12 foundation tests passed successfully.
 - July 8, 2025. Fixed shared tournament score input issue by replacing minimal component with full SharedTournament component containing score input functionality
 - June 27, 2025. Fixed Button component import error preventing tournament display and added duplicate prevention in tournament creation
