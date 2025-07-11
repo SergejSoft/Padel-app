@@ -95,36 +95,56 @@ export default function RegistrationPage() {
 
   // WebSocket connection for real-time updates
   useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    const ws = new WebSocket(wsUrl);
+    // Only attempt WebSocket connection in a proper environment
+    if (typeof window === 'undefined') return;
     
-    ws.onopen = () => {
-      console.log('WebSocket connected');
-      ws.send(JSON.stringify({
-        type: 'join_registration',
-        registrationId
-      }));
-      setWsConnection(ws);
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log('WebSocket message:', data);
+    try {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const host = window.location.host;
+      const wsUrl = `${protocol}//${host}/ws`;
       
-      if (data.type === 'participant_registered' || data.type === 'participant_removed') {
-        queryClient.invalidateQueries({ queryKey: ['registration', registrationId, 'participants'] });
-      }
-    };
+      console.log('Attempting WebSocket connection to:', wsUrl);
+      const ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log('WebSocket connected successfully');
+        ws.send(JSON.stringify({
+          type: 'join_registration',
+          registrationId
+        }));
+        setWsConnection(ws);
+      };
 
-    ws.onclose = () => {
-      console.log('WebSocket disconnected');
-      setWsConnection(null);
-    };
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('WebSocket message received:', data);
+          
+          if (data.type === 'participant_registered' || data.type === 'participant_removed') {
+            queryClient.invalidateQueries({ queryKey: ['registration', registrationId, 'participants'] });
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
 
-    return () => {
-      ws.close();
-    };
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+
+      ws.onclose = (event) => {
+        console.log('WebSocket disconnected:', event.code, event.reason);
+        setWsConnection(null);
+      };
+
+      return () => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.close();
+        }
+      };
+    } catch (error) {
+      console.error('Failed to create WebSocket connection:', error);
+    }
   }, [registrationId, queryClient]);
 
   const handleSubmit = (e: React.FormEvent) => {
