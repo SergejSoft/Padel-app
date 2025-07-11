@@ -256,9 +256,6 @@ export default function RegistrationPage() {
               </CardTitle>
               <CardDescription>
                 Players who have registered for this tournament
-                {wsConnection && (
-                  <span className="ml-2 text-green-600">• Live Updates</span>
-                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
