@@ -5,9 +5,13 @@ import {
   type InsertTournament,
   type User,
   type UpsertUser,
+  type RegisteredParticipant,
+  type RegistrationInfo
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
+import { TOURNAMENT_CONFIG, type RegistrationStatus } from "@shared/tournament-config";
+import { nanoid } from "nanoid";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -32,6 +36,16 @@ export interface IStorage {
   generateLeaderboardId(tournamentId: number): Promise<string>;
   deleteTournament(id: number): Promise<boolean>;
   getTournamentOwnerId(id: number): Promise<string | null>;
+  
+  // Self-registration operations
+  getTournamentByRegistrationId(registrationId: string): Promise<Tournament | undefined>;
+  generateRegistrationId(tournamentId: number): Promise<string>;
+  registerParticipant(registrationId: string, participant: Omit<RegisteredParticipant, 'id' | 'registeredAt' | 'status'>): Promise<RegisteredParticipant | null>;
+  removeParticipant(tournamentId: number, participantId: string): Promise<boolean>;
+  updateParticipant(tournamentId: number, participantId: string, updates: Partial<RegisteredParticipant>): Promise<RegisteredParticipant | null>;
+  getRegistrationInfo(registrationId: string): Promise<RegistrationInfo | null>;
+  updateRegistrationStatus(tournamentId: number, status: RegistrationStatus): Promise<Tournament | undefined>;
+  convertRegistrationToTournament(tournamentId: number): Promise<Tournament | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -337,6 +351,167 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return updatedTournament;
+  }
+
+  // Self-registration implementations
+  async getTournamentByRegistrationId(registrationId: string): Promise<Tournament | undefined> {
+    const [tournament] = await db.select().from(tournaments).where(eq(tournaments.registrationId, registrationId));
+    return tournament || undefined;
+  }
+
+  async generateRegistrationId(tournamentId: number): Promise<string> {
+    const registrationId = nanoid(12); // Shorter, URL-friendly ID
+    await db.update(tournaments).set({ registrationId }).where(eq(tournaments.id, tournamentId));
+    return registrationId;
+  }
+
+  async registerParticipant(registrationId: string, participant: Omit<RegisteredParticipant, 'id' | 'registeredAt' | 'status'>): Promise<RegisteredParticipant | null> {
+    const tournament = await this.getTournamentByRegistrationId(registrationId);
+    if (!tournament) return null;
+
+    // Check if registration is open
+    if (tournament.registrationStatus !== TOURNAMENT_CONFIG.REGISTRATION_STATUS.OPEN) {
+      return null;
+    }
+
+    // Check if tournament is full
+    const currentParticipants = tournament.registeredParticipants || [];
+    const maxParticipants = tournament.maxParticipants || tournament.playersCount;
+    
+    if (currentParticipants.length >= maxParticipants) {
+      return null;
+    }
+
+    // Check for duplicate names (case-insensitive)
+    const existingNames = currentParticipants.map(p => p.name.toLowerCase());
+    if (existingNames.includes(participant.name.toLowerCase())) {
+      return null;
+    }
+
+    // Create new participant
+    const newParticipant: RegisteredParticipant = {
+      id: nanoid(8),
+      name: participant.name,
+      email: participant.email,
+      registeredAt: new Date().toISOString(),
+      status: 'registered'
+    };
+
+    // Add to participants list
+    const updatedParticipants = [...currentParticipants, newParticipant];
+    
+    // Update registration status if full
+    const newStatus = updatedParticipants.length >= maxParticipants 
+      ? TOURNAMENT_CONFIG.REGISTRATION_STATUS.FULL 
+      : TOURNAMENT_CONFIG.REGISTRATION_STATUS.OPEN;
+
+    await db.update(tournaments)
+      .set({ 
+        registeredParticipants: updatedParticipants as any,
+        registrationStatus: newStatus
+      })
+      .where(eq(tournaments.id, tournament.id));
+
+    return newParticipant;
+  }
+
+  async removeParticipant(tournamentId: number, participantId: string): Promise<boolean> {
+    const tournament = await this.getTournament(tournamentId);
+    if (!tournament) return false;
+
+    const currentParticipants = tournament.registeredParticipants || [];
+    const updatedParticipants = currentParticipants.filter(p => p.id !== participantId);
+    
+    if (updatedParticipants.length === currentParticipants.length) {
+      return false; // Participant not found
+    }
+
+    // Update registration status (reopen if was full)
+    const newStatus = tournament.registrationStatus === TOURNAMENT_CONFIG.REGISTRATION_STATUS.FULL
+      ? TOURNAMENT_CONFIG.REGISTRATION_STATUS.OPEN
+      : tournament.registrationStatus;
+
+    await db.update(tournaments)
+      .set({ 
+        registeredParticipants: updatedParticipants as any,
+        registrationStatus: newStatus
+      })
+      .where(eq(tournaments.id, tournamentId));
+
+    return true;
+  }
+
+  async updateParticipant(tournamentId: number, participantId: string, updates: Partial<RegisteredParticipant>): Promise<RegisteredParticipant | null> {
+    const tournament = await this.getTournament(tournamentId);
+    if (!tournament) return null;
+
+    const currentParticipants = tournament.registeredParticipants || [];
+    const participantIndex = currentParticipants.findIndex(p => p.id === participantId);
+    
+    if (participantIndex === -1) return null;
+
+    // Update participant
+    const updatedParticipant = { ...currentParticipants[participantIndex], ...updates };
+    const updatedParticipants = [...currentParticipants];
+    updatedParticipants[participantIndex] = updatedParticipant;
+
+    await db.update(tournaments)
+      .set({ registeredParticipants: updatedParticipants as any })
+      .where(eq(tournaments.id, tournamentId));
+
+    return updatedParticipant;
+  }
+
+  async getRegistrationInfo(registrationId: string): Promise<RegistrationInfo | null> {
+    const tournament = await this.getTournamentByRegistrationId(registrationId);
+    if (!tournament) return null;
+
+    const currentParticipants = tournament.registeredParticipants || [];
+    
+    return {
+      tournamentId: tournament.id,
+      tournamentName: tournament.name,
+      date: tournament.date || '',
+      time: tournament.time || '',
+      location: tournament.location || '',
+      currentParticipants: currentParticipants.length,
+      maxParticipants: tournament.maxParticipants || tournament.playersCount,
+      registrationStatus: tournament.registrationStatus as 'open' | 'closed' | 'full',
+      deadline: tournament.registrationDeadline?.toISOString()
+    };
+  }
+
+  async updateRegistrationStatus(tournamentId: number, status: RegistrationStatus): Promise<Tournament | undefined> {
+    const [updated] = await db
+      .update(tournaments)
+      .set({ registrationStatus: status })
+      .where(eq(tournaments.id, tournamentId))
+      .returning();
+    return updated || undefined;
+  }
+
+  async convertRegistrationToTournament(tournamentId: number): Promise<Tournament | undefined> {
+    const tournament = await this.getTournament(tournamentId);
+    if (!tournament) return undefined;
+
+    // Convert registered participants to players array
+    const participants = tournament.registeredParticipants || [];
+    const playerNames = participants
+      .filter(p => p.status === 'registered' || p.status === 'confirmed')
+      .map(p => p.name);
+
+    // Close registration and update to traditional tournament mode
+    const [updated] = await db
+      .update(tournaments)
+      .set({ 
+        players: playerNames as any,
+        tournamentMode: TOURNAMENT_CONFIG.TOURNAMENT_MODE.FIXED_PLAYERS,
+        registrationStatus: TOURNAMENT_CONFIG.REGISTRATION_STATUS.CLOSED
+      })
+      .where(eq(tournaments.id, tournamentId))
+      .returning();
+    
+    return updated || undefined;
   }
 }
 

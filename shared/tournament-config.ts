@@ -31,6 +31,19 @@ export const TOURNAMENT_CONFIG = {
     COMPLETED: 'completed'
   } as const,
   
+  // Registration status
+  REGISTRATION_STATUS: {
+    OPEN: 'open',
+    CLOSED: 'closed', 
+    FULL: 'full'
+  } as const,
+  
+  // Tournament modes
+  TOURNAMENT_MODE: {
+    FIXED_PLAYERS: 'fixed',    // Traditional: organizer enters all players
+    SELF_REGISTRATION: 'registration'  // New: players self-register
+  } as const,
+  
   // Match status
   MATCH_STATUS: {
     PENDING: 'pending',
@@ -52,3 +65,5 @@ export const TOURNAMENT_CONFIG = {
 // Type exports for type safety
 export type TournamentStatus = typeof TOURNAMENT_CONFIG.STATUS[keyof typeof TOURNAMENT_CONFIG.STATUS];
 export type MatchStatus = typeof TOURNAMENT_CONFIG.MATCH_STATUS[keyof typeof TOURNAMENT_CONFIG.MATCH_STATUS];
+export type RegistrationStatus = typeof TOURNAMENT_CONFIG.REGISTRATION_STATUS[keyof typeof TOURNAMENT_CONFIG.REGISTRATION_STATUS];
+export type TournamentMode = typeof TOURNAMENT_CONFIG.TOURNAMENT_MODE[keyof typeof TOURNAMENT_CONFIG.TOURNAMENT_MODE];

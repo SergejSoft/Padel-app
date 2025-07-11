@@ -43,6 +43,15 @@ export const tournaments = pgTable("tournaments", {
   urlSlug: text("url_slug").unique(), // Custom friendly URL slug
   status: text("status").notNull().default("active"), // active, cancelled, past, completed
   organizerId: text("organizer_id").references(() => users.id),
+  
+  // New self-registration fields (all optional for backward compatibility)
+  tournamentMode: text("tournament_mode").notNull().default("fixed"), // 'fixed' or 'registration'
+  registrationId: text("registration_id").unique(), // Unique ID for public registration link
+  registrationStatus: text("registration_status").default("closed"), // 'open', 'closed', 'full'
+  maxParticipants: integer("max_participants"), // Registration limit (defaults to playersCount)
+  registeredParticipants: json("registered_participants").$type<RegisteredParticipant[]>().default([]), // Self-registered players
+  registrationDeadline: timestamp("registration_deadline"), // Optional deadline for registration
+  
   createdAt: timestamp("created_at").defaultNow(),
   completedAt: timestamp("completed_at"), // When tournament was completed
 });
@@ -56,6 +65,27 @@ export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type InsertTournament = z.infer<typeof insertTournamentSchema>;
 export type Tournament = typeof tournaments.$inferSelect;
+
+// Self-registration types
+export interface RegisteredParticipant {
+  id: string; // Unique participant ID
+  name: string; // Player name
+  email?: string; // Optional contact info
+  registeredAt: string; // ISO timestamp
+  status: 'registered' | 'confirmed' | 'removed'; // Participant status
+}
+
+export interface RegistrationInfo {
+  tournamentId: number;
+  tournamentName: string;
+  date: string;
+  time: string;
+  location: string;
+  currentParticipants: number;
+  maxParticipants: number;
+  registrationStatus: 'open' | 'closed' | 'full';
+  deadline?: string;
+}
 
 // Import new foundation
 import { TOURNAMENT_CONFIG } from './tournament-config';
