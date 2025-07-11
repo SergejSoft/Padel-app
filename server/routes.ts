@@ -1,12 +1,10 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
-import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertTournamentSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated, isAdmin, isOwnerOrAdmin } from "./replitAuth";
 import { z } from "zod";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
   // Setup authentication middleware
   await setupAuth(app);
 
@@ -513,8 +511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Broadcast update to WebSocket clients
-      broadcastRegistrationUpdate(registrationId, 'participant_registered', participant);
+      // Real-time updates handled by client polling
       
       res.json(participant);
     } catch (error: any) {
@@ -540,11 +537,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Participant not found" });
       }
       
-      // Get tournament registration ID for WebSocket broadcast
-      const tournament = await storage.getTournament(tournamentId);
-      if (tournament?.registrationId) {
-        broadcastRegistrationUpdate(tournament.registrationId, 'participant_removed', { participantId });
-      }
+      // Real-time updates handled by client polling
       
       res.json({ success: true });
     } catch (error: any) {
@@ -568,11 +561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Participant not found" });
       }
       
-      // Get tournament registration ID for WebSocket broadcast
-      const tournament = await storage.getTournament(tournamentId);
-      if (tournament?.registrationId) {
-        broadcastRegistrationUpdate(tournament.registrationId, 'participant_updated', updatedParticipant);
-      }
+      // Real-time updates handled by client polling
       
       res.json(updatedParticipant);
     } catch (error: any) {
@@ -622,10 +611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Tournament not found" });
       }
       
-      // Broadcast status update
-      if (tournament.registrationId) {
-        broadcastRegistrationUpdate(tournament.registrationId, 'status_updated', { status });
-      }
+      // Real-time updates handled by client polling
       
       res.json(tournament);
     } catch (error: any) {
@@ -633,80 +619,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // === WebSocket Integration ===
 
-  // Create HTTP server
-  const httpServer = createServer(app);
-  
-  // WebSocket server for real-time updates
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
-  // Store WebSocket connections by registration ID
-  const registrationConnections = new Map<string, Set<WebSocket>>();
-  
-  wss.on('connection', (ws, req) => {
-    console.log('WebSocket connection established');
-    
-    ws.on('message', (message) => {
-      try {
-        const data = JSON.parse(message.toString());
-        
-        if (data.type === 'join_registration') {
-          const { registrationId } = data;
-          
-          // Add connection to registration room
-          if (!registrationConnections.has(registrationId)) {
-            registrationConnections.set(registrationId, new Set());
-          }
-          registrationConnections.get(registrationId)?.add(ws);
-          
-          // Store registration ID on WebSocket for cleanup
-          (ws as any).registrationId = registrationId;
-          
-          console.log(`Client joined registration room: ${registrationId}`);
-        }
-      } catch (error) {
-        console.error('WebSocket message error:', error);
-      }
-    });
-    
-    ws.on('close', () => {
-      // Clean up connection from registration rooms
-      const registrationId = (ws as any).registrationId;
-      if (registrationId && registrationConnections.has(registrationId)) {
-        registrationConnections.get(registrationId)?.delete(ws);
-        if (registrationConnections.get(registrationId)?.size === 0) {
-          registrationConnections.delete(registrationId);
-        }
-      }
-      console.log('WebSocket connection closed');
-    });
-    
-    ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
-    });
-  });
-  
-  // Function to broadcast registration updates
-  function broadcastRegistrationUpdate(registrationId: string, eventType: string, data: any) {
-    const connections = registrationConnections.get(registrationId);
-    if (!connections) return;
-    
-    const message = JSON.stringify({
-      type: eventType,
-      registrationId,
-      data,
-      timestamp: new Date().toISOString()
-    });
-    
-    connections.forEach(ws => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(message);
-      }
-    });
-    
-    console.log(`Broadcast to ${connections.size} clients: ${eventType} for ${registrationId}`);
-  }
-  
-  return httpServer;
 }
