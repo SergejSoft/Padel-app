@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Plus, Settings, Users, Calendar, Trash2, Edit, Crown, Shield, Ban, Play, Share, Copy, ExternalLink, Trophy } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Loader2, Plus, Settings, Users, Calendar, Trash2, Edit, Crown, Shield, Ban, Play, Share, Copy, ExternalLink, Trophy, UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentWizard } from "@/components/tournament-wizard";
 import { EditTournamentModal } from "@/components/edit-tournament-modal";
 import { TournamentViewModal } from "@/components/tournament-view-modal";
 import { Footer } from "@/components/footer";
+import RegistrationManagement from "@/components/registration-management";
 import { apiRequest } from "@/lib/queryClient";
 import type { Tournament } from "@shared/schema";
 
@@ -21,6 +23,7 @@ export default function Dashboard() {
   const [showCreateTournament, setShowCreateTournament] = useState(false);
   const [editingTournament, setEditingTournament] = useState<Tournament | null>(null);
   const [viewingTournament, setViewingTournament] = useState<Tournament | null>(null);
+  const [managingRegistration, setManagingRegistration] = useState<Tournament | null>(null);
 
   const { data: tournaments = [], isLoading, error } = useQuery<Tournament[]>({
     queryKey: ["/api/tournaments"],
@@ -402,6 +405,17 @@ export default function Dashboard() {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => setManagingRegistration(tournament)}
+                          className="text-xs sm:text-sm"
+                        >
+                          <UserPlus className="w-4 h-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Registration</span>
+                        </Button>
+                      )}
+                      {getTournamentStatus(tournament) === 'active' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleCancelTournament(tournament.id)}
                           disabled={updateStatusMutation.isPending}
                           className="text-xs sm:text-sm"
@@ -454,6 +468,21 @@ export default function Dashboard() {
           isOpen={!!viewingTournament}
           onClose={() => setViewingTournament(null)}
         />
+
+        {/* Registration Management Dialog */}
+        {managingRegistration && (
+          <Dialog open={!!managingRegistration} onOpenChange={() => setManagingRegistration(null)}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{managingRegistration.name} - Self-Registration</DialogTitle>
+                <DialogDescription>
+                  Manage tournament registration and participants
+                </DialogDescription>
+              </DialogHeader>
+              <RegistrationManagement tournament={managingRegistration} />
+            </DialogContent>
+          </Dialog>
+        )}
         </div>
       </div>
       
