@@ -33,6 +33,7 @@ export const tournaments = pgTable("tournaments", {
   location: text("location"),
   playersCount: integer("players_count").notNull(),
   courtsCount: integer("courts_count").notNull(),
+  pointsPerMatch: integer("points_per_match").notNull().default(16),
   players: json("players").$type<string[]>().notNull(),
   schedule: json("schedule").$type<any[]>().notNull(),
   results: json("results").$type<PlayerStats[]>(), // Final leaderboard results
@@ -56,18 +57,45 @@ export type User = typeof users.$inferSelect;
 export type InsertTournament = z.infer<typeof insertTournamentSchema>;
 export type Tournament = typeof tournaments.$inferSelect;
 
-// Validation schemas
+// Import new foundation
+import { TOURNAMENT_CONFIG } from './tournament-config';
+
+// Validation schemas with configurable constraints
 export const tournamentSetupSchema = z.object({
-  name: z.string().min(1, "Tournament name is required"),
+  name: z.string()
+    .min(TOURNAMENT_CONFIG.VALIDATION.MIN_TOURNAMENT_NAME_LENGTH, "Tournament name is required")
+    .max(TOURNAMENT_CONFIG.VALIDATION.MAX_TOURNAMENT_NAME_LENGTH, "Tournament name too long"),
   date: z.string().min(1, "Tournament date is required"),
   time: z.string().min(1, "Tournament time is required"),
-  location: z.string().min(1, "Tournament location is required"),
-  playersCount: z.literal(8, { errorMap: () => ({ message: "American format requires exactly 8 players" }) }),
-  courtsCount: z.literal(2, { errorMap: () => ({ message: "American format requires exactly 2 courts" }) }),
+  location: z.string()
+    .min(TOURNAMENT_CONFIG.VALIDATION.MIN_LOCATION_LENGTH, "Tournament location is required")
+    .max(TOURNAMENT_CONFIG.VALIDATION.MAX_LOCATION_LENGTH, "Tournament location too long"),
+  playersCount: z.number()
+    .min(TOURNAMENT_CONFIG.MIN_PLAYERS, `Minimum ${TOURNAMENT_CONFIG.MIN_PLAYERS} players required`)
+    .max(TOURNAMENT_CONFIG.MAX_PLAYERS, `Maximum ${TOURNAMENT_CONFIG.MAX_PLAYERS} players allowed`)
+    .refine(count => count % 4 === 0, { message: "Player count must be divisible by 4 for proper team formation" }),
+  courtsCount: z.number()
+    .min(1, "At least 1 court is required")
+    .max(TOURNAMENT_CONFIG.MAX_COURTS, `Maximum ${TOURNAMENT_CONFIG.MAX_COURTS} courts allowed`),
+  pointsPerMatch: z.number()
+    .min(TOURNAMENT_CONFIG.MIN_POINTS_PER_MATCH, `Minimum ${TOURNAMENT_CONFIG.MIN_POINTS_PER_MATCH} points per match`)
+    .max(TOURNAMENT_CONFIG.MAX_POINTS_PER_MATCH, `Maximum ${TOURNAMENT_CONFIG.MAX_POINTS_PER_MATCH} points per match`)
+    .default(TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH).optional(),
 });
 
 export const playersSchema = z.object({
-  players: z.array(z.string().min(1, "Player name is required")).min(4, "At least 4 players required"),
+  players: z.array(
+    z.string()
+      .min(TOURNAMENT_CONFIG.VALIDATION.MIN_PLAYER_NAME_LENGTH, "Player name is required")
+      .max(TOURNAMENT_CONFIG.VALIDATION.MAX_PLAYER_NAME_LENGTH, "Player name too long")
+      .transform(name => name.trim())
+  )
+    .min(TOURNAMENT_CONFIG.MIN_PLAYERS, `At least ${TOURNAMENT_CONFIG.MIN_PLAYERS} players required`)
+    .max(TOURNAMENT_CONFIG.MAX_PLAYERS, `Maximum ${TOURNAMENT_CONFIG.MAX_PLAYERS} players allowed`)
+    .refine(players => {
+      const uniqueNames = new Set(players.map(p => p.toLowerCase()));
+      return uniqueNames.size === players.length;
+    }, { message: "All player names must be unique" }),
 });
 
 export type TournamentSetup = z.infer<typeof tournamentSetupSchema>;
@@ -87,6 +115,9 @@ export interface Match {
 export interface MatchScore {
   team1Score: number;
   team2Score: number;
+  isValid: boolean;
+  totalPoints: number;
+  validationErrors: readonly string[];
   sets?: SetScore[];
 }
 

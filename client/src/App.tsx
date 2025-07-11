@@ -13,6 +13,7 @@ import SharedTournamentScores from "@/pages/shared-tournament-scores";
 import Leaderboard from "@/pages/leaderboard";
 import AmericanFormatRules from "@/pages/american-format-rules";
 import ScoringDemo from "@/pages/scoring-demo";
+import FoundationTest from "@/pages/foundation-test";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -44,6 +45,7 @@ function Router() {
       <Route path="/leaderboard/:leaderboardId" component={Leaderboard} />
       <Route path="/american-format-rules" component={AmericanFormatRules} />
       <Route path="/scoring-demo" component={ScoringDemo} />
+      <Route path="/foundation-test" component={FoundationTest} />
       {isAuthenticated && <Route path="/tournament" component={Tournament} />}
       <Route component={NotFound} />
     </Switch>

@@ -1,0 +1,203 @@
+# Padel Americano Tournament Management System - Foundation Prompt
+
+## Core Requirements
+Create a robust Padel Americano tournament management system with **bulletproof scoring logic** and **consistent data structures**. Focus on correctness over complexity.
+
+## 1. Data Structure Foundation
+
+### Player Object
+```typescript
+interface Player {
+  id: string;
+  name: string;
+  gamesPlayed: number;
+  gamesWon: number;
+  gamesLost: number;
+  setsWon: number;
+  setsLost: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  partners: string[]; // Array of partner IDs played with
+  opponents: string[]; // Array of opponent IDs played against
+}
+```
+
+### Match Object
+```typescript
+interface Match {
+  id: string;
+  round: number;
+  court: number;
+  team1: {
+    player1: string; // Player ID
+    player2: string; // Player ID
+    score: number;
+  };
+  team2: {
+    player1: string; // Player ID
+    player2: string; // Player ID
+    score: number;
+  };
+  status: 'pending' | 'in_progress' | 'completed';
+  winner?: 'team1' | 'team2';
+  timestamp: Date;
+}
+```
+
+## 2. Scoring Rules (STRICT IMPLEMENTATION)
+
+### Americano Format Rules:
+- Each match is played to a **fixed number of points** (typically 24 or 32 points)
+- Players rotate partners each round
+- **No player should play with the same partner twice** until all combinations are exhausted
+- **No player should play against the same opponent twice** until unavoidable
+- Tournament continues until all possible partner combinations are played
+
+### Scoring Logic:
+```typescript
+// CRITICAL: Always validate these rules before processing any match result
+function validateMatchResult(match: Match): boolean {
+  // Rule 1: Total points must equal the target (e.g., 24 points)
+  const totalPoints = match.team1.score + match.team2.score;
+  if (totalPoints !== POINTS_PER_MATCH) return false;
+  
+  // Rule 2: Winner must have more points than loser
+  if (match.team1.score === match.team2.score) return false;
+  
+  // Rule 3: All player IDs must be valid and different
+  const playerIds = [match.team1.player1, match.team1.player2, match.team2.player1, match.team2.player2];
+  if (new Set(playerIds).size !== 4) return false;
+  
+  return true;
+}
+```
+
+## 3. Leaderboard Calculation (IMMUTABLE LOGIC)
+
+### Ranking Priority (in exact order):
+1. **Games Won** (primary ranking factor)
+2. **Point Difference** (pointsFor - pointsAgainst)
+3. **Points For** (total points scored)
+4. **Head-to-Head record** (if applicable)
+5. **Name** (alphabetical, as tiebreaker)
+
+```typescript
+function calculateLeaderboard(players: Player[]): Player[] {
+  return players.sort((a, b) => {
+    // 1. Games Won (descending)
+    if (a.gamesWon !== b.gamesWon) return b.gamesWon - a.gamesWon;
+    
+    // 2. Point Difference (descending)
+    const diffA = a.pointsFor - a.pointsAgainst;
+    const diffB = b.pointsFor - b.pointsAgainst;
+    if (diffA !== diffB) return diffB - diffA;
+    
+    // 3. Points For (descending)
+    if (a.pointsFor !== b.pointsFor) return b.pointsFor - a.pointsFor;
+    
+    // 4. Alphabetical by name
+    return a.name.localeCompare(b.name);
+  });
+}
+```
+
+## 4. Partner Rotation Algorithm
+
+```typescript
+function generateNextRound(players: Player[], completedMatches: Match[]): Match[] {
+  // CRITICAL: Ensure fair partner rotation
+  // Priority: Players who have played together least should be paired
+  // Secondary: Avoid repeat opponent matchups when possible
+  
+  const partnerCounts = calculatePartnerCounts(players, completedMatches);
+  const opponentCounts = calculateOpponentCounts(players, completedMatches);
+  
+  // Generate pairings with minimum partner repeats
+  return generateOptimalPairings(players, partnerCounts, opponentCounts);
+}
+```
+
+## 5. Critical Validation Rules
+
+### Before Every Operation:
+```typescript
+// ALWAYS validate tournament state before mutations
+function validateTournamentState(tournament: Tournament): ValidationResult {
+  const errors: string[] = [];
+  
+  // Check player count is valid (must be divisible by 4)
+  if (tournament.players.length % 4 !== 0) {
+    errors.push("Player count must be divisible by 4");
+  }
+  
+  // Verify all match results are mathematically consistent
+  for (const match of tournament.matches) {
+    if (!validateMatchResult(match)) {
+      errors.push(`Invalid match result: ${match.id}`);
+    }
+  }
+  
+  // Ensure player statistics match match history
+  for (const player of tournament.players) {
+    const calculatedStats = calculatePlayerStats(player.id, tournament.matches);
+    if (!statsMatch(player, calculatedStats)) {
+      errors.push(`Player stats mismatch: ${player.name}`);
+    }
+  }
+  
+  return { isValid: errors.length === 0, errors };
+}
+```
+
+## 6. Development Guidelines
+
+### Code Structure:
+- **Separate data logic from UI logic completely**
+- **Use pure functions for all calculations**
+- **Implement comprehensive input validation**
+- **Add unit tests for all scoring functions**
+- **Use TypeScript interfaces for type safety**
+
+### Error Prevention:
+- **Never mutate objects directly** - always create new objects
+- **Validate all inputs** before processing
+- **Use constants for magic numbers** (points per match, etc.)
+- **Implement rollback mechanisms** for failed operations
+- **Log all state changes** for debugging
+
+### Testing Requirements:
+Create unit tests for:
+- Leaderboard calculation with edge cases
+- Partner rotation algorithm
+- Match result validation
+- Tournament state validation
+- Statistics calculation accuracy
+
+## 7. Configuration Constants
+
+```typescript
+const TOURNAMENT_CONFIG = {
+  POINTS_PER_MATCH: 24, // Adjust as needed
+  MIN_PLAYERS: 4,
+  MAX_PLAYERS: 16, // Adjust based on your needs
+  COURTS_AVAILABLE: 2, // Adjust based on venue
+} as const;
+```
+
+## Implementation Instructions:
+
+1. **Start with data structures** - implement all interfaces first
+2. **Build validation functions** - ensure data integrity from the start
+3. **Implement core calculations** - scoring, leaderboard, partner rotation
+4. **Add comprehensive tests** - verify logic with various scenarios
+5. **Create UI components** - build interface after logic is solid
+6. **Add error handling** - graceful failure and recovery
+
+## Critical Success Factors:
+- **NEVER modify scoring logic without comprehensive testing**
+- **Always validate tournament state before and after operations**
+- **Use immutable data patterns to prevent state corruption**
+- **Implement proper error boundaries and rollback mechanisms**
+- **Document all business rules clearly in code comments**
+
+This foundation will provide consistent, predictable behavior that won't "hallucinate" incorrect calculations as you add features.

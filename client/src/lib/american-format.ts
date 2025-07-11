@@ -1,74 +1,39 @@
 import type { Match, Round } from "@shared/schema";
+import { generateAmericanFormatTournament } from "@shared/american-format-generator";
+import { TOURNAMENT_CONFIG } from "@shared/tournament-config";
+import { validateMatchScore } from "@shared/validation-utils";
 
 export interface AmericanFormatConfig {
   players: string[];
   courts: number;
+  pointsPerMatch?: number;
 }
 
-export function generateAmericanFormat({ players, courts }: AmericanFormatConfig): Round[] {
-  const numPlayers = players.length;
-  
-  if (numPlayers !== 8) {
-    throw new Error("This American format implementation is optimized for 8 players");
-  }
-
-  if (courts !== 2) {
-    throw new Error("This American format implementation requires exactly 2 courts");
-  }
-
-  // Working American Format schedule for 8 players, 2 courts, 7 rounds
-  const scheduleMatrix = [
-    // Round 1: 1-2 vs 3-4, 5-6 vs 7-8
-    [[0, 1], [2, 3], [4, 5], [6, 7]],
-    // Round 2: 1-3 vs 5-7, 2-4 vs 6-8
-    [[0, 2], [4, 6], [1, 3], [5, 7]],
-    // Round 3: 1-4 vs 6-7, 2-5 vs 3-8
-    [[0, 3], [5, 6], [1, 4], [2, 7]],
-    // Round 4: 1-5 vs 2-8, 3-6 vs 4-7
-    [[0, 4], [1, 7], [2, 5], [3, 6]],
-    // Round 5: 1-6 vs 4-8, 2-7 vs 3-5
-    [[0, 5], [3, 7], [1, 6], [2, 4]],
-    // Round 6: 1-7 vs 2-3, 4-6 vs 5-8
-    [[0, 6], [1, 2], [3, 5], [4, 7]],
-    // Round 7: 1-8 vs 4-5, 2-6 vs 3-7
-    [[0, 7], [3, 4], [1, 5], [2, 6]]
-  ];
-
-  const rounds: Round[] = [];
-  let gameNumber = 1;
-
-  scheduleMatrix.forEach((roundTeams, roundIndex) => {
-    const matches: Match[] = [];
-    
-    // Create two matches per round (2 courts)
-    const match1: Match = {
-      court: 1,
-      team1: [players[roundTeams[0][0]], players[roundTeams[0][1]]],
-      team2: [players[roundTeams[1][0]], players[roundTeams[1][1]]],
-      round: roundIndex + 1,
-      gameNumber: gameNumber++
-    };
-    
-    const match2: Match = {
-      court: 2,
-      team1: [players[roundTeams[2][0]], players[roundTeams[2][1]]],
-      team2: [players[roundTeams[3][0]], players[roundTeams[3][1]]],
-      round: roundIndex + 1,
-      gameNumber: gameNumber++
-    };
-    
-    matches.push(match1, match2);
-    
-    rounds.push({
-      round: roundIndex + 1,
-      matches
-    });
+export function generateAmericanFormat({ players, courts, pointsPerMatch = TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH }: AmericanFormatConfig): Round[] {
+  // Use the new comprehensive tournament generator
+  const result = generateAmericanFormatTournament({
+    players,
+    courts,
+    pointsPerMatch
   });
 
-  // Validation temporarily disabled for testing
-  // validateSchedule(rounds);
-  
-  return rounds;
+  if (!result.validation.isValid) {
+    throw new Error(`Tournament generation failed: ${result.validation.errors.join(', ')}`);
+  }
+
+  // Convert to legacy format for compatibility
+  return result.rounds.map(round => ({
+    round: round.round,
+    matches: round.matches.map(match => ({
+      court: match.court,
+      team1: [match.team1[0], match.team1[1]] as [string, string],
+      team2: [match.team2[0], match.team2[1]] as [string, string],
+      round: match.round,
+      gameNumber: match.gameNumber,
+      score: match.score,
+      status: match.status
+    }))
+  }));
 }
 
 function validateSchedule(rounds: Round[]): void {
@@ -238,7 +203,42 @@ function rotatePlayersArray(players: string[]): void {
   }
 }
 
+/**
+ * Legacy validation function - now uses the new comprehensive validation
+ */
 export function validateTournamentConfig(playersCount: number, courtsCount: number): string | null {
+  // Use new validation system
+  const configValidation = validateTournamentConfiguration({
+    playersCount,
+    courtsCount,
+    pointsPerMatch: TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH,
+    gameDurationMinutes: TOURNAMENT_CONFIG.DEFAULT_GAME_DURATION
+  });
+
+  if (!configValidation.isValid) {
+    return configValidation.errors[0] || 'Invalid tournament configuration';
+  }
+
+  return null;
+}
+
+/**
+ * Enhanced score validation using the new system
+ */
+export function validateScore(team1Score: number, team2Score: number, pointsPerMatch: number = TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH): string | null {
+  const validation = validateMatchScore(team1Score, team2Score, pointsPerMatch);
+  
+  if (!validation.isValid) {
+    return validation.validationErrors[0] || 'Invalid score';
+  }
+
+  return null;
+}
+
+/**
+ * Legacy function maintained for compatibility
+ */
+export function validateTournamentConfigLegacy(playersCount: number, courtsCount: number): string | null {
   if (playersCount !== 8) {
     return "American format requires exactly 8 players";
   }

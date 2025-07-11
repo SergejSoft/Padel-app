@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import { Save } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { validateMatchScore } from "@shared/validation-utils";
+import { TOURNAMENT_CONFIG } from "@shared/tournament-config";
 
 interface SimpleScoreInputProps {
   team1: [string, string];
@@ -81,13 +83,12 @@ export function SimpleScoreInput({
   const validateAndUpdate = (newTeam1: string, newTeam2: string) => {
     const score1 = parseInt(newTeam1) || 0;
     const score2 = parseInt(newTeam2) || 0;
-    const sum = score1 + score2;
     
-    // Validate scores are in range and sum is 16
-    const valid = score1 >= 0 && score1 <= 16 && score2 >= 0 && score2 <= 16 && sum === 16;
-    setIsValid(valid);
+    // Use the comprehensive validation system
+    const validation = validateMatchScore(score1, score2, TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH);
+    setIsValid(validation.isValid);
     
-    if (valid) {
+    if (validation.isValid) {
       onScoreChange(score1, score2);
     }
   };
