@@ -30,9 +30,10 @@ export function TournamentCreationSummary({ tournamentSetup, onBack }: Tournamen
         location: tournamentSetup.location,
         playersCount: tournamentSetup.playersCount,
         courtsCount: tournamentSetup.courtsCount,
-        pointsPerMatch: tournamentSetup.pointsPerMatch,
-        gameDurationMinutes: tournamentSetup.gameDurationMinutes,
+        pointsPerMatch: tournamentSetup.pointsPerMatch || 16,
+        gameDurationMinutes: tournamentSetup.gameDurationMinutes || 13,
         players: [], // Empty players array for self-registration
+        schedule: [], // Empty schedule array - will be generated later
         tournamentMode: 'registration', // Set to registration mode
       };
 
