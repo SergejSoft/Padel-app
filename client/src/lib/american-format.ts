@@ -209,9 +209,8 @@ function rotatePlayersArray(players: string[]): void {
 export function validateTournamentConfig(playersCount: number, courtsCount: number): string | null {
   // Use the validation utility
   const errors = validateAmericanFormatConfiguration({
-    playerNames: Array(playersCount).fill(0).map((_, i) => `Player ${i + 1}`),
-    courtCount: courtsCount,
-    rounds: 7,
+    players: Array(playersCount).fill(0).map((_, i) => `Player ${i + 1}`),
+    courts: courtsCount,
     pointsPerMatch: TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH
   });
 
