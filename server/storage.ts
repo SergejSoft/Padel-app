@@ -211,6 +211,16 @@ export class DatabaseStorage implements IStorage {
     if (tournamentData.players) updateData.players = tournamentData.players as any;
     if (tournamentData.schedule) updateData.schedule = tournamentData.schedule as any;
     if (tournamentData.status) updateData.status = tournamentData.status;
+    if (tournamentData.tournamentMode) updateData.tournamentMode = tournamentData.tournamentMode;
+    if (tournamentData.maxParticipants !== undefined) updateData.maxParticipants = tournamentData.maxParticipants;
+    if (tournamentData.registrationStatus) updateData.registrationStatus = tournamentData.registrationStatus;
+    if (tournamentData.registrationDeadline !== undefined) updateData.registrationDeadline = tournamentData.registrationDeadline;
+
+    // Check if there are any fields to update
+    if (Object.keys(updateData).length === 0) {
+      // If no fields to update, just return the existing tournament
+      return await this.getTournament(id);
+    }
 
     const [tournament] = await db
       .update(tournaments)
