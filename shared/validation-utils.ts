@@ -174,6 +174,11 @@ export function validateMatchScore(
 /**
  * Validates American format configuration
  */
+export function validateAmericanFormatConfiguration(config: AmericanFormatConfig): readonly string[] {
+  const validation = validateAmericanFormatConfig(config);
+  return validation.errors;
+}
+
 export function validateAmericanFormatConfig(config: AmericanFormatConfig): ValidationResult<AmericanFormatConfig> {
   const errors: string[] = [];
   const warnings: string[] = [];

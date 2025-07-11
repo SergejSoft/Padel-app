@@ -1,7 +1,7 @@
 import type { Match, Round } from "@shared/schema";
 import { generateAmericanFormatTournament } from "@shared/american-format-generator";
 import { TOURNAMENT_CONFIG } from "@shared/tournament-config";
-import { validateMatchScore } from "@shared/validation-utils";
+import { validateMatchScore, validateAmericanFormatConfiguration } from "@shared/validation-utils";
 
 export interface AmericanFormatConfig {
   players: string[];
@@ -207,19 +207,15 @@ function rotatePlayersArray(players: string[]): void {
  * Legacy validation function - now uses the new comprehensive validation
  */
 export function validateTournamentConfig(playersCount: number, courtsCount: number): string | null {
-  // Use new validation system
-  const configValidation = validateTournamentConfiguration({
-    playersCount,
-    courtsCount,
-    pointsPerMatch: TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH,
-    gameDurationMinutes: TOURNAMENT_CONFIG.DEFAULT_GAME_DURATION
+  // Use the validation utility
+  const errors = validateAmericanFormatConfiguration({
+    playerNames: Array(playersCount).fill(0).map((_, i) => `Player ${i + 1}`),
+    courtCount: courtsCount,
+    rounds: 7,
+    pointsPerMatch: TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH
   });
 
-  if (!configValidation.isValid) {
-    return configValidation.errors[0] || 'Invalid tournament configuration';
-  }
-
-  return null;
+  return errors.length > 0 ? errors[0] : null;
 }
 
 /**
