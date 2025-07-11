@@ -1,8 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { insertTournamentSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated, isAdmin, isOwnerOrAdmin } from "./replitAuth";
+import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
@@ -408,6 +410,303 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Registration validation schemas
+  const registrationParticipantSchema = z.object({
+    name: z.string().min(1, "Name is required").max(50, "Name too long"),
+    email: z.string().email("Invalid email").optional()
+  });
+
+  // === Self-Registration API Routes ===
+
+  // Generate registration link (requires authentication)
+  app.post("/api/tournaments/:id/registration", isAuthenticated, isOwnerOrAdmin(async (req) => {
+    const id = parseInt(req.params.id);
+    return await storage.getTournamentOwnerId(id);
+  }), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { maxParticipants, registrationDeadline } = req.body;
+      
+      // Update tournament for registration mode
+      const tournament = await storage.getTournament(id);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+
+      // Generate registration ID
+      const registrationId = await storage.generateRegistrationId(id);
+      
+      // Update tournament with registration settings
+      const updatedTournament = await storage.updateTournament(id, {
+        tournamentMode: 'registration',
+        maxParticipants: maxParticipants || tournament.playersCount,
+        registrationStatus: 'open',
+        registrationDeadline: registrationDeadline ? new Date(registrationDeadline) : null
+      });
+      
+      res.json({ 
+        registrationId, 
+        registrationUrl: `/register/${registrationId}`,
+        tournament: updatedTournament 
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get registration info (public endpoint)
+  app.get("/api/registration/:registrationId", async (req, res) => {
+    try {
+      const { registrationId } = req.params;
+      
+      const registrationInfo = await storage.getRegistrationInfo(registrationId);
+      
+      if (!registrationInfo) {
+        return res.status(404).json({ error: "Registration not found" });
+      }
+      
+      res.json(registrationInfo);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get registered participants (public endpoint)
+  app.get("/api/registration/:registrationId/participants", async (req, res) => {
+    try {
+      const { registrationId } = req.params;
+      
+      const tournament = await storage.getTournamentByRegistrationId(registrationId);
+      
+      if (!tournament) {
+        return res.status(404).json({ error: "Registration not found" });
+      }
+      
+      const participants = tournament.registeredParticipants || [];
+      
+      res.json({
+        participants: participants.map(p => ({
+          id: p.id,
+          name: p.name,
+          registeredAt: p.registeredAt,
+          status: p.status
+        })), // Remove email for privacy
+        count: participants.length,
+        maxParticipants: tournament.maxParticipants || tournament.playersCount
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Register participant (public endpoint)
+  app.post("/api/registration/:registrationId/register", async (req, res) => {
+    try {
+      const { registrationId } = req.params;
+      const validatedData = registrationParticipantSchema.parse(req.body);
+      
+      const participant = await storage.registerParticipant(registrationId, validatedData);
+      
+      if (!participant) {
+        return res.status(400).json({ 
+          error: "Registration failed. Tournament may be full, closed, or name already taken." 
+        });
+      }
+      
+      // Broadcast update to WebSocket clients
+      broadcastRegistrationUpdate(registrationId, 'participant_registered', participant);
+      
+      res.json(participant);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Remove participant (organizer only)
+  app.delete("/api/tournaments/:id/participants/:participantId", isAuthenticated, isOwnerOrAdmin(async (req) => {
+    const id = parseInt(req.params.id);
+    return await storage.getTournamentOwnerId(id);
+  }), async (req: any, res) => {
+    try {
+      const tournamentId = parseInt(req.params.id);
+      const { participantId } = req.params;
+      
+      const success = await storage.removeParticipant(tournamentId, participantId);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Participant not found" });
+      }
+      
+      // Get tournament registration ID for WebSocket broadcast
+      const tournament = await storage.getTournament(tournamentId);
+      if (tournament?.registrationId) {
+        broadcastRegistrationUpdate(tournament.registrationId, 'participant_removed', { participantId });
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update participant (organizer only)
+  app.put("/api/tournaments/:id/participants/:participantId", isAuthenticated, isOwnerOrAdmin(async (req) => {
+    const id = parseInt(req.params.id);
+    return await storage.getTournamentOwnerId(id);
+  }), async (req: any, res) => {
+    try {
+      const tournamentId = parseInt(req.params.id);
+      const { participantId } = req.params;
+      const validatedData = registrationParticipantSchema.partial().parse(req.body);
+      
+      const updatedParticipant = await storage.updateParticipant(tournamentId, participantId, validatedData);
+      
+      if (!updatedParticipant) {
+        return res.status(404).json({ error: "Participant not found" });
+      }
+      
+      // Get tournament registration ID for WebSocket broadcast
+      const tournament = await storage.getTournament(tournamentId);
+      if (tournament?.registrationId) {
+        broadcastRegistrationUpdate(tournament.registrationId, 'participant_updated', updatedParticipant);
+      }
+      
+      res.json(updatedParticipant);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Convert registration to tournament (organizer only)
+  app.post("/api/tournaments/:id/convert", isAuthenticated, isOwnerOrAdmin(async (req) => {
+    const id = parseInt(req.params.id);
+    return await storage.getTournamentOwnerId(id);
+  }), async (req: any, res) => {
+    try {
+      const tournamentId = parseInt(req.params.id);
+      
+      const tournament = await storage.convertRegistrationToTournament(tournamentId);
+      
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      res.json(tournament);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update registration status (organizer only)
+  app.put("/api/tournaments/:id/registration-status", isAuthenticated, isOwnerOrAdmin(async (req) => {
+    const id = parseInt(req.params.id);
+    return await storage.getTournamentOwnerId(id);
+  }), async (req: any, res) => {
+    try {
+      const tournamentId = parseInt(req.params.id);
+      const { status } = req.body;
+      
+      if (!['open', 'closed', 'full'].includes(status)) {
+        return res.status(400).json({ error: "Invalid registration status" });
+      }
+      
+      const tournament = await storage.updateRegistrationStatus(tournamentId, status);
+      
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      // Broadcast status update
+      if (tournament.registrationId) {
+        broadcastRegistrationUpdate(tournament.registrationId, 'status_updated', { status });
+      }
+      
+      res.json(tournament);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // === WebSocket Integration ===
+
+  // Create HTTP server
   const httpServer = createServer(app);
+  
+  // WebSocket server for real-time updates
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  // Store WebSocket connections by registration ID
+  const registrationConnections = new Map<string, Set<WebSocket>>();
+  
+  wss.on('connection', (ws, req) => {
+    console.log('WebSocket connection established');
+    
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        
+        if (data.type === 'join_registration') {
+          const { registrationId } = data;
+          
+          // Add connection to registration room
+          if (!registrationConnections.has(registrationId)) {
+            registrationConnections.set(registrationId, new Set());
+          }
+          registrationConnections.get(registrationId)?.add(ws);
+          
+          // Store registration ID on WebSocket for cleanup
+          (ws as any).registrationId = registrationId;
+          
+          console.log(`Client joined registration room: ${registrationId}`);
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      // Clean up connection from registration rooms
+      const registrationId = (ws as any).registrationId;
+      if (registrationId && registrationConnections.has(registrationId)) {
+        registrationConnections.get(registrationId)?.delete(ws);
+        if (registrationConnections.get(registrationId)?.size === 0) {
+          registrationConnections.delete(registrationId);
+        }
+      }
+      console.log('WebSocket connection closed');
+    });
+    
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+    });
+  });
+  
+  // Function to broadcast registration updates
+  function broadcastRegistrationUpdate(registrationId: string, eventType: string, data: any) {
+    const connections = registrationConnections.get(registrationId);
+    if (!connections) return;
+    
+    const message = JSON.stringify({
+      type: eventType,
+      registrationId,
+      data,
+      timestamp: new Date().toISOString()
+    });
+    
+    connections.forEach(ws => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(message);
+      }
+    });
+    
+    console.log(`Broadcast to ${connections.size} clients: ${eventType} for ${registrationId}`);
+  }
+  
   return httpServer;
 }

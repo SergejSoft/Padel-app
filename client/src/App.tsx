@@ -11,6 +11,7 @@ import Tournament from "@/pages/tournament";
 import SharedTournament from "@/pages/shared-tournament";
 import SharedTournamentScores from "@/pages/shared-tournament-scores";
 import Leaderboard from "@/pages/leaderboard";
+import RegistrationPage from "@/pages/registration";
 import AmericanFormatRules from "@/pages/american-format-rules";
 import ScoringDemo from "@/pages/scoring-demo";
 import FoundationTest from "@/pages/foundation-test";
@@ -23,7 +24,8 @@ function Router() {
   const isPublicRoute = window.location.pathname.includes('/scoring-demo') || 
                        window.location.pathname.includes('/american-format-rules') ||
                        window.location.pathname.includes('/shared/') ||
-                       window.location.pathname.includes('/leaderboard/');
+                       window.location.pathname.includes('/leaderboard/') ||
+                       window.location.pathname.includes('/register/');
 
   if (isLoading && !isPublicRoute) {
     return (
@@ -43,6 +45,7 @@ function Router() {
       <Route path="/shared/:shareId/scores" component={SharedTournamentScores} />
       <Route path="/shared/:shareId" component={SharedTournament} />
       <Route path="/leaderboard/:leaderboardId" component={Leaderboard} />
+      <Route path="/register/:registrationId" component={RegistrationPage} />
       <Route path="/american-format-rules" component={AmericanFormatRules} />
       <Route path="/scoring-demo" component={ScoringDemo} />
       <Route path="/foundation-test" component={FoundationTest} />
