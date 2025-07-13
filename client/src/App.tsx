@@ -15,6 +15,7 @@ import RegistrationPage from "@/pages/registration";
 import AmericanFormatRules from "@/pages/american-format-rules";
 import ScoringDemo from "@/pages/scoring-demo";
 import FoundationTest from "@/pages/foundation-test";
+import DeploymentTest from "@/pages/deployment-test";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -49,6 +50,7 @@ function Router() {
       <Route path="/american-format-rules" component={AmericanFormatRules} />
       <Route path="/scoring-demo" component={ScoringDemo} />
       <Route path="/foundation-test" component={FoundationTest} />
+      <Route path="/deployment-test" component={DeploymentTest} />
       {isAuthenticated && <Route path="/tournament" component={Tournament} />}
       <Route component={NotFound} />
     </Switch>
