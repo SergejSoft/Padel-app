@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { validateMatchScore } from "@shared/validation-utils";
 import { TOURNAMENT_CONFIG } from "@shared/tournament-config";
+import { apiRequest } from "@/lib/queryClient";
 
 interface SimpleScoreInputProps {
   team1: [string, string];
@@ -16,6 +17,7 @@ interface SimpleScoreInputProps {
   onScoreChange: (team1Score: number, team2Score: number) => void;
   gameNumber: number;
   tournamentId?: number;
+  pointsPerMatch?: number;
   readOnly?: boolean;
 }
 
@@ -27,6 +29,7 @@ export function SimpleScoreInput({
   onScoreChange,
   gameNumber,
   tournamentId,
+  pointsPerMatch = TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH,
   readOnly = false
 }: SimpleScoreInputProps) {
   const [team1Input, setTeam1Input] = useState(team1Score === 0 ? "" : team1Score.toString());
@@ -37,22 +40,11 @@ export function SimpleScoreInput({
 
   const saveScoreMutation = useMutation({
     mutationFn: async ({ gameNumber, team1Score, team2Score }: { gameNumber: number; team1Score: number; team2Score: number }) => {
-      const response = await fetch(`/api/tournaments/${tournamentId}/scores`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          gameNumber,
-          team1Score,
-          team2Score,
-        }),
+      const response = await apiRequest('PUT', `/api/tournaments/${tournamentId}/scores`, {
+        gameNumber,
+        team1Score,
+        team2Score,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save score');
-      }
 
       return response.json();
     },
@@ -85,7 +77,7 @@ export function SimpleScoreInput({
     const score2 = parseInt(newTeam2) || 0;
     
     // Use the comprehensive validation system
-    const validation = validateMatchScore(score1, score2, TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH);
+    const validation = validateMatchScore(score1, score2, pointsPerMatch);
     setIsValid(validation.isValid);
     
     if (validation.isValid) {
@@ -121,7 +113,7 @@ export function SimpleScoreInput({
         inputMode="numeric"
         pattern="[0-9]*"
         min="0"
-        max="16"
+        max={pointsPerMatch}
         value={team1Input}
         onChange={(e) => handleTeam1Change(e.target.value)}
         className={`w-10 sm:w-12 h-7 sm:h-8 text-center text-xs sm:text-sm font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
@@ -137,7 +129,7 @@ export function SimpleScoreInput({
         inputMode="numeric"
         pattern="[0-9]*"
         min="0"
-        max="16"
+        max={pointsPerMatch}
         value={team2Input}
         onChange={(e) => handleTeam2Change(e.target.value)}
         className={`w-10 sm:w-12 h-7 sm:h-8 text-center text-xs sm:text-sm font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
@@ -146,10 +138,10 @@ export function SimpleScoreInput({
 
       {/* Validation Indicator */}
       <div className="flex items-center ml-0.5 sm:ml-1">
-        {currentSum === 16 && isValid ? (
+        {currentSum === pointsPerMatch && isValid ? (
           <div className="text-green-600 text-xs">✓</div>
         ) : (
-          <div className="text-red-500 text-xs">{currentSum}/16</div>
+          <div className="text-red-500 text-xs">{currentSum}/{pointsPerMatch}</div>
         )}
       </div>
 

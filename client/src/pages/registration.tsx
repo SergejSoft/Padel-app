@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useUser } from '@clerk/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Users, Calendar, MapPin, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 import type { RegistrationInfo, RegisteredParticipant } from '@shared/schema';
 
 interface RegistrationPageProps {
@@ -26,6 +28,18 @@ export default function RegistrationPage() {
   const [email, setEmail] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user, isSignedIn, isLoaded } = useUser();
+  const didPrefillAccount = useRef(false);
+
+  useEffect(() => {
+    if (!user || didPrefillAccount.current) return;
+
+    const accountName = user.fullName || user.firstName || '';
+    const accountEmail = user.primaryEmailAddress?.emailAddress || '';
+    if (accountName) setName(accountName);
+    if (accountEmail) setEmail(accountEmail);
+    didPrefillAccount.current = true;
+  }, [user]);
 
   if (!registrationId) {
     return (
@@ -63,15 +77,11 @@ export default function RegistrationPage() {
   // Registration mutation
   const registerMutation = useMutation({
     mutationFn: async (data: { name: string; email?: string }) => {
-      const response = await fetch(`/api/registration/${registrationId}/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Registration failed');
-      }
+      const response = await apiRequest(
+        'POST',
+        `/api/registration/${registrationId}/register`,
+        data,
+      );
       return response.json();
     },
     onSuccess: () => {
@@ -82,6 +92,7 @@ export default function RegistrationPage() {
       setName('');
       setEmail('');
       queryClient.invalidateQueries({ queryKey: ['registration', registrationId, 'participants'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my/registrations"] });
     },
     onError: (error: Error) => {
       toast({
@@ -103,6 +114,10 @@ export default function RegistrationPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isSignedIn) {
+      window.location.href = `/login?redirect=${encodeURIComponent(`/register/${registrationId}`)}`;
+      return;
+    }
     if (!name.trim()) return;
     
     registerMutation.mutate({
@@ -192,7 +207,27 @@ export default function RegistrationPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {!isRegistrationClosed ? (
+              {!isRegistrationClosed && !isLoaded ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  Loading sign-in options...
+                </div>
+              ) : !isRegistrationClosed && !isSignedIn ? (
+                <div className="space-y-4 text-center py-4">
+                  <p className="text-sm text-muted-foreground">
+                    You can view the tournament and registered players without an account.
+                    Sign in only when you are ready to join.
+                  </p>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={() => {
+                      window.location.href = `/login?redirect=${encodeURIComponent(`/register/${registrationId}`)}`;
+                    }}
+                  >
+                    Join Tournament
+                  </Button>
+                </div>
+              ) : !isRegistrationClosed ? (
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Player Name *</Label>

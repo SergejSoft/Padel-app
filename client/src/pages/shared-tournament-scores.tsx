@@ -213,7 +213,7 @@ export default function SharedTournamentScores() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-gray-500" />
-              <span className="text-sm">{formatDate(tournament.date)}</span>
+              <span className="text-sm">{formatDate(tournament.date ?? "")}</span>
             </div>
             {tournament.time && (
               <div className="flex items-center gap-2">

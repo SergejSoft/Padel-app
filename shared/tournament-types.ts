@@ -3,7 +3,7 @@
  * Separated from schema to maintain clean data structure
  */
 
-import { TOURNAMENT_CONFIG, type TournamentStatus, type MatchStatus } from './tournament-config';
+import { TOURNAMENT_CONFIG, type TournamentStatus, type MatchStatus } from './tournament-config.js';
 
 // Core tournament configuration
 export interface TournamentConfiguration {

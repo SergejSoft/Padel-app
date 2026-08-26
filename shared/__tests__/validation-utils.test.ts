@@ -42,7 +42,7 @@ describe('validateTournamentConfiguration', () => {
     expect(result.errors).toContain('Minimum 4 players required');
   });
 
-  it('should reject non-divisible by 4 player counts', () => {
+  it('should accept player counts that require rotating sit-outs', () => {
     const config = {
       playersCount: 6,
       courtsCount: 2,
@@ -51,8 +51,7 @@ describe('validateTournamentConfiguration', () => {
     };
     
     const result = validateTournamentConfiguration(config);
-    expect(result.isValid).toBe(false);
-    expect(result.errors).toContain('Player count must be divisible by 4 for proper team formation');
+    expect(result.isValid).toBe(true);
   });
 
   it('should warn about non-optimal player count', () => {
@@ -202,8 +201,8 @@ describe('validateAmericanFormatSchedule', () => {
     ];
     
     const result = validateAmericanFormatSchedule(rounds);
-    expect(result.isValid).toBe(false);
-    expect(result.errors[0]).toContain('Repeated partnership Alice & Bob');
+    expect(result.isValid).toBe(true);
+    expect(result.warnings).toContain('Round 2: Repeated partnership Alice & Bob');
   });
 
   it('should detect when not all players participate in a round', () => {
@@ -224,8 +223,11 @@ describe('validateAmericanFormatSchedule', () => {
       }
     ];
     
-    const result = validateAmericanFormatSchedule(rounds);
+    const result = validateAmericanFormatSchedule(
+      rounds,
+      ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank', 'Grace', 'Henry'],
+    );
     expect(result.isValid).toBe(false);
-    expect(result.errors[0]).toContain('Not all players participate');
+    expect(result.errors).toContain('Eve is not scheduled in any round');
   });
 });

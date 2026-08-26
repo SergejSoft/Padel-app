@@ -1,8 +1,56 @@
 import type { Express } from "express";
-import { storage } from "./storage";
-import { insertTournamentSchema } from "@shared/schema";
-import { setupAuth, isAuthenticated, isAdmin, isOwnerOrAdmin } from "./replitAuth";
+import { storage } from "./storage.js";
+import { insertTournamentSchema } from "../shared/schema.js";
+import { setupAuth, getUserId, isAuthenticated, isAdmin, isOrganizer, isOwnerOrAdmin } from "./clerkAuth.js";
+import { clerkClient } from "@clerk/express";
 import { z } from "zod";
+import { rateLimit } from "express-rate-limit";
+
+const registrationRateLimit = rateLimit({
+  windowMs: 60_000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Too many registration attempts. Please wait a minute and try again." },
+});
+
+function toPublicTournament(tournament: any) {
+  const {
+    organizerId: _organizerId,
+    registeredParticipants,
+    finalScores,
+    ...publicTournament
+  } = tournament;
+
+  return {
+    ...publicTournament,
+    registeredParticipants: (registeredParticipants ?? []).map(
+      ({ email: _email, userId: _userId, ...participant }: any) => participant,
+    ),
+    finalScores: (finalScores ?? []).map(({ updatedBy: _updatedBy, ...score }: any) => score),
+  };
+}
+
+async function getOrCreateUser(userId: string) {
+  const existing = await storage.getUser(userId);
+  if (existing) return existing;
+
+  const clerkUser = await clerkClient.users.getUser(userId);
+  return storage.upsertUser({
+    id: userId,
+    email: clerkUser.primaryEmailAddress?.emailAddress ?? null,
+    firstName: clerkUser.firstName,
+    lastName: clerkUser.lastName,
+    profileImageUrl: clerkUser.imageUrl,
+  });
+}
+
+async function canManageTournament(req: any, tournament: any): Promise<boolean> {
+  const userId = getUserId(req);
+  if (!userId) return false;
+  if (tournament.organizerId === userId) return true;
+  return (await storage.getUser(userId))?.role === "admin";
+}
 
 export async function registerRoutes(app: Express): Promise<void> {
   // Setup authentication middleware
@@ -11,8 +59,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const userId = getUserId(req)!;
+      const user = await getOrCreateUser(userId);
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -20,10 +68,39 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Create tournament (requires authentication)
-  app.post("/api/tournaments", isAuthenticated, async (req: any, res) => {
+  app.post('/api/auth/become-organizer', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req)!;
+      const user = await getOrCreateUser(userId);
+
+      if (user.role === "organizer" || user.role === "admin") {
+        return res.json({ message: "Organizer access already enabled", user });
+      }
+
+      const updatedUser = await storage.setUserRole(userId, "organizer");
+      res.json({ message: "Organizer access enabled", user: updatedUser });
+    } catch (error: any) {
+      console.error("Error enabling organizer access:", error);
+      res.status(500).json({ message: "Failed to enable organizer access" });
+    }
+  });
+
+  app.get('/api/my/registrations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
+      const user = await getOrCreateUser(userId);
+      const joinedTournaments = await storage.getTournamentsByParticipant(userId, user.email);
+      res.json(joinedTournaments);
+    } catch (error: any) {
+      console.error("Error fetching joined tournaments:", error);
+      res.status(500).json({ message: "Failed to fetch joined tournaments" });
+    }
+  });
+
+  // Create tournament (organizer or admin only)
+  app.post("/api/tournaments", isAuthenticated, isOrganizer, async (req: any, res) => {
+    try {
+      const userId = getUserId(req)!;
       const validatedData = insertTournamentSchema.parse({
         ...req.body,
         organizerId: userId,
@@ -35,8 +112,10 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Get tournament by ID
-  app.get("/api/tournaments/:id", async (req, res) => {
+  // Get tournament by ID (owner or admin only)
+  app.get("/api/tournaments/:id", isOwnerOrAdmin(async (req) => {
+    return storage.getTournamentOwnerId(parseInt(req.params.id));
+  }), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const tournament = await storage.getTournament(id);
@@ -45,40 +124,22 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ error: "Tournament not found" });
       }
       
-      res.json(tournament);
+      res.json({
+        ...toPublicTournament(tournament),
+        canEdit: await canManageTournament(req, tournament),
+      });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
   });
 
   // Get tournaments (role-based access)  
-  app.get("/api/tournaments", async (req: any, res) => {
+  app.get("/api/tournaments", isAuthenticated, async (req: any, res) => {
     try {
-      // Check if user is authenticated
-      if (!req.isAuthenticated() || !req.user) {
-        console.log('API: User not authenticated for tournaments endpoint');
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req)!;
       console.log(`API: Fetching tournaments for authenticated user: ${userId}`);
       
-      const user = await storage.getUser(userId);
-      if (!user) {
-        console.log(`API: User ${userId} not found in database, creating default organizer`);
-        // Create user with organizer role if not exists
-        const newUser = await storage.upsertUser({
-          id: userId,
-          email: req.user.claims.email || null,
-          firstName: req.user.claims.first_name || null,
-          lastName: req.user.claims.last_name || null,
-          profileImageUrl: req.user.claims.profile_image_url || null,
-          role: 'organizer'
-        });
-        console.log(`API: Created new user: ${newUser.id} with role ${newUser.role}`);
-      }
-      
-      const finalUser = user || await storage.getUser(userId);
+      const finalUser = await getOrCreateUser(userId);
       console.log(`API: User found: ${finalUser?.id} with role ${finalUser?.role}`);
       
       let tournaments = await storage.getTournamentsByOrganizer(userId);
@@ -193,30 +254,10 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Development helper: Make current user admin (remove in production)
-  app.post("/api/dev/make-admin", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      
-      const updatedUser = await storage.upsertUser({
-        ...user,
-        role: "admin",
-        updatedAt: new Date(),
-      });
-      
-      res.json({ message: "You are now an admin", user: updatedUser });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   // Generate share ID for tournament
-  app.post("/api/tournaments/:id/share", async (req, res) => {
+  app.post("/api/tournaments/:id/share", isOwnerOrAdmin(async (req) => {
+    return storage.getTournamentOwnerId(parseInt(req.params.id));
+  }), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -242,22 +283,27 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       const id = parseInt(req.params.id);
       const { gameNumber, team1Score, team2Score } = req.body;
+      const tournament = await storage.getTournament(id);
+
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
       
       // Validate input
       if (!gameNumber || team1Score === undefined || team2Score === undefined) {
         return res.status(400).json({ error: "Missing required fields" });
       }
       
-      // Validate 16-point total
-      if (team1Score + team2Score !== 16) {
-        return res.status(400).json({ error: "Total score must equal 16 points" });
+      const pointsPerMatch = tournament.pointsPerMatch;
+      if (team1Score + team2Score !== pointsPerMatch) {
+        return res.status(400).json({ error: `Total score must equal ${pointsPerMatch} points` });
       }
       
-      if (team1Score < 0 || team2Score < 0 || team1Score > 16 || team2Score > 16) {
-        return res.status(400).json({ error: "Individual scores must be between 0 and 16" });
+      if (team1Score < 0 || team2Score < 0 || team1Score > pointsPerMatch || team2Score > pointsPerMatch) {
+        return res.status(400).json({ error: `Individual scores must be between 0 and ${pointsPerMatch}` });
       }
 
-      const userId = req.user.claims.sub;
+      const userId = getUserId(req)!;
       const updatedTournament = await storage.updateTournamentScores(id, gameNumber, team1Score, team2Score, userId);
       
       if (!updatedTournament) {
@@ -310,14 +356,19 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ error: "Shared tournament not found" });
       }
       
-      res.json(tournament);
+      res.json({
+        ...toPublicTournament(tournament),
+        canEdit: await canManageTournament(req, tournament),
+      });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
   });
 
   // Save tournament results
-  app.patch("/api/tournaments/:id/results", isAuthenticated, async (req, res) => {
+  app.patch("/api/tournaments/:id/results", isOwnerOrAdmin(async (req) => {
+    return storage.getTournamentOwnerId(parseInt(req.params.id));
+  }), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -328,15 +379,6 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       if (!results || !schedule) {
         return res.status(400).json({ error: "Results and schedule are required" });
-      }
-
-      // Check if user owns tournament or is admin
-      const userId = req.user?.id;
-      const tournamentOwnerId = await storage.getTournamentOwnerId(id);
-      const user = await storage.getUser(userId!);
-      
-      if (tournamentOwnerId !== userId && user?.role !== 'admin') {
-        return res.status(403).json({ error: "Not authorized to save results for this tournament" });
       }
 
       const tournament = await storage.updateTournamentResults(id, results, schedule);
@@ -365,6 +407,8 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (tournament.status !== 'completed' || !tournament.results) {
         return res.status(404).json({ error: "Tournament results not available" });
       }
+
+      const publicTournament = toPublicTournament(tournament);
       
       res.json({
         tournamentId: tournament.id,
@@ -373,7 +417,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         tournamentTime: tournament.time,
         tournamentLocation: tournament.location,
         results: tournament.results,
-        finalScores: tournament.finalScores,
+        finalScores: publicTournament.finalScores,
         completedAt: tournament.completedAt,
         status: tournament.status
       });
@@ -399,9 +443,12 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       // Return tournament with finalScores and results
       res.json({
-        ...tournament,
-        finalScores: tournament.finalScores || [],
-        results: tournament.results || []
+        ...toPublicTournament({
+          ...tournament,
+          finalScores: tournament.finalScores || [],
+          results: tournament.results || []
+        }),
+        canEdit: await canManageTournament(req, tournament),
       });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -497,13 +544,18 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Register participant (public endpoint)
-  app.post("/api/registration/:registrationId/register", async (req, res) => {
+  // Register participant (sign-in required; tournament preview remains public)
+  app.post("/api/registration/:registrationId/register", registrationRateLimit, isAuthenticated, async (req, res) => {
     try {
       const { registrationId } = req.params;
       const validatedData = registrationParticipantSchema.parse(req.body);
-      
-      const participant = await storage.registerParticipant(registrationId, validatedData);
+      const userId = getUserId(req)!;
+      const user = await getOrCreateUser(userId);
+      const participant = await storage.registerParticipant(registrationId, {
+        ...validatedData,
+        email: validatedData.email ?? user?.email ?? undefined,
+        userId,
+      });
       
       if (!participant) {
         return res.status(400).json({ 
@@ -516,9 +568,32 @@ export async function registerRoutes(app: Express): Promise<void> {
       res.json(participant);
     } catch (error: any) {
       if (error.name === 'ZodError') {
-        return res.status(400).json({ error: error.errors[0].message });
+        return res.status(400).json({ error: error.issues?.[0]?.message ?? "Invalid registration" });
       }
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Add participant manually (organizer only)
+  app.post("/api/tournaments/:id/participants", isAuthenticated, isOwnerOrAdmin(async (req) => {
+    const id = parseInt(req.params.id);
+    return await storage.getTournamentOwnerId(id);
+  }), async (req: any, res) => {
+    try {
+      const tournamentId = parseInt(req.params.id);
+      const validatedData = registrationParticipantSchema.parse(req.body);
+
+      const participant = await storage.addParticipantAsOrganizer(tournamentId, validatedData);
+
+      res.json(participant);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.issues?.[0]?.message ?? "Invalid participant" });
+      }
+      if (error.message === "Tournament not found") {
+        return res.status(404).json({ error: error.message });
+      }
+      res.status(400).json({ error: error.message });
     }
   });
 
@@ -566,7 +641,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       res.json(updatedParticipant);
     } catch (error: any) {
       if (error.name === 'ZodError') {
-        return res.status(400).json({ error: error.errors[0].message });
+        return res.status(400).json({ error: error.issues?.[0]?.message ?? "Invalid participant update" });
       }
       res.status(500).json({ error: error.message });
     }

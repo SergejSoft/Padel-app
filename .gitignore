@@ -1,6 +1,13 @@
 node_modules
 dist
+.env
+.env.*
+!.env.example
+playwright/.clerk/
+playwright-report/
+test-results/
 .DS_Store
 server/public
 vite.config.ts.*
 *.tar.gz
+.vercel

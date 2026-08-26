@@ -1,16 +1,9 @@
-import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Save, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { Label } from "@/components/ui/label";
 import RegistrationManagement from "./registration-management";
 import type { Tournament, Round } from "@shared/schema";
 
@@ -21,180 +14,23 @@ interface TournamentViewModalProps {
 }
 
 export function TournamentViewModal({ tournament, isOpen, onClose }: TournamentViewModalProps) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    date: "",
-    location: "",
-  });
-  const [players, setPlayers] = useState<string[]>([]);
-  const [rounds, setRounds] = useState<Round[]>([]);
-
-  // Reset form when tournament changes
-  useEffect(() => {
-    if (tournament) {
-      setFormData({
-        name: tournament.name,
-        date: tournament.date || "",
-        location: tournament.location || "",
-      });
-      
-      if (tournament.players) {
-        setPlayers(Array.isArray(tournament.players) ? tournament.players : JSON.parse(tournament.players));
-      }
-      
-      if (tournament.schedule) {
-        setRounds(Array.isArray(tournament.schedule) ? tournament.schedule : JSON.parse(tournament.schedule));
-      }
-    }
-  }, [tournament]);
-
-  const updateMutation = useMutation({
-    mutationFn: async () => {
-      if (!tournament) return;
-      
-      // Generate new schedule with updated player names
-      const { generateAmericanFormat } = await import("@/lib/american-format");
-      const newSchedule = generateAmericanFormat({
-        players: players,
-        courts: tournament.courtsCount,
-      });
-      
-      console.log("Updated players:", players);
-      console.log("Generated new schedule:", newSchedule);
-      
-      const response = await apiRequest("PUT", `/api/tournaments/${tournament.id}`, {
-        name: formData.name,
-        date: formData.date || null,
-        location: formData.location || null,
-        players: players,
-        schedule: newSchedule,
-      });
-      return response.json();
-    },
-    onSuccess: (updatedTournament) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
-      
-      // Force update local state with the new data immediately
-      if (updatedTournament) {
-        setFormData({
-          name: updatedTournament.name || "",
-          date: updatedTournament.date || "",
-          location: updatedTournament.location || "",
-        });
-        setPlayers([...updatedTournament.players]);
-        
-        // Ensure schedule is properly updated with new player names
-        if (updatedTournament.schedule) {
-          const newSchedule = Array.isArray(updatedTournament.schedule) 
-            ? updatedTournament.schedule 
-            : JSON.parse(updatedTournament.schedule);
-          setRounds([...newSchedule]);
-        }
-      }
-      
-      toast({
-        title: "Tournament updated",
-        description: "Player names and schedule have been updated successfully.",
-      });
-      setIsEditing(false);
-      
-      // Force a re-render by clearing and resetting tournament data
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
-      }, 100);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error updating tournament",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleChange = (field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handlePlayerChange = (index: number, value: string) => {
-    setPlayers(prev => {
-      const updated = [...prev];
-      updated[index] = value;
-      return updated;
-    });
-  };
-
-  const handleSave = () => {
-    if (!formData.name.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Tournament name is required.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    updateMutation.mutate();
-  };
-
-  const handleCancel = () => {
-    // Reset form data to original tournament values
-    if (tournament) {
-      setFormData({
-        name: tournament.name || "",
-        date: tournament.date || "",
-        location: tournament.location || "",
-      });
-      setPlayers(tournament.players || []);
-      if (tournament.schedule) {
-        setRounds(Array.isArray(tournament.schedule) ? tournament.schedule : JSON.parse(tournament.schedule));
-      }
-    }
-    setIsEditing(false);
-  };
-
   if (!tournament) return null;
+
+  const players: string[] = Array.isArray(tournament.players)
+    ? tournament.players
+    : JSON.parse(tournament.players as unknown as string);
+
+  const rounds: Round[] = tournament.schedule
+    ? (Array.isArray(tournament.schedule)
+        ? tournament.schedule
+        : JSON.parse(tournament.schedule as unknown as string))
+    : [];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between pr-8">
-            <span>Tournament Details</span>
-            <div className="flex gap-2 mr-6">
-              {isEditing ? (
-                <>
-                  <Button
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={updateMutation.isPending}
-                  >
-                    <Save className="w-4 h-4 mr-1" />
-                    Save
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleCancel}
-                  >
-                    <X className="w-4 h-4 mr-1" />
-                    Cancel
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  size="sm"
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Edit className="w-4 h-4 mr-1" />
-                  Edit
-                </Button>
-              )}
-            </div>
-          </DialogTitle>
+          <DialogTitle>Tournament Details</DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
@@ -213,45 +49,18 @@ export function TournamentViewModal({ tournament, isOpen, onClose }: TournamentV
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor="name">Tournament Name</Label>
-                    {isEditing ? (
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => handleChange("name", e.target.value)}
-                        placeholder="Enter tournament name"
-                      />
-                    ) : (
-                      <p className="text-sm font-medium mt-1">{tournament.name}</p>
-                    )}
+                    <Label>Tournament Name</Label>
+                    <p className="text-sm font-medium mt-1">{tournament.name}</p>
                   </div>
                   <div>
-                    <Label htmlFor="date">Date</Label>
-                    {isEditing ? (
-                      <Input
-                        id="date"
-                        type="date"
-                        value={formData.date}
-                        onChange={(e) => handleChange("date", e.target.value)}
-                      />
-                    ) : (
-                      <p className="text-sm font-medium mt-1">
-                        {tournament.date ? new Date(tournament.date).toLocaleDateString() : "Not set"}
-                      </p>
-                    )}
+                    <Label>Date</Label>
+                    <p className="text-sm font-medium mt-1">
+                      {tournament.date ? new Date(tournament.date).toLocaleDateString() : "Not set"}
+                    </p>
                   </div>
                   <div>
-                    <Label htmlFor="location">Location</Label>
-                    {isEditing ? (
-                      <Input
-                        id="location"
-                        value={formData.location}
-                        onChange={(e) => handleChange("location", e.target.value)}
-                        placeholder="Enter location"
-                      />
-                    ) : (
-                      <p className="text-sm font-medium mt-1">{tournament.location || "Not set"}</p>
-                    )}
+                    <Label>Location</Label>
+                    <p className="text-sm font-medium mt-1">{tournament.location || "Not set"}</p>
                   </div>
                 </div>
               </CardContent>
@@ -269,16 +78,7 @@ export function TournamentViewModal({ tournament, isOpen, onClose }: TournamentV
                       <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center text-xs">
                         {index + 1}
                       </Badge>
-                      {isEditing ? (
-                        <Input
-                          value={player}
-                          onChange={(e) => handlePlayerChange(index, e.target.value)}
-                          placeholder={`Player ${index + 1}`}
-                          className="flex-1"
-                        />
-                      ) : (
-                        <span className="flex-1 text-sm font-medium">{player}</span>
-                      )}
+                      <span className="flex-1 text-sm font-medium">{player}</span>
                     </div>
                   ))}
                 </div>

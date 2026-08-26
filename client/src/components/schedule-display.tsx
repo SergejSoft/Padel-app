@@ -8,6 +8,7 @@ import { generateAmericanFormat } from "@/lib/american-format";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import { PDFPreviewModal } from "./pdf-preview-modal";
 import { apiRequest } from "@/lib/queryClient";
+import { getPublicAppUrl } from "@/lib/public-url";
 import { useToast } from "@/hooks/use-toast";
 import type { TournamentSetup, Round, InsertTournament } from "@shared/schema";
 
@@ -59,7 +60,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          window.location.href = "/login";
         }, 1000);
       } else {
         toast({
@@ -78,7 +79,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
     },
     onSuccess: (data: { shareId: string; urlSlug?: string }) => {
       const identifier = data.urlSlug || data.shareId;
-      const shareUrl = `${window.location.origin}/shared/${identifier}`;
+      const shareUrl = `${getPublicAppUrl()}/shared/${identifier}`;
       setShareLink(shareUrl);
       
       // Copy to clipboard
@@ -179,7 +180,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
       });
       // Redirect to login if not authenticated
       setTimeout(() => {
-        window.location.href = "/api/login";
+        window.location.href = "/login";
       }, 2000);
     }
   };

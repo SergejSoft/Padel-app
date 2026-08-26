@@ -6,19 +6,22 @@ import {
   type User,
   type UpsertUser,
   type RegisteredParticipant,
-  type RegistrationInfo
-} from "@shared/schema";
-import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
-import { TOURNAMENT_CONFIG, type RegistrationStatus } from "@shared/tournament-config";
-import { generateAmericanFormatTournament } from "@shared/american-format-generator";
-import type { AmericanFormatConfig } from "@shared/tournament-types";
+  type RegistrationInfo,
+  type JoinedTournamentSummary,
+} from "../shared/schema.js";
+import { db } from "./db.js";
+import { eq, desc, sql } from "drizzle-orm";
+import { TOURNAMENT_CONFIG, type RegistrationStatus } from "../shared/tournament-config.js";
+import { generateAmericanFormatTournament } from "../shared/american-format-generator.js";
+import type { AmericanFormatConfig } from "../shared/tournament-types.js";
 import { nanoid } from "nanoid";
+import { buildParticipantRegistrationPredicate } from "./participant-query.js";
 
 export interface IStorage {
-  // User operations (required for Replit Auth)
+  // User profile and role operations
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  setUserRole(id: string, role: "player" | "organizer" | "admin"): Promise<User | undefined>;
   
   // Tournament operations
   getTournament(id: number): Promise<Tournament | undefined>;
@@ -43,9 +46,11 @@ export interface IStorage {
   getTournamentByRegistrationId(registrationId: string): Promise<Tournament | undefined>;
   generateRegistrationId(tournamentId: number): Promise<string>;
   registerParticipant(registrationId: string, participant: Omit<RegisteredParticipant, 'id' | 'registeredAt' | 'status'>): Promise<RegisteredParticipant | null>;
+  addParticipantAsOrganizer(tournamentId: number, participant: { name: string; email?: string }): Promise<RegisteredParticipant>;
   removeParticipant(tournamentId: number, participantId: string): Promise<boolean>;
   updateParticipant(tournamentId: number, participantId: string, updates: Partial<RegisteredParticipant>): Promise<RegisteredParticipant | null>;
   getRegistrationInfo(registrationId: string): Promise<RegistrationInfo | null>;
+  getTournamentsByParticipant(userId: string, email?: string | null): Promise<JoinedTournamentSummary[]>;
   updateRegistrationStatus(tournamentId: number, status: RegistrationStatus): Promise<Tournament | undefined>;
   convertRegistrationToTournament(tournamentId: number): Promise<Tournament | undefined>;
 }
@@ -73,19 +78,12 @@ export class DatabaseStorage implements IStorage {
     const [tournament] = await db
       .insert(tournaments)
       .values({
-        name: insertTournament.name,
-        date: insertTournament.date,
-        time: insertTournament.time,
-        location: insertTournament.location,
-        playersCount: insertTournament.playersCount,
-        courtsCount: insertTournament.courtsCount,
+        ...insertTournament,
         players: insertTournament.players as any,
         schedule: insertTournament.schedule as any,
-        organizerId: insertTournament.organizerId,
-        status: insertTournament.status || 'active',
         shareId,
         urlSlug
-      })
+      } as typeof tournaments.$inferInsert)
       .returning();
     return tournament;
   }
@@ -142,7 +140,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(tournaments.createdAt));
   }
 
-  // User operations (required for Replit Auth)
+  // User profile and role operations
   async getUser(id: string): Promise<User | undefined> {
     try {
       console.log(`Storage: Looking for user with id: "${id}"`);
@@ -168,6 +166,15 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async setUserRole(id: string, role: "player" | "organizer" | "admin"): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
   }
 
   async getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]> {
@@ -208,6 +215,9 @@ export class DatabaseStorage implements IStorage {
     if (tournamentData.date) updateData.date = tournamentData.date;
     if (tournamentData.time) updateData.time = tournamentData.time;
     if (tournamentData.location) updateData.location = tournamentData.location;
+    if (tournamentData.playersCount !== undefined) updateData.playersCount = tournamentData.playersCount;
+    if (tournamentData.courtsCount !== undefined) updateData.courtsCount = tournamentData.courtsCount;
+    if (tournamentData.pointsPerMatch !== undefined) updateData.pointsPerMatch = tournamentData.pointsPerMatch;
     if (tournamentData.players) updateData.players = tournamentData.players as any;
     if (tournamentData.schedule) updateData.schedule = tournamentData.schedule as any;
     if (tournamentData.status) updateData.status = tournamentData.status;
@@ -378,29 +388,65 @@ export class DatabaseStorage implements IStorage {
   }
 
   async registerParticipant(registrationId: string, participant: Omit<RegisteredParticipant, 'id' | 'registeredAt' | 'status'>): Promise<RegisteredParticipant | null> {
-    const tournament = await this.getTournamentByRegistrationId(registrationId);
-    if (!tournament) return null;
+    const newParticipant: RegisteredParticipant = {
+      id: nanoid(8),
+      userId: participant.userId,
+      name: participant.name,
+      email: participant.email,
+      registeredAt: new Date().toISOString(),
+      status: 'registered'
+    };
 
-    // Check if registration is open
-    if (tournament.registrationStatus !== TOURNAMENT_CONFIG.REGISTRATION_STATUS.OPEN) {
-      return null;
+    const serializedParticipant = JSON.stringify([newParticipant]);
+    const result = await db.execute(sql`
+      UPDATE ${tournaments}
+      SET
+        registered_participants = (
+          COALESCE(${tournaments.registeredParticipants}, '[]'::json)::jsonb
+          || ${serializedParticipant}::jsonb
+        )::json,
+        registration_status = CASE
+          WHEN json_array_length(COALESCE(${tournaments.registeredParticipants}, '[]'::json)) + 1
+            >= COALESCE(${tournaments.maxParticipants}, ${tournaments.playersCount})
+          THEN ${TOURNAMENT_CONFIG.REGISTRATION_STATUS.FULL}
+          ELSE ${TOURNAMENT_CONFIG.REGISTRATION_STATUS.OPEN}
+        END
+      WHERE ${tournaments.registrationId} = ${registrationId}
+        AND ${tournaments.registrationStatus} = ${TOURNAMENT_CONFIG.REGISTRATION_STATUS.OPEN}
+        AND (${tournaments.registrationDeadline} IS NULL OR ${tournaments.registrationDeadline} > NOW())
+        AND json_array_length(COALESCE(${tournaments.registeredParticipants}, '[]'::json))
+          < COALESCE(${tournaments.maxParticipants}, ${tournaments.playersCount})
+        AND NOT EXISTS (
+          SELECT 1
+          FROM json_array_elements(COALESCE(${tournaments.registeredParticipants}, '[]'::json)) AS existing
+          WHERE lower(existing->>'name') = lower(${participant.name})
+        )
+      RETURNING ${tournaments.id}
+    `);
+
+    return result.rows.length > 0 ? newParticipant : null;
+  }
+
+  async addParticipantAsOrganizer(tournamentId: number, participant: { name: string; email?: string }): Promise<RegisteredParticipant> {
+    const tournament = await this.getTournament(tournamentId);
+    if (!tournament) {
+      throw new Error("Tournament not found");
     }
 
-    // Check if tournament is full
     const currentParticipants = tournament.registeredParticipants || [];
     const maxParticipants = tournament.maxParticipants || tournament.playersCount;
-    
+
     if (currentParticipants.length >= maxParticipants) {
-      return null;
+      throw new Error("Tournament is full");
     }
 
-    // Check for duplicate names (case-insensitive)
-    const existingNames = currentParticipants.map(p => p.name.toLowerCase());
-    if (existingNames.includes(participant.name.toLowerCase())) {
-      return null;
+    const nameTaken = currentParticipants.some(
+      p => p.name.toLowerCase() === participant.name.toLowerCase()
+    );
+    if (nameTaken) {
+      throw new Error("A player with this name is already registered");
     }
 
-    // Create new participant
     const newParticipant: RegisteredParticipant = {
       id: nanoid(8),
       name: participant.name,
@@ -409,20 +455,17 @@ export class DatabaseStorage implements IStorage {
       status: 'registered'
     };
 
-    // Add to participants list
     const updatedParticipants = [...currentParticipants, newParticipant];
-    
-    // Update registration status if full
-    const newStatus = updatedParticipants.length >= maxParticipants 
-      ? TOURNAMENT_CONFIG.REGISTRATION_STATUS.FULL 
-      : TOURNAMENT_CONFIG.REGISTRATION_STATUS.OPEN;
+    const newStatus = updatedParticipants.length >= maxParticipants
+      ? TOURNAMENT_CONFIG.REGISTRATION_STATUS.FULL
+      : tournament.registrationStatus;
 
     await db.update(tournaments)
-      .set({ 
+      .set({
         registeredParticipants: updatedParticipants as any,
         registrationStatus: newStatus
       })
-      .where(eq(tournaments.id, tournament.id));
+      .where(eq(tournaments.id, tournamentId));
 
     return newParticipant;
   }
@@ -491,6 +534,25 @@ export class DatabaseStorage implements IStorage {
       registrationStatus: tournament.registrationStatus as 'open' | 'closed' | 'full',
       deadline: tournament.registrationDeadline?.toISOString()
     };
+  }
+
+  async getTournamentsByParticipant(userId: string, email?: string | null): Promise<JoinedTournamentSummary[]> {
+    return db
+      .select({
+        id: tournaments.id,
+        name: tournaments.name,
+        date: tournaments.date,
+        time: tournaments.time,
+        location: tournaments.location,
+        status: tournaments.status,
+        shareId: tournaments.shareId,
+        urlSlug: tournaments.urlSlug,
+        leaderboardId: tournaments.leaderboardId,
+        registrationStatus: tournaments.registrationStatus,
+      })
+      .from(tournaments)
+      .where(buildParticipantRegistrationPredicate(userId, email))
+      .orderBy(desc(tournaments.createdAt));
   }
 
   async updateRegistrationStatus(tournamentId: number, status: RegistrationStatus): Promise<Tournament | undefined> {

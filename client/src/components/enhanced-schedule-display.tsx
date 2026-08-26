@@ -19,6 +19,7 @@ import { FinalsLeaderboard } from "./finals-leaderboard";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { getPublicAppUrl } from "@/lib/public-url";
 import type { Round, Match, PlayerStats, MatchScore } from "@shared/schema";
 
 interface EnhancedScheduleDisplayProps {
@@ -185,7 +186,7 @@ export function EnhancedScheduleDisplay({
       
       // Show leaderboard link
       if (data.leaderboardId) {
-        const leaderboardUrl = `${window.location.origin}/leaderboard/${data.leaderboardId}`;
+        const leaderboardUrl = `${getPublicAppUrl()}/leaderboard/${data.leaderboardId}`;
         navigator.clipboard.writeText(leaderboardUrl).then(() => {
           toast({
             title: "Leaderboard link copied!",

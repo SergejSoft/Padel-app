@@ -10,9 +10,9 @@ import type {
   ImmutableMatch,
   PartnershipTracking,
   ValidationResult
-} from './tournament-types';
-import { validateAmericanFormatConfig, validateAmericanFormatSchedule } from './validation-utils';
-import { TOURNAMENT_CONFIG } from './tournament-config';
+} from './tournament-types.js';
+import { validateAmericanFormatConfig, validateAmericanFormatSchedule } from './validation-utils.js';
+import { TOURNAMENT_CONFIG } from './tournament-config.js';
 
 /**
  * Generates American format tournament schedule with strict rule adherence
@@ -113,43 +113,38 @@ function generateOptimal8PlayerFormat(config: AmericanFormatConfig): AmericanFor
  * Uses round-robin approach with partnership rotation
  */
 function generateGeneralAmericanFormat(config: AmericanFormatConfig): AmericanFormatResult {
-  const { players, courts, pointsPerMatch } = config;
+  const { players, courts } = config;
   const playerCount = players.length;
-  
-  if (playerCount % 4 !== 0) {
-    return {
-      rounds: [],
-      partnershipTracking: createEmptyPartnershipTracking(),
-      validation: {
-        isValid: false,
-        errors: ['Player count must be divisible by 4 for team formation'],
-        warnings: []
-      }
-    };
-  }
-
-  // Calculate optimal number of rounds
-  // Each player should partner with as many different players as possible
-  const maxPartnerships = playerCount - 1;
-  const partnershipsPerRound = 1; // Each player gets 1 partner per round
-  const optimalRounds = Math.min(maxPartnerships, 12); // Cap at reasonable number
+  const activePlayerCount = Math.min(
+    Math.floor(playerCount / 4) * 4,
+    courts * 4,
+  );
+  const activeCourts = activePlayerCount / 4;
+  const optimalRounds = Math.min(playerCount - 1, 12);
 
   const rounds: ImmutableMatch[][] = [];
   const partnershipHistory = new Map<string, Set<string>>();
   const opponentHistory = new Map<string, Set<string>>();
+  const matchCounts = new Map<string, number>();
   
-  // Initialize tracking
   players.forEach(player => {
     partnershipHistory.set(player, new Set());
     opponentHistory.set(player, new Set());
+    matchCounts.set(player, 0);
   });
 
   let gameNumber = 1;
 
   for (let round = 1; round <= optimalRounds; round++) {
-    const matches = generateRoundMatches(
+    const activePlayers = selectActivePlayers(
       players,
-      courts,
+      activePlayerCount,
+      matchCounts,
+      round,
+    );
+    const matches = generateBestRound(
+      activePlayers,
+      activeCourts,
       round,
       gameNumber,
       partnershipHistory,
@@ -163,9 +158,11 @@ function generateGeneralAmericanFormat(config: AmericanFormatConfig): AmericanFo
     rounds.push(matches);
     gameNumber += matches.length;
     
-    // Update tracking
     matches.forEach(match => {
       updatePartnershipHistory(match, partnershipHistory, opponentHistory);
+      [...match.team1, ...match.team2].forEach((player) => {
+        matchCounts.set(player, (matchCounts.get(player) ?? 0) + 1);
+      });
     });
   }
 
@@ -174,7 +171,7 @@ function generateGeneralAmericanFormat(config: AmericanFormatConfig): AmericanFo
     matches
   }));
 
-  const validation = validateAmericanFormatSchedule(immutableRounds);
+  const validation = validateAmericanFormatSchedule(immutableRounds, players);
   const partnershipTracking = calculatePartnershipTracking(immutableRounds);
 
   return {
@@ -185,93 +182,99 @@ function generateGeneralAmericanFormat(config: AmericanFormatConfig): AmericanFo
 }
 
 /**
- * Generates matches for a single round, avoiding repeated partnerships
+ * Selects the players with the fewest matches. The rotating tie-breaker keeps
+ * sit-outs deterministic and evenly distributed.
  */
-function generateRoundMatches(
+function selectActivePlayers(
   players: readonly string[],
+  activePlayerCount: number,
+  matchCounts: ReadonlyMap<string, number>,
+  round: number,
+): string[] {
+  const startIndex = (round - 1) % players.length;
+  return [...players]
+    .sort((left, right) => {
+      const countDifference = (matchCounts.get(left) ?? 0) - (matchCounts.get(right) ?? 0);
+      if (countDifference !== 0) return countDifference;
+
+      const leftIndex = (players.indexOf(left) - startIndex + players.length) % players.length;
+      const rightIndex = (players.indexOf(right) - startIndex + players.length) % players.length;
+      return leftIndex - rightIndex;
+    })
+    .slice(0, activePlayerCount);
+}
+
+/**
+ * Scores complete round assignments instead of committing court by court.
+ * Deterministic seeded shuffles provide broad coverage without exponential
+ * backtracking for 20-player tournaments.
+ */
+function generateBestRound(
+  activePlayers: readonly string[],
   courts: number,
   round: number,
   startGameNumber: number,
   partnershipHistory: Map<string, Set<string>>,
-  opponentHistory: Map<string, Set<string>>
-): ImmutableMatch[] {
-  const availablePlayers = [...players];
-  const matches: ImmutableMatch[] = [];
-  let gameNumber = startGameNumber;
-
-  for (let court = 1; court <= courts; court++) {
-    if (availablePlayers.length < 4) {
-      break; // Not enough players for another match
-    }
-
-    const match = findOptimalMatch(availablePlayers, partnershipHistory, opponentHistory, court, round, gameNumber);
-    if (match) {
-      matches.push(match);
-      gameNumber++;
-      
-      // Remove players from available pool
-      [match.team1[0], match.team1[1], match.team2[0], match.team2[1]].forEach(player => {
-        const index = availablePlayers.indexOf(player);
-        if (index > -1) {
-          availablePlayers.splice(index, 1);
-        }
-      });
-    }
-  }
-
-  return matches;
-}
-
-/**
- * Finds optimal match pairing to minimize repeated partnerships/opponents
- */
-function findOptimalMatch(
-  availablePlayers: string[],
-  partnershipHistory: Map<string, Set<string>>,
   opponentHistory: Map<string, Set<string>>,
-  court: number,
-  round: number,
-  gameNumber: number
-): ImmutableMatch | null {
-  if (availablePlayers.length < 4) return null;
-
-  let bestMatch: ImmutableMatch | null = null;
+): ImmutableMatch[] {
+  let bestMatches: ImmutableMatch[] = [];
   let bestScore = Infinity;
 
-  // Try different combinations
-  for (let i = 0; i < availablePlayers.length - 3; i++) {
-    for (let j = i + 1; j < availablePlayers.length - 2; j++) {
-      for (let k = j + 1; k < availablePlayers.length - 1; k++) {
-        for (let l = k + 1; l < availablePlayers.length; l++) {
-          const players = [availablePlayers[i], availablePlayers[j], availablePlayers[k], availablePlayers[l]];
-          
-          // Try both team arrangements
-          const arrangements = [
-            { team1: [players[0], players[1]], team2: [players[2], players[3]] },
-            { team1: [players[0], players[2]], team2: [players[1], players[3]] },
-            { team1: [players[0], players[3]], team2: [players[1], players[2]] }
-          ];
-          
-          arrangements.forEach(arrangement => {
-            const score = calculateMatchScore(arrangement, partnershipHistory, opponentHistory);
-            if (score < bestScore) {
-              bestScore = score;
-              bestMatch = {
-                court,
-                team1: arrangement.team1 as [string, string],
-                team2: arrangement.team2 as [string, string],
-                round,
-                gameNumber,
-                status: 'pending'
-              };
-            }
-          });
+  for (let attempt = 0; attempt < 256; attempt++) {
+    const orderedPlayers = seededShuffle(activePlayers, round * 1009 + attempt);
+    const candidateMatches: ImmutableMatch[] = [];
+    let candidateScore = 0;
+
+    for (let courtIndex = 0; courtIndex < courts; courtIndex++) {
+      const group = orderedPlayers.slice(courtIndex * 4, courtIndex * 4 + 4);
+      const arrangements = [
+        { team1: [group[0], group[1]], team2: [group[2], group[3]] },
+        { team1: [group[0], group[2]], team2: [group[1], group[3]] },
+        { team1: [group[0], group[3]], team2: [group[1], group[2]] },
+      ];
+
+      let bestArrangement = arrangements[0];
+      let arrangementScore = Infinity;
+      for (const arrangement of arrangements) {
+        const score = calculateMatchScore(arrangement, partnershipHistory, opponentHistory);
+        if (score < arrangementScore) {
+          arrangementScore = score;
+          bestArrangement = arrangement;
         }
       }
+
+      candidateScore += arrangementScore;
+      candidateMatches.push({
+        court: courtIndex + 1,
+        team1: bestArrangement.team1 as [string, string],
+        team2: bestArrangement.team2 as [string, string],
+        round,
+        gameNumber: startGameNumber + courtIndex,
+        status: "pending",
+      });
+    }
+
+    if (candidateScore < bestScore) {
+      bestScore = candidateScore;
+      bestMatches = candidateMatches;
+      if (bestScore === 0) break;
     }
   }
 
-  return bestMatch;
+  return bestMatches;
+}
+
+function seededShuffle(players: readonly string[], seed: number): string[] {
+  const result = [...players];
+  let state = seed >>> 0;
+
+  for (let index = result.length - 1; index > 0; index--) {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    const swapIndex = state % (index + 1);
+    [result[index], result[swapIndex]] = [result[swapIndex], result[index]];
+  }
+
+  return result;
 }
 
 /**

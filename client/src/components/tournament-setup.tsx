@@ -16,6 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { validateTournamentConfig } from "@/lib/american-format";
 import { tournamentSetupSchema, type TournamentSetup } from "@shared/schema";
+import { TOURNAMENT_CONFIG } from "@shared/tournament-config";
 
 interface TournamentSetupProps {
   onComplete: (setup: TournamentSetup) => void;
@@ -150,9 +151,11 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
                     <FormLabel>Number of Players</FormLabel>
                     <FormControl>
                       <Input
-                        value="8 Players"
-                        disabled
-                        className="bg-muted cursor-not-allowed"
+                        type="number"
+                        min={TOURNAMENT_CONFIG.MIN_PLAYERS}
+                        max={TOURNAMENT_CONFIG.MAX_PLAYERS}
+                        value={field.value}
+                        onChange={(event) => field.onChange(Number(event.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
@@ -166,13 +169,23 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Number of Courts</FormLabel>
-                    <FormControl>
-                      <Input
-                        value="2 Courts"
-                        disabled
-                        className="bg-muted cursor-not-allowed"
-                      />
-                    </FormControl>
+                    <Select
+                      value={String(field.value)}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select courts" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {[2, 3, 4, 5].map((courtCount) => (
+                          <SelectItem key={courtCount} value={String(courtCount)}>
+                            {courtCount} courts
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -187,7 +200,7 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
               <div className="bg-background border border-border rounded-md p-4">
                 <h4 className="font-medium text-foreground mb-2">Americano Format</h4>
                 <p className="text-sm text-muted-foreground mb-2">
-                  7 rounds with optimal partner and opponent rotation. Each player plays exactly once per round across 2 courts simultaneously.
+                  Partners and opponents rotate between rounds. When capacity is limited, sit-outs are distributed as evenly as possible.
                 </p>
                 <div className="text-xs text-muted-foreground">
                   • Rally-point scoring to 16 points<br/>

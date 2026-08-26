@@ -6,12 +6,13 @@
 export const TOURNAMENT_CONFIG = {
   // Player constraints
   MIN_PLAYERS: 4,
-  MAX_PLAYERS: 16, // Support for larger tournaments
+  MAX_PLAYERS: 20,
   OPTIMAL_PLAYERS: 8, // Optimal for American format
   
   // Court configuration
   DEFAULT_COURTS: 2,
-  MAX_COURTS: 8, // For larger tournaments
+  MIN_COURTS: 2,
+  MAX_COURTS: 5,
   
   // Scoring configuration
   DEFAULT_POINTS_PER_MATCH: 16,

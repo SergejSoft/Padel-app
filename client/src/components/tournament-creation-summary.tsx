@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, CheckCircle, Copy, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { getPublicAppUrl } from "@/lib/public-url";
 import type { TournamentSetup } from "@shared/schema";
 
 interface TournamentCreationSummaryProps {
@@ -31,7 +32,6 @@ export function TournamentCreationSummary({ tournamentSetup, onBack }: Tournamen
         playersCount: tournamentSetup.playersCount,
         courtsCount: tournamentSetup.courtsCount,
         pointsPerMatch: tournamentSetup.pointsPerMatch || 16,
-        gameDurationMinutes: tournamentSetup.gameDurationMinutes || 13,
         players: [], // Empty players array for self-registration
         schedule: [], // Empty schedule array - will be generated later
         tournamentMode: 'registration', // Set to registration mode
@@ -57,7 +57,7 @@ export function TournamentCreationSummary({ tournamentSetup, onBack }: Tournamen
           const regData = await regResponse.json();
           const registrationId = regData.registrationId || regData.tournament?.registrationId;
           if (registrationId) {
-            setShareUrl(`${window.location.origin}/register/${registrationId}`);
+            setShareUrl(`${getPublicAppUrl()}/register/${registrationId}`);
           }
           
           toast({
@@ -89,7 +89,7 @@ export function TournamentCreationSummary({ tournamentSetup, onBack }: Tournamen
   };
 
   const handleViewDashboard = () => {
-    setLocation("/dashboard");
+    setLocation("/");
   };
 
   if (createdTournamentId && shareUrl) {

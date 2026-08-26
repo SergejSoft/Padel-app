@@ -3,7 +3,7 @@
  * Pure functions with no side effects
  */
 
-import { TOURNAMENT_CONFIG } from './tournament-config';
+import { TOURNAMENT_CONFIG } from './tournament-config.js';
 import type { 
   ValidationResult, 
   TournamentConfiguration, 
@@ -11,7 +11,7 @@ import type {
   AmericanFormatConfig,
   ImmutableMatch,
   ImmutableRound
-} from './tournament-types';
+} from './tournament-types.js';
 
 /**
  * Validates tournament configuration
@@ -27,13 +27,9 @@ export function validateTournamentConfiguration(config: Partial<TournamentConfig
   if (config.playersCount && config.playersCount > TOURNAMENT_CONFIG.MAX_PLAYERS) {
     errors.push(`Maximum ${TOURNAMENT_CONFIG.MAX_PLAYERS} players allowed`);
   }
-  if (config.playersCount && config.playersCount % 4 !== 0) {
-    errors.push('Player count must be divisible by 4 for proper team formation');
-  }
-
   // Validate courts count
-  if (!config.courtsCount || config.courtsCount < 1) {
-    errors.push('At least 1 court is required');
+  if (!config.courtsCount || config.courtsCount < TOURNAMENT_CONFIG.MIN_COURTS) {
+    errors.push(`Minimum ${TOURNAMENT_CONFIG.MIN_COURTS} courts required`);
   }
   if (config.courtsCount && config.courtsCount > TOURNAMENT_CONFIG.MAX_COURTS) {
     errors.push(`Maximum ${TOURNAMENT_CONFIG.MAX_COURTS} courts allowed`);
@@ -81,7 +77,7 @@ export function validateTournamentConfiguration(config: Partial<TournamentConfig
 /**
  * Validates player names
  */
-export function validatePlayerNames(players: string[]): ValidationResult<readonly string[]> {
+export function validatePlayerNames(players: readonly string[]): ValidationResult<readonly string[]> {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -189,10 +185,13 @@ export function validateAmericanFormatConfig(config: AmericanFormatConfig): Vali
     errors.push(...playerValidation.errors);
   }
 
-  // Validate courts for player count
-  const playersPerCourt = config.players.length / config.courts;
-  if (playersPerCourt < 4) {
-    errors.push('Too many courts for the number of players (minimum 4 players per court)');
+  if (config.courts < TOURNAMENT_CONFIG.MIN_COURTS || config.courts > TOURNAMENT_CONFIG.MAX_COURTS) {
+    errors.push(`Court count must be between ${TOURNAMENT_CONFIG.MIN_COURTS} and ${TOURNAMENT_CONFIG.MAX_COURTS}`);
+  }
+
+  const usableCourts = Math.floor(config.players.length / 4);
+  if (config.courts > usableCourts) {
+    warnings.push(`${config.courts - usableCourts} court(s) will be unused with ${config.players.length} players`);
   }
 
   // Check if American format is optimal
@@ -215,7 +214,10 @@ export function validateAmericanFormatConfig(config: AmericanFormatConfig): Vali
 /**
  * Validates tournament schedule for American format rules
  */
-export function validateAmericanFormatSchedule(rounds: readonly ImmutableRound[]): ValidationResult {
+export function validateAmericanFormatSchedule(
+  rounds: readonly ImmutableRound[],
+  expectedPlayers?: readonly string[],
+): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -225,7 +227,7 @@ export function validateAmericanFormatSchedule(rounds: readonly ImmutableRound[]
   }
 
   // Extract all players
-  const allPlayers = new Set<string>();
+  const allPlayers = new Set<string>(expectedPlayers);
   rounds.forEach(round => {
     round.matches.forEach(match => {
       match.team1.forEach(player => allPlayers.add(player));
@@ -250,9 +252,16 @@ export function validateAmericanFormatSchedule(rounds: readonly ImmutableRound[]
     const playersInRound = new Set<string>();
     
     round.matches.forEach(match => {
-      // Track players in this round
-      match.team1.forEach(player => playersInRound.add(player));
-      match.team2.forEach(player => playersInRound.add(player));
+      const matchPlayers = [...match.team1, ...match.team2];
+      if (new Set(matchPlayers).size !== 4) {
+        errors.push(`Round ${round.round}, court ${match.court}: A player is assigned more than once`);
+      }
+      matchPlayers.forEach(player => {
+        if (playersInRound.has(player)) {
+          errors.push(`Round ${round.round}: ${player} is assigned to multiple courts`);
+        }
+        playersInRound.add(player);
+      });
 
       // Track partnerships
       const [p1, p2] = match.team1;
@@ -260,10 +269,10 @@ export function validateAmericanFormatSchedule(rounds: readonly ImmutableRound[]
 
       // Check for repeated partnerships
       if (partnerships.get(p1)?.has(p2)) {
-        errors.push(`Round ${round.round}: Repeated partnership ${p1} & ${p2}`);
+        warnings.push(`Round ${round.round}: Repeated partnership ${p1} & ${p2}`);
       }
       if (partnerships.get(p3)?.has(p4)) {
-        errors.push(`Round ${round.round}: Repeated partnership ${p3} & ${p4}`);
+        warnings.push(`Round ${round.round}: Repeated partnership ${p3} & ${p4}`);
       }
 
       // Update partnership tracking
@@ -285,11 +294,6 @@ export function validateAmericanFormatSchedule(rounds: readonly ImmutableRound[]
         playerMatchCounts.set(player, (playerMatchCounts.get(player) || 0) + 1);
       });
     });
-
-    // Ensure all players participate in each round
-    if (playersInRound.size !== playerList.length) {
-      errors.push(`Round ${round.round}: Not all players participate (${playersInRound.size}/${playerList.length})`);
-    }
   });
 
   // Check for balanced match distribution
@@ -300,6 +304,10 @@ export function validateAmericanFormatSchedule(rounds: readonly ImmutableRound[]
   if (maxMatches - minMatches > 1) {
     warnings.push('Unbalanced match distribution between players');
   }
+
+  playerMatchCounts.forEach((count, player) => {
+    if (count === 0) errors.push(`${player} is not scheduled in any round`);
+  });
 
   return {
     isValid: errors.length === 0,
