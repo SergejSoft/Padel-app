@@ -5,15 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Calendar, MapPin, Users, Target, Clock, Ban, Download, Eye, Trophy, Home, LayoutDashboard } from "lucide-react";
-import { generateAmericanFormat } from "@/lib/american-format";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import { PDFPreviewModal } from "@/components/pdf-preview-modal";
 import { SimpleScoreInput } from "@/components/simple-score-input";
 import { FinalsLeaderboard } from "@/components/finals-leaderboard";
 import { Footer } from "@/components/footer";
-import type { Tournament } from "@shared/schema";
+import type { Round, Tournament } from "@shared/schema";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { apiRequest } from "@/lib/queryClient";
+import { getPublicAppUrl } from "@/lib/public-url";
+
+type PublicTournament = Tournament & { canEdit?: boolean };
 
 export default function SharedTournament() {
   const { shareId } = useParams();
@@ -22,17 +25,25 @@ export default function SharedTournament() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const { user } = useAuth();
 
-  const { data: tournament, isLoading, error } = useQuery({
+  const { data: tournament, isLoading, error } = useQuery<PublicTournament>({
     queryKey: ['/api/shared', shareId],
     queryFn: async () => {
-      const response = await fetch(`/api/shared/${shareId}`);
-      if (!response.ok) {
-        throw new Error('Tournament not found');
-      }
+      const response = await apiRequest("GET", `/api/shared/${shareId}`);
       return response.json();
     },
     enabled: !!shareId,
   });
+
+  useEffect(() => {
+    if (!tournament?.finalScores) return;
+    const scores = Object.fromEntries(
+      tournament.finalScores.map((score: any) => [
+        score.gameNumber,
+        { team1Score: score.team1Score, team2Score: score.team2Score },
+      ]),
+    );
+    setGameScores(scores);
+  }, [tournament?.finalScores]);
 
   if (isLoading) {
     return (
@@ -70,12 +81,9 @@ export default function SharedTournament() {
   // Check if tournament is in registration mode
   const isRegistrationMode = tournament.tournamentMode === 'registration' && (!tournament.schedule || tournament.schedule.length === 0);
 
-  // Only generate schedule if not in registration mode and has enough players
-  const schedule = !isRegistrationMode && tournament.players && tournament.players.length >= 4 
-    ? generateAmericanFormat({
-        players: tournament.players,
-        courts: tournament.courtsCount,
-      })
+  // The stored schedule is the source of truth for every viewer.
+  const schedule: Round[] = !isRegistrationMode && Array.isArray(tournament.schedule)
+    ? tournament.schedule as Round[]
     : [];
 
   const totalGames = schedule.length > 0 ? schedule.reduce((sum, round) => sum + round.matches.length, 0) : 0;
@@ -121,8 +129,7 @@ export default function SharedTournament() {
 
   // Check if current user can edit scores (is organizer or admin)
   const canEditScores = () => {
-    if (!user || !tournament) return false;
-    return user.role === 'admin' || user.id === tournament.organizerId;
+    return !!user && !!tournament?.canEdit;
   };
 
   const handleScoreChange = (gameNumber: number, team1Score: number, team2Score: number) => {
@@ -310,7 +317,7 @@ export default function SharedTournament() {
                   <div className="text-center py-4">
                     <p className="text-sm text-gray-600 mb-2">Share this registration link:</p>
                     <code className="bg-gray-100 px-3 py-1 rounded text-sm">
-                      {window.location.origin}/register/{tournament.registrationId}
+                      {getPublicAppUrl()}/register/{tournament.registrationId}
                     </code>
                   </div>
                 )}
@@ -383,6 +390,8 @@ export default function SharedTournament() {
                                   handleScoreChange(match.gameNumber, team1Score, team2Score)
                                 }
                                 gameNumber={match.gameNumber}
+                                tournamentId={tournament.id}
+                                pointsPerMatch={tournament.pointsPerMatch}
                               />
                             ) : (
                               <div className="bg-gray-100 rounded px-3 py-2 text-sm text-gray-600">
@@ -420,8 +429,8 @@ export default function SharedTournament() {
                 onClick={() => {
                   const pdf = generateTournamentPDF({
                     tournamentName: tournament.name,
-                    tournamentDate: tournament.date,
-                    tournamentLocation: tournament.location,
+                    tournamentDate: tournament.date ?? "",
+                    tournamentLocation: tournament.location ?? "",
                     playersCount: tournament.playersCount,
                     courtsCount: tournament.courtsCount,
                     rounds: schedule,
@@ -450,16 +459,16 @@ export default function SharedTournament() {
         isOpen={showPDFPreview}
         onClose={() => setShowPDFPreview(false)}
         tournamentName={tournament.name}
-        tournamentDate={tournament.date}
-        tournamentLocation={tournament.location}
+        tournamentDate={tournament.date ?? ""}
+        tournamentLocation={tournament.location ?? ""}
         playersCount={tournament.playersCount}
         courtsCount={tournament.courtsCount}
         rounds={schedule}
         onDownload={() => {
           const pdf = generateTournamentPDF({
             tournamentName: tournament.name,
-            tournamentDate: tournament.date,
-            tournamentLocation: tournament.location,
+            tournamentDate: tournament.date ?? "",
+            tournamentLocation: tournament.location ?? "",
             playersCount: tournament.playersCount,
             courtsCount: tournament.courtsCount,
             rounds: schedule,

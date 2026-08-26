@@ -1,26 +1,15 @@
-import { pgTable, text, serial, integer, json, timestamp, varchar, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, json, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Session storage table (required for Replit Auth)
-export const sessions = pgTable(
-  "sessions",
-  {
-    sid: varchar("sid").primaryKey(),
-    sess: json("sess").notNull(),
-    expire: timestamp("expire").notNull(),
-  },
-  (table) => [index("IDX_session_expire").on(table.expire)],
-);
-
-// User storage table (required for Replit Auth)
+// Application profile keyed by Clerk's user ID. Clerk owns credentials and sessions.
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().notNull(),
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role").default("organizer").notNull(), // 'admin', 'organizer'
+  role: varchar("role").default("player").notNull(), // 'player', 'organizer', 'admin'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -31,6 +20,8 @@ export const tournaments = pgTable("tournaments", {
   date: text("date"),
   time: text("time"), // Format: "HH:MM"
   location: text("location"),
+  price: text("price"),
+  currency: text("currency"),
   playersCount: integer("players_count").notNull(),
   courtsCount: integer("courts_count").notNull(),
   pointsPerMatch: integer("points_per_match").notNull().default(16),
@@ -56,7 +47,10 @@ export const tournaments = pgTable("tournaments", {
   completedAt: timestamp("completed_at"), // When tournament was completed
 });
 
-export const insertTournamentSchema = createInsertSchema(tournaments).omit({
+export const insertTournamentSchema = createInsertSchema(tournaments, {
+  players: z.array(z.string()),
+  schedule: z.array(z.any()),
+}).omit({
   id: true,
   createdAt: true,
 });
@@ -69,6 +63,7 @@ export type Tournament = typeof tournaments.$inferSelect;
 // Self-registration types
 export interface RegisteredParticipant {
   id: string; // Unique participant ID
+  userId?: string; // Clerk user ID when registration is linked to an account
   name: string; // Player name
   email?: string; // Optional contact info
   registeredAt: string; // ISO timestamp
@@ -87,8 +82,21 @@ export interface RegistrationInfo {
   deadline?: string;
 }
 
+export interface JoinedTournamentSummary {
+  id: number;
+  name: string;
+  date: string | null;
+  time: string | null;
+  location: string | null;
+  status: string;
+  shareId: string | null;
+  urlSlug: string | null;
+  leaderboardId: string | null;
+  registrationStatus: string | null;
+}
+
 // Import new foundation
-import { TOURNAMENT_CONFIG } from './tournament-config';
+import { TOURNAMENT_CONFIG } from './tournament-config.js';
 
 // Validation schemas with configurable constraints
 export const tournamentSetupSchema = z.object({
@@ -102,10 +110,9 @@ export const tournamentSetupSchema = z.object({
     .max(TOURNAMENT_CONFIG.VALIDATION.MAX_LOCATION_LENGTH, "Tournament location too long"),
   playersCount: z.number()
     .min(TOURNAMENT_CONFIG.MIN_PLAYERS, `Minimum ${TOURNAMENT_CONFIG.MIN_PLAYERS} players required`)
-    .max(TOURNAMENT_CONFIG.MAX_PLAYERS, `Maximum ${TOURNAMENT_CONFIG.MAX_PLAYERS} players allowed`)
-    .refine(count => count % 4 === 0, { message: "Player count must be divisible by 4 for proper team formation" }),
+    .max(TOURNAMENT_CONFIG.MAX_PLAYERS, `Maximum ${TOURNAMENT_CONFIG.MAX_PLAYERS} players allowed`),
   courtsCount: z.number()
-    .min(1, "At least 1 court is required")
+    .min(TOURNAMENT_CONFIG.MIN_COURTS, `Minimum ${TOURNAMENT_CONFIG.MIN_COURTS} courts required`)
     .max(TOURNAMENT_CONFIG.MAX_COURTS, `Maximum ${TOURNAMENT_CONFIG.MAX_COURTS} courts allowed`),
   pointsPerMatch: z.number()
     .min(TOURNAMENT_CONFIG.MIN_POINTS_PER_MATCH, `Minimum ${TOURNAMENT_CONFIG.MIN_POINTS_PER_MATCH} points per match`)

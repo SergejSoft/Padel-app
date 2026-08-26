@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Plus, Settings, Users, Calendar, Trash2, Edit, Crown, Shield, Ban, Play, Share, Copy, ExternalLink, Trophy, UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { UserButton, useClerk } from "@clerk/react";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentWizard } from "@/components/tournament-wizard";
 import { EditTournamentModal } from "@/components/edit-tournament-modal";
@@ -14,10 +15,12 @@ import { TournamentViewModal } from "@/components/tournament-view-modal";
 import { Footer } from "@/components/footer";
 import RegistrationManagement from "@/components/registration-management";
 import { apiRequest } from "@/lib/queryClient";
+import { getPublicAppUrl } from "@/lib/public-url";
 import type { Tournament } from "@shared/schema";
 
 export default function Dashboard() {
   const { user, isAdmin } = useAuth();
+  const { signOut } = useClerk();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showCreateTournament, setShowCreateTournament] = useState(false);
@@ -28,12 +31,6 @@ export default function Dashboard() {
   const { data: tournaments = [], isLoading, error } = useQuery<Tournament[]>({
     queryKey: ["/api/tournaments"],
     retry: false,
-    onError: (error) => {
-      console.error('Dashboard query error:', error);
-    },
-    onSuccess: (data) => {
-      console.log('Dashboard loaded tournaments:', data?.length || 0);
-    }
   });
 
   // Sort tournaments by date (newest first), then by creation order
@@ -90,37 +87,6 @@ export default function Dashboard() {
     },
   });
 
-  const makeAdminMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/dev/make-admin", {});
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
-      toast({
-        title: "Role updated",
-        description: `You are now an admin (${data.user.role}). Page will refresh to show admin features.`,
-      });
-      // Refresh page to update UI
-      setTimeout(() => window.location.reload(), 1500);
-    },
-    onError: (error: any) => {
-      console.error("Admin promotion error:", error);
-      toast({
-        title: "Error updating role",
-        description: error.message || "Please sign in again and try again.",
-        variant: "destructive",
-      });
-      // If unauthorized, redirect to login
-      if (error.message?.includes("Unauthorized")) {
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 2000);
-      }
-    },
-  });
-
   const handleDeleteTournament = (tournamentId: number, tournamentName: string) => {
     if (confirm(`Are you sure you want to delete "${tournamentName}"? This action cannot be undone.`)) {
       deleteMutation.mutate(tournamentId);
@@ -160,7 +126,7 @@ export default function Dashboard() {
   const handleCopyLink = (tournament: Tournament) => {
     // Use custom URL slug if available, fallback to shareId
     const identifier = tournament.urlSlug || tournament.shareId;
-    const url = `${window.location.origin}/shared/${identifier}`;
+    const url = `${getPublicAppUrl()}/shared/${identifier}`;
     navigator.clipboard.writeText(url).then(() => {
       toast({
         title: "Link copied",
@@ -217,13 +183,14 @@ export default function Dashboard() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => window.location.href = "/api/logout"}
+                onClick={() => signOut({ redirectUrl: "/" })}
                 size="sm"
                 className="text-sm sm:text-base"
               >
                 <span className="hidden sm:inline">Sign Out</span>
                 <span className="sm:hidden">Out</span>
               </Button>
+              <UserButton />
             </div>
           </div>
         </div>
@@ -398,6 +365,7 @@ export default function Dashboard() {
                         size="sm"
                         onClick={() => setEditingTournament(tournament)}
                         className="text-xs sm:text-sm"
+                        aria-label="Edit tournament"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>

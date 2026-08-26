@@ -46,7 +46,10 @@ export function ScoreInputModal({ match, isOpen, onClose, onSave }: ScoreInputMo
     return {
       team1Score: team1Sets,
       team2Score: team2Sets,
-      sets
+      sets,
+      isValid: team1Sets !== team2Sets,
+      totalPoints: team1Sets + team2Sets,
+      validationErrors: team1Sets === team2Sets ? ["A match must have a winner"] : [],
     };
   };
 

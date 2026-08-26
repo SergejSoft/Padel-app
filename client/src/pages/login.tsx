@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocation } from "wouter";
+import { SignIn, useAuth } from "@clerk/react";
 
 export const TennisIcon = ({ size = "1em", color = 'currentColor', ...props }) => (
   <svg 
@@ -16,41 +16,37 @@ export const TennisIcon = ({ size = "1em", color = 'currentColor', ...props }) =
 );
 
 export default function Login() {
-  useEffect(() => {
-    // Auto-redirect to Replit Auth after a brief moment to show branding
-    const timer = setTimeout(() => {
-      window.location.href = "/api/login";
-    }, 1500);
+  const { isSignedIn } = useAuth();
+  const [, navigate] = useLocation();
+  const requestedRedirect = new URLSearchParams(window.location.search).get("redirect");
+  const redirectPath = requestedRedirect?.startsWith("/") && !requestedRedirect.startsWith("//")
+    ? requestedRedirect
+    : "/";
 
-    return () => clearTimeout(timer);
-  }, []);
+  useEffect(() => {
+    if (isSignedIn) {
+      navigate(redirectPath);
+    }
+  }, [isSignedIn, navigate, redirectPath]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <TennisIcon size="4rem" className="text-primary" />
-          </div>
-          <CardTitle className="text-2xl font-bold text-foreground">
-            Padel Tournament App
-          </CardTitle>
-          <CardDescription>
-            Professional tournament management for padel players
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-center">
-          <p className="text-muted-foreground mb-6">
-            Redirecting you to secure login...
-          </p>
-          <Button 
-            onClick={() => window.location.href = "/api/login"}
-            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            Continue to Login
-          </Button>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 px-4 py-8">
+      <div className="text-center">
+        <div className="flex justify-center mb-3">
+          <TennisIcon size="3rem" className="text-primary" />
+        </div>
+        <h1 className="text-2xl font-bold text-foreground">
+          Padel Tournament App
+        </h1>
+        <p className="text-muted-foreground">
+          Professional tournament management for padel players
+        </p>
+      </div>
+      <SignIn
+        routing="hash"
+        forceRedirectUrl={redirectPath}
+        signUpForceRedirectUrl={redirectPath}
+      />
     </div>
   );
 }

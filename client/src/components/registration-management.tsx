@@ -40,9 +40,12 @@ import {
   Play, 
   Pause,
   CheckCircle,
-  XCircle 
+  XCircle,
+  UserPlus 
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import { getPublicAppUrl } from '@/lib/public-url';
 import type { Tournament, RegisteredParticipant } from '@shared/schema';
 
 interface RegistrationManagementProps {
@@ -54,24 +57,22 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
   const [editingParticipant, setEditingParticipant] = useState<RegisteredParticipant | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const isRegistrationMode = tournament.tournamentMode === 'registration';
   const participants = tournament.registeredParticipants || [];
   const registrationUrl = tournament.registrationId 
-    ? `${window.location.origin}/register/${tournament.registrationId}`
+    ? `${getPublicAppUrl()}/register/${tournament.registrationId}`
     : null;
 
   // Generate registration link
   const generateLinkMutation = useMutation({
     mutationFn: async (data: { maxParticipants?: number; registrationDeadline?: string }) => {
-      const response = await fetch(`/api/tournaments/${tournament.id}/registration`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to generate registration link');
+      const response = await apiRequest('POST', `/api/tournaments/${tournament.id}/registration`, data);
       return response.json();
     },
     onSuccess: () => {
@@ -79,7 +80,32 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
         title: "Registration Link Generated",
         description: "Your tournament is now open for registration",
       });
-      queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tournaments'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Add participant manually (organizer)
+  const addParticipantMutation = useMutation({
+    mutationFn: async (data: { name: string; email?: string }) => {
+      const response = await apiRequest('POST', `/api/tournaments/${tournament.id}/participants`, data);
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      toast({
+        title: "Player Added",
+        description: `${variables.name} has been added to the tournament`,
+      });
+      setIsAddDialogOpen(false);
+      setNewName('');
+      setNewEmail('');
+      queryClient.invalidateQueries({ queryKey: ['/api/tournaments'] });
     },
     onError: (error: Error) => {
       toast({
@@ -93,10 +119,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
   // Remove participant
   const removeParticipantMutation = useMutation({
     mutationFn: async (participantId: string) => {
-      const response = await fetch(`/api/tournaments/${tournament.id}/participants/${participantId}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) throw new Error('Failed to remove participant');
+      const response = await apiRequest('DELETE', `/api/tournaments/${tournament.id}/participants/${participantId}`);
       return response.json();
     },
     onSuccess: () => {
@@ -104,7 +127,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
         title: "Participant Removed",
         description: "The participant has been removed from the tournament",
       });
-      queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tournaments'] });
     },
     onError: (error: Error) => {
       toast({
@@ -118,12 +141,10 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
   // Update participant
   const updateParticipantMutation = useMutation({
     mutationFn: async (data: { participantId: string; name: string; email?: string }) => {
-      const response = await fetch(`/api/tournaments/${tournament.id}/participants/${data.participantId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: data.name, email: data.email }),
+      const response = await apiRequest('PUT', `/api/tournaments/${tournament.id}/participants/${data.participantId}`, {
+        name: data.name,
+        email: data.email,
       });
-      if (!response.ok) throw new Error('Failed to update participant');
       return response.json();
     },
     onSuccess: () => {
@@ -132,7 +153,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
         description: "The participant information has been updated",
       });
       setEditingParticipant(null);
-      queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tournaments'] });
     },
     onError: (error: Error) => {
       toast({
@@ -146,12 +167,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
   // Update registration status
   const updateStatusMutation = useMutation({
     mutationFn: async (status: 'open' | 'closed' | 'full') => {
-      const response = await fetch(`/api/tournaments/${tournament.id}/registration-status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      if (!response.ok) throw new Error('Failed to update registration status');
+      const response = await apiRequest('PUT', `/api/tournaments/${tournament.id}/registration-status`, { status });
       return response.json();
     },
     onSuccess: () => {
@@ -159,7 +175,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
         title: "Registration Status Updated",
         description: "The registration status has been changed",
       });
-      queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tournaments'] });
     },
     onError: (error: Error) => {
       toast({
@@ -173,10 +189,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
   // Convert to tournament
   const convertToTournamentMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/tournaments/${tournament.id}/convert`, {
-        method: 'POST',
-      });
-      if (!response.ok) throw new Error('Failed to convert to tournament');
+      const response = await apiRequest('POST', `/api/tournaments/${tournament.id}/convert`);
       return response.json();
     },
     onSuccess: () => {
@@ -184,7 +197,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
         title: "Tournament Ready",
         description: "Tournament has been converted and is ready to start",
       });
-      queryClient.invalidateQueries({ queryKey: ['tournaments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/tournaments'] });
     },
     onError: (error: Error) => {
       toast({
@@ -220,6 +233,18 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
       });
     }
   };
+
+  const handleAddParticipant = () => {
+    if (newName.trim()) {
+      addParticipantMutation.mutate({
+        name: newName.trim(),
+        email: newEmail.trim() || undefined,
+      });
+    }
+  };
+
+  const maxParticipants = tournament.maxParticipants || tournament.playersCount;
+  const isFull = participants.length >= maxParticipants;
 
   if (!isRegistrationMode && !tournament.registrationId) {
     return (
@@ -313,9 +338,20 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
               <Users className="h-5 w-5 text-purple-600" />
               <span>Registered Players</span>
             </span>
-            <Badge variant="outline">
-              {participants.length} / {tournament.maxParticipants || tournament.playersCount}
-            </Badge>
+            <div className="flex items-center space-x-2">
+              <Badge variant="outline">
+                {participants.length} / {maxParticipants}
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsAddDialogOpen(true)}
+                disabled={isFull}
+              >
+                <UserPlus className="h-4 w-4 mr-1" />
+                Add Player
+              </Button>
+            </div>
           </CardTitle>
           <CardDescription>
             Manage players who have registered for this tournament
@@ -386,7 +422,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
               <div className="text-center py-8 text-gray-500">
                 <Users className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                 <p>No players registered yet</p>
-                <p className="text-sm">Share the registration link to get started</p>
+                <p className="text-sm">Share the registration link or add players manually</p>
               </div>
             )}
           </div>
@@ -422,6 +458,65 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
           )}
         </CardContent>
       </Card>
+
+      {/* Add Participant Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+        setIsAddDialogOpen(open);
+        if (!open) {
+          setNewName('');
+          setNewEmail('');
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Player</DialogTitle>
+            <DialogDescription>
+              Manually add a player to the tournament
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-name">Name</Label>
+              <Input
+                id="add-name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Enter player name"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newName.trim() && !addParticipantMutation.isPending) {
+                    handleAddParticipant();
+                  }
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-email">Email</Label>
+              <Input
+                id="add-email"
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="Enter email (optional)"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsAddDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddParticipant}
+              disabled={!newName.trim() || addParticipantMutation.isPending}
+            >
+              {addParticipantMutation.isPending ? 'Adding...' : 'Add Player'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Participant Dialog */}
       <Dialog open={!!editingParticipant} onOpenChange={() => setEditingParticipant(null)}>

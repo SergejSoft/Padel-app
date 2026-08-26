@@ -38,7 +38,7 @@ describe('generateAmericanFormatTournament', () => {
   it('should reject invalid player counts', () => {
     const config = {
       players: ['Alice', 'Bob', 'Charlie'], // Only 3 players
-      courts: 1,
+      courts: 2,
       pointsPerMatch: 16
     };
 
@@ -112,7 +112,7 @@ describe('generateAmericanFormatTournament', () => {
   it('should work with 4 players', () => {
     const config = {
       players: ['Alice', 'Bob', 'Charlie', 'Diana'],
-      courts: 1,
+      courts: 2,
       pointsPerMatch: 16
     };
 
@@ -169,5 +169,70 @@ describe('generateAmericanFormatTournament', () => {
       expect(courts).toContain(2);
       expect(courts).toHaveLength(2);
     });
+  });
+
+  it('rotates sit-outs fairly when players exceed court capacity', () => {
+    const players = Array.from({ length: 9 }, (_, index) => `Player ${index + 1}`);
+    const result = generateAmericanFormatTournament({
+      players,
+      courts: 2,
+      pointsPerMatch: 16,
+    });
+
+    expect(result.validation.isValid).toBe(true);
+    result.rounds.forEach((round) => expect(round.matches).toHaveLength(2));
+
+    const matchCounts = new Map(players.map((player) => [player, 0]));
+    result.rounds.forEach((round) => {
+      round.matches.forEach((match) => {
+        [...match.team1, ...match.team2].forEach((player) => {
+          matchCounts.set(player, matchCounts.get(player)! + 1);
+        });
+      });
+    });
+
+    const counts = [...matchCounts.values()];
+    expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
+  });
+
+  it('allows unavoidable repeated partnerships as warnings', () => {
+    const result = generateAmericanFormatTournament({
+      players: Array.from({ length: 12 }, (_, index) => `Player ${index + 1}`),
+      courts: 3,
+      pointsPerMatch: 16,
+    });
+
+    expect(result.validation.isValid).toBe(true);
+    expect(result.rounds).toHaveLength(11);
+  });
+
+  it('generates valid and fair schedules for every supported configuration', () => {
+    for (let playerCount = 4; playerCount <= 20; playerCount++) {
+      for (let courts = 2; courts <= 5; courts++) {
+        const players = Array.from({ length: playerCount }, (_, index) => `P${index + 1}`);
+        const result = generateAmericanFormatTournament({
+          players,
+          courts,
+          pointsPerMatch: 16,
+        });
+
+        expect(result.validation.isValid, `${playerCount} players / ${courts} courts`).toBe(true);
+
+        const matchCounts = new Map(players.map((player) => [player, 0]));
+        result.rounds.forEach((round) => {
+          const playersInRound = new Set<string>();
+          round.matches.forEach((match) => {
+            [...match.team1, ...match.team2].forEach((player) => {
+              expect(playersInRound.has(player)).toBe(false);
+              playersInRound.add(player);
+              matchCounts.set(player, matchCounts.get(player)! + 1);
+            });
+          });
+        });
+
+        const counts = [...matchCounts.values()];
+        expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
+      }
+    }
   });
 });

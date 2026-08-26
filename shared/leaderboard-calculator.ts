@@ -9,7 +9,7 @@ import type {
   ImmutablePlayerStats, 
   TournamentLeaderboard,
   ValidatedMatchScore 
-} from './tournament-types';
+} from './tournament-types.js';
 
 /**
  * Calculates comprehensive player statistics from tournament matches
@@ -117,24 +117,20 @@ export function rankPlayerStats(stats: readonly ImmutablePlayerStats[]): readonl
     return a.player.localeCompare(b.player);
   });
 
-  // Assign ranks (handle ties properly)
-  return sortedStats.map((stat, index) => {
-    let rank = index + 1;
-    
-    // Check for ties with previous player
-    if (index > 0) {
-      const prevStat = sortedStats[index - 1];
-      if (stat.totalPoints === prevStat.totalPoints && 
-          stat.matchesPlayed === prevStat.matchesPlayed) {
-        rank = prevStat.rank;
-      }
-    }
-    
-    return {
+  const rankedStats: ImmutablePlayerStats[] = [];
+  sortedStats.forEach((stat, index) => {
+    const previous = rankedStats[index - 1];
+    const isTie = previous
+      && stat.totalPoints === previous.totalPoints
+      && stat.matchesPlayed === previous.matchesPlayed;
+
+    rankedStats.push({
       ...stat,
-      rank
-    };
+      rank: isTie ? previous.rank : index + 1,
+    });
   });
+
+  return rankedStats;
 }
 
 /**
