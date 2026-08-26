@@ -1,6 +1,7 @@
-import { pgTable, text, serial, integer, json, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, json, timestamp, varchar, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { TOURNAMENT_CONFIG } from './tournament-config.js';
 
 // Application profile keyed by Clerk's user ID. Clerk owns credentials and sessions.
 export const users = pgTable("users", {
@@ -9,6 +10,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  playtomicRating: real("playtomic_rating"),
   role: varchar("role").default("player").notNull(), // 'player', 'organizer', 'admin'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -24,7 +26,7 @@ export const tournaments = pgTable("tournaments", {
   currency: text("currency"),
   playersCount: integer("players_count").notNull(),
   courtsCount: integer("courts_count").notNull(),
-  pointsPerMatch: integer("points_per_match").notNull().default(16),
+  pointsPerMatch: integer("points_per_match").notNull().default(24),
   players: json("players").$type<string[]>().notNull(),
   schedule: json("schedule").$type<any[]>().notNull(),
   results: json("results").$type<PlayerStats[]>(), // Final leaderboard results
@@ -48,6 +50,10 @@ export const tournaments = pgTable("tournaments", {
 });
 
 export const insertTournamentSchema = createInsertSchema(tournaments, {
+  pointsPerMatch: z.number().refine(
+    value => (TOURNAMENT_CONFIG.POINTS_PER_MATCH_OPTIONS as readonly number[]).includes(value),
+    "Points per match must be 16, 24, or 32",
+  ).optional(),
   players: z.array(z.string()),
   schedule: z.array(z.any()),
 }).omit({
@@ -66,6 +72,7 @@ export interface RegisteredParticipant {
   userId?: string; // Clerk user ID when registration is linked to an account
   name: string; // Player name
   email?: string; // Optional contact info
+  playtomicRating?: number | null; // Optional Playtomic level (0-7)
   registeredAt: string; // ISO timestamp
   status: 'registered' | 'confirmed' | 'removed'; // Participant status
 }
@@ -78,6 +85,7 @@ export interface RegistrationInfo {
   location: string;
   currentParticipants: number;
   maxParticipants: number;
+  pointsPerMatch: number;
   registrationStatus: 'open' | 'closed' | 'full';
   deadline?: string;
 }
@@ -94,9 +102,6 @@ export interface JoinedTournamentSummary {
   leaderboardId: string | null;
   registrationStatus: string | null;
 }
-
-// Import new foundation
-import { TOURNAMENT_CONFIG } from './tournament-config.js';
 
 // Validation schemas with configurable constraints
 export const tournamentSetupSchema = z.object({
@@ -115,8 +120,10 @@ export const tournamentSetupSchema = z.object({
     .min(TOURNAMENT_CONFIG.MIN_COURTS, `Minimum ${TOURNAMENT_CONFIG.MIN_COURTS} courts required`)
     .max(TOURNAMENT_CONFIG.MAX_COURTS, `Maximum ${TOURNAMENT_CONFIG.MAX_COURTS} courts allowed`),
   pointsPerMatch: z.number()
-    .min(TOURNAMENT_CONFIG.MIN_POINTS_PER_MATCH, `Minimum ${TOURNAMENT_CONFIG.MIN_POINTS_PER_MATCH} points per match`)
-    .max(TOURNAMENT_CONFIG.MAX_POINTS_PER_MATCH, `Maximum ${TOURNAMENT_CONFIG.MAX_POINTS_PER_MATCH} points per match`)
+    .refine(
+      value => (TOURNAMENT_CONFIG.POINTS_PER_MATCH_OPTIONS as readonly number[]).includes(value),
+      "Points per match must be 16, 24, or 32",
+    )
     .default(TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH).optional(),
 });
 

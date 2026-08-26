@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserButton, useClerk } from "@clerk/react";
 import { Link } from "wouter";
@@ -11,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -45,7 +47,11 @@ function getGroups(tournaments: JoinedTournamentSummary[]): TournamentGroup[] {
   const completed: JoinedTournamentSummary[] = [];
 
   for (const tournament of tournaments) {
-    if (tournament.status === "completed" || tournament.status === "cancelled") {
+    if (
+      tournament.status === "completed"
+      || tournament.status === "cancelled"
+      || tournament.status === "archived"
+    ) {
       completed.push(tournament);
     } else if (tournament.date && new Date(tournament.date) >= today) {
       upcoming.push(tournament);
@@ -66,7 +72,7 @@ function getGroups(tournaments: JoinedTournamentSummary[]): TournamentGroup[] {
       tournaments: active,
     },
     {
-      title: "Completed and cancelled",
+      title: "History",
       description: "Your tournament history",
       tournaments: completed,
     },
@@ -132,6 +138,7 @@ export default function PlayerHome() {
   const { signOut } = useClerk();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [playtomicRating, setPlaytomicRating] = useState("");
   const { data: tournaments = [], isLoading, error } = useQuery<JoinedTournamentSummary[]>({
     queryKey: ["/api/my/registrations"],
   });
@@ -153,6 +160,30 @@ export default function PlayerHome() {
       toast({
         title: "Could not enable organizer access",
         description: upgradeError.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  useEffect(() => {
+    setPlaytomicRating(user?.playtomicRating == null ? "" : String(user.playtomicRating));
+  }, [user?.playtomicRating]);
+
+  const profileMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("PATCH", "/api/auth/profile", {
+        playtomicRating: playtomicRating === "" ? null : Number(playtomicRating),
+      });
+      return response.json() as Promise<User>;
+    },
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(["/api/auth/user"], updatedUser);
+      toast({ title: "Profile updated", description: "Your Playtomic rating has been saved." });
+    },
+    onError: (profileError: Error) => {
+      toast({
+        title: "Could not update profile",
+        description: profileError.message,
         variant: "destructive",
       });
     },
@@ -231,6 +262,45 @@ export default function PlayerHome() {
             </div>
           )}
         </section>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Player profile</CardTitle>
+            <CardDescription>
+              Your rating is prefilled when you join a tournament. You can still change it for each event.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="w-full space-y-2 sm:max-w-xs">
+                <label htmlFor="profile-playtomic-rating" className="text-sm font-medium">
+                  Playtomic rating (optional)
+                </label>
+                <Input
+                  id="profile-playtomic-rating"
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  max="7"
+                  step="0.01"
+                  value={playtomicRating}
+                  onChange={(event) => setPlaytomicRating(event.target.value)}
+                  placeholder="For example, 3.25"
+                />
+              </div>
+              <Button
+                onClick={() => profileMutation.mutate()}
+                disabled={
+                  profileMutation.isPending
+                  || (playtomicRating !== "" && (Number(playtomicRating) < 0 || Number(playtomicRating) > 7))
+                }
+                className="w-full sm:w-auto"
+              >
+                {profileMutation.isPending ? "Saving..." : "Save rating"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>

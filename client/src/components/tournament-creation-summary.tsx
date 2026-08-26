@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { getPublicAppUrl } from "@/lib/public-url";
 import type { TournamentSetup } from "@shared/schema";
+import { TOURNAMENT_CONFIG } from "@shared/tournament-config";
 
 interface TournamentCreationSummaryProps {
   tournamentSetup: TournamentSetup;
@@ -31,7 +32,7 @@ export function TournamentCreationSummary({ tournamentSetup, onBack }: Tournamen
         location: tournamentSetup.location,
         playersCount: tournamentSetup.playersCount,
         courtsCount: tournamentSetup.courtsCount,
-        pointsPerMatch: tournamentSetup.pointsPerMatch || 16,
+        pointsPerMatch: tournamentSetup.pointsPerMatch || TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH,
         players: [], // Empty players array for self-registration
         schedule: [], // Empty schedule array - will be generated later
         tournamentMode: 'registration', // Set to registration mode
@@ -176,6 +177,12 @@ export function TournamentCreationSummary({ tournamentSetup, onBack }: Tournamen
             <div className="flex justify-between">
               <span className="text-muted-foreground">Courts:</span>
               <span className="font-medium">{tournamentSetup.courtsCount}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Points per match:</span>
+              <span className="font-medium">
+                {tournamentSetup.pointsPerMatch ?? TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH}
+              </span>
             </div>
           </div>
         </div>

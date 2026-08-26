@@ -108,7 +108,7 @@ test("organizer can run a complete registration and scoring flow", async ({ page
         location: "E2E Court",
         playersCount: 8,
         courtsCount: 2,
-        pointsPerMatch: 20,
+        pointsPerMatch: 24,
         players: [],
         schedule: [],
         tournamentMode: "registration",
@@ -131,6 +131,7 @@ test("organizer can run a complete registration and scoring flow", async ({ page
     const publicPage = await publicContext.newPage();
     await publicPage.goto(`/register/${registrationId}`);
     await expect(publicPage.getByText(`RELEASE-QA E2E ${unique}`, { exact: true })).toBeVisible();
+    await expect(publicPage.getByText("24 points per match")).toBeVisible();
     await expect(publicPage.getByRole("button", { name: "Join Tournament" })).toBeVisible();
 
     const unsignedRegistration = await publicContext.request.post(
@@ -148,6 +149,7 @@ test("organizer can run a complete registration and scoring flow", async ({ page
         data: {
           name: `E2E Player ${unique}-${index}`,
           email: `e2e-${unique}-${index}@example.com`,
+          playtomicRating: index === 1 ? 3.25 : undefined,
         },
       });
       expect(response.ok()).toBe(true);
@@ -163,8 +165,8 @@ test("organizer can run a complete registration and scoring flow", async ({ page
     const scoreResponse = await page.request.put(`/api/tournaments/${tournamentId}/scores`, {
       data: {
         gameNumber: firstMatch.gameNumber,
-        team1Score: 12,
-        team2Score: 8,
+        team1Score: 14,
+        team2Score: 10,
       },
     });
     expect(scoreResponse.ok()).toBe(true);
@@ -176,7 +178,9 @@ test("organizer can run a complete registration and scoring flow", async ({ page
     expect(publicTournament.registeredParticipants.every((participant: any) => !("email" in participant))).toBe(true);
     expect(publicTournament.registeredParticipants.every((participant: any) => !("userId" in participant))).toBe(true);
     expect(publicTournament.finalScores[0]).not.toHaveProperty("updatedBy");
-    expect(publicTournament.finalScores[0]).toMatchObject({ team1Score: 12, team2Score: 8 });
+    expect(publicTournament.pointsPerMatch).toBe(24);
+    expect(publicTournament.registeredParticipants[0].playtomicRating).toBe(3.25);
+    expect(publicTournament.finalScores[0]).toMatchObject({ team1Score: 14, team2Score: 10 });
   } finally {
     if (tournamentId) {
       await page.request.delete(`/api/tournaments/${tournamentId}`);

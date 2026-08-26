@@ -38,10 +38,10 @@ export function validateTournamentConfiguration(config: Partial<TournamentConfig
   // Validate points per match
   if (!config.pointsPerMatch) {
     errors.push('Points per match is required');
-  } else if (config.pointsPerMatch < TOURNAMENT_CONFIG.MIN_POINTS_PER_MATCH) {
-    errors.push(`Minimum ${TOURNAMENT_CONFIG.MIN_POINTS_PER_MATCH} points per match`);
-  } else if (config.pointsPerMatch > TOURNAMENT_CONFIG.MAX_POINTS_PER_MATCH) {
-    errors.push(`Maximum ${TOURNAMENT_CONFIG.MAX_POINTS_PER_MATCH} points per match`);
+  } else if (
+    !(TOURNAMENT_CONFIG.POINTS_PER_MATCH_OPTIONS as readonly number[]).includes(config.pointsPerMatch)
+  ) {
+    errors.push('Points per match must be 16, 24, or 32');
   }
 
   // Validate game duration

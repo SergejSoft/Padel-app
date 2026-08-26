@@ -22,6 +22,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   setUserRole(id: string, role: "player" | "organizer" | "admin"): Promise<User | undefined>;
+  updateUserProfile(id: string, profile: { playtomicRating: number | null }): Promise<User | undefined>;
   
   // Tournament operations
   getTournament(id: number): Promise<Tournament | undefined>;
@@ -39,14 +40,14 @@ export interface IStorage {
   completeTournament(id: number, finalResults: any[]): Promise<Tournament | undefined>;
   getTournamentByLeaderboardId(leaderboardId: string): Promise<Tournament | undefined>;
   generateLeaderboardId(tournamentId: number): Promise<string>;
-  deleteTournament(id: number): Promise<boolean>;
+  archiveTournament(id: number): Promise<Tournament | undefined>;
   getTournamentOwnerId(id: number): Promise<string | null>;
   
   // Self-registration operations
   getTournamentByRegistrationId(registrationId: string): Promise<Tournament | undefined>;
   generateRegistrationId(tournamentId: number): Promise<string>;
   registerParticipant(registrationId: string, participant: Omit<RegisteredParticipant, 'id' | 'registeredAt' | 'status'>): Promise<RegisteredParticipant | null>;
-  addParticipantAsOrganizer(tournamentId: number, participant: { name: string; email?: string }): Promise<RegisteredParticipant>;
+  addParticipantAsOrganizer(tournamentId: number, participant: { name: string; email?: string; playtomicRating?: number | null }): Promise<RegisteredParticipant>;
   removeParticipant(tournamentId: number, participantId: string): Promise<boolean>;
   updateParticipant(tournamentId: number, participantId: string, updates: Partial<RegisteredParticipant>): Promise<RegisteredParticipant | null>;
   getRegistrationInfo(registrationId: string): Promise<RegistrationInfo | null>;
@@ -125,9 +126,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined> {
+    const existing = await this.getTournament(id);
+    if (!existing) return undefined;
+
+    const updates: Partial<typeof tournaments.$inferInsert> = { status };
+    if (status === TOURNAMENT_CONFIG.STATUS.CANCELLED || status === TOURNAMENT_CONFIG.STATUS.ARCHIVED) {
+      updates.registrationStatus = TOURNAMENT_CONFIG.REGISTRATION_STATUS.CLOSED;
+    } else if (status === TOURNAMENT_CONFIG.STATUS.ACTIVE && existing.registrationId) {
+      const participantCount = existing.registeredParticipants?.length ?? 0;
+      const capacity = existing.maxParticipants ?? existing.playersCount;
+      updates.registrationStatus = participantCount >= capacity
+        ? TOURNAMENT_CONFIG.REGISTRATION_STATUS.FULL
+        : TOURNAMENT_CONFIG.REGISTRATION_STATUS.OPEN;
+    }
+
     const [tournament] = await db
       .update(tournaments)
-      .set({ status })
+      .set(updates)
       .where(eq(tournaments.id, id))
       .returning();
     return tournament;
@@ -177,6 +192,15 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async updateUserProfile(id: string, profile: { playtomicRating: number | null }): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ ...profile, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user || undefined;
+  }
+
   async getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]> {
     try {
       console.log(`Storage: Looking for tournaments with organizer_id: "${organizerId}"`);
@@ -197,7 +221,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateTournament(id: number, tournamentData: Partial<InsertTournament>): Promise<Tournament | undefined> {
     // If players are being updated, we need to update the schedule as well
-    if (tournamentData.players) {
+    if (tournamentData.players && !tournamentData.schedule) {
       const existingTournament = await this.getTournament(id);
       if (existingTournament && existingTournament.schedule) {
         // Update player names in the schedule
@@ -220,6 +244,8 @@ export class DatabaseStorage implements IStorage {
     if (tournamentData.pointsPerMatch !== undefined) updateData.pointsPerMatch = tournamentData.pointsPerMatch;
     if (tournamentData.players) updateData.players = tournamentData.players as any;
     if (tournamentData.schedule) updateData.schedule = tournamentData.schedule as any;
+    if (tournamentData.finalScores !== undefined) updateData.finalScores = tournamentData.finalScores as any;
+    if (tournamentData.results !== undefined) updateData.results = tournamentData.results as any;
     if (tournamentData.status) updateData.status = tournamentData.status;
     if (tournamentData.tournamentMode) updateData.tournamentMode = tournamentData.tournamentMode;
     if (tournamentData.maxParticipants !== undefined) updateData.maxParticipants = tournamentData.maxParticipants;
@@ -266,9 +292,8 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async deleteTournament(id: number): Promise<boolean> {
-    const result = await db.delete(tournaments).where(eq(tournaments.id, id));
-    return (result.rowCount || 0) > 0;
+  async archiveTournament(id: number): Promise<Tournament | undefined> {
+    return this.updateTournamentStatus(id, TOURNAMENT_CONFIG.STATUS.ARCHIVED);
   }
 
   async updateTournamentResults(id: number, results: any, schedule: any): Promise<Tournament | undefined> {
@@ -393,6 +418,7 @@ export class DatabaseStorage implements IStorage {
       userId: participant.userId,
       name: participant.name,
       email: participant.email,
+      playtomicRating: participant.playtomicRating,
       registeredAt: new Date().toISOString(),
       status: 'registered'
     };
@@ -427,7 +453,7 @@ export class DatabaseStorage implements IStorage {
     return result.rows.length > 0 ? newParticipant : null;
   }
 
-  async addParticipantAsOrganizer(tournamentId: number, participant: { name: string; email?: string }): Promise<RegisteredParticipant> {
+  async addParticipantAsOrganizer(tournamentId: number, participant: { name: string; email?: string; playtomicRating?: number | null }): Promise<RegisteredParticipant> {
     const tournament = await this.getTournament(tournamentId);
     if (!tournament) {
       throw new Error("Tournament not found");
@@ -451,6 +477,7 @@ export class DatabaseStorage implements IStorage {
       id: nanoid(8),
       name: participant.name,
       email: participant.email,
+      playtomicRating: participant.playtomicRating,
       registeredAt: new Date().toISOString(),
       status: 'registered'
     };
@@ -531,6 +558,7 @@ export class DatabaseStorage implements IStorage {
       location: tournament.location || '',
       currentParticipants: currentParticipants.length,
       maxParticipants: tournament.maxParticipants || tournament.playersCount,
+      pointsPerMatch: tournament.pointsPerMatch,
       registrationStatus: tournament.registrationStatus as 'open' | 'closed' | 'full',
       deadline: tournament.registrationDeadline?.toISOString()
     };

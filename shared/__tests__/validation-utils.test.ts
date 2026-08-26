@@ -66,6 +66,29 @@ describe('validateTournamentConfiguration', () => {
     expect(result.isValid).toBe(true);
     expect(result.warnings).toContain('Optimal player count is 8 for balanced American format');
   });
+
+  it.each([16, 24, 32])('should accept the supported %i-point format', (pointsPerMatch) => {
+    const result = validateTournamentConfiguration({
+      playersCount: 8,
+      courtsCount: 2,
+      pointsPerMatch,
+      gameDurationMinutes: 13,
+    });
+
+    expect(result.isValid).toBe(true);
+  });
+
+  it('should reject unsupported match totals', () => {
+    const result = validateTournamentConfiguration({
+      playersCount: 8,
+      courtsCount: 2,
+      pointsPerMatch: 20,
+      gameDurationMinutes: 13,
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain('Points per match must be 16, 24, or 32');
+  });
 });
 
 describe('validatePlayerNames', () => {

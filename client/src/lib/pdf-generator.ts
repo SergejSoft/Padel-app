@@ -8,17 +8,18 @@ export interface PDFConfig {
   tournamentLocation: string;
   playersCount: number;
   courtsCount: number;
+  pointsPerMatch?: number;
   rounds: Round[];
 }
 
-export function generateTournamentPDF({ tournamentName, tournamentDate, tournamentTime, tournamentLocation, playersCount, courtsCount, rounds }: PDFConfig): jsPDF {
+export function generateTournamentPDF(config: PDFConfig): jsPDF {
   // Generate both schedule and scorecard pages
-  const pdf = generateSchedulePDF({ tournamentName, tournamentDate, tournamentTime, tournamentLocation, playersCount, courtsCount, rounds });
-  generateScorecardPDF(pdf, { tournamentName, tournamentDate, tournamentTime, tournamentLocation, playersCount, courtsCount, rounds });
+  const pdf = generateSchedulePDF(config);
+  generateScorecardPDF(pdf, config);
   return pdf;
 }
 
-function generateSchedulePDF({ tournamentName, tournamentDate, tournamentTime, tournamentLocation, playersCount, courtsCount, rounds }: PDFConfig): jsPDF {
+function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, pointsPerMatch, rounds }: PDFConfig): jsPDF {
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.width;
   const pageHeight = pdf.internal.pageSize.height;
@@ -49,7 +50,12 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentTime, t
   pdf.text(`${formattedDate} • ${tournamentLocation || 'Location TBD'}`, pageWidth / 2, yPosition, { align: 'center' });
   
   yPosition += 4;
-  pdf.text(`${playersCount} Players • ${courtsCount} Courts`, pageWidth / 2, yPosition, { align: 'center' });
+  pdf.text(
+    `${playersCount} Players • ${courtsCount} Courts${pointsPerMatch ? ` • ${pointsPerMatch} Points/Match` : ''}`,
+    pageWidth / 2,
+    yPosition,
+    { align: 'center' },
+  );
 
   // Draw header underline
   yPosition += 6;
@@ -154,7 +160,7 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentTime, t
   return pdf;
 }
 
-function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tournamentTime, tournamentLocation, playersCount, courtsCount, rounds }: PDFConfig): void {
+function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, pointsPerMatch, rounds }: PDFConfig): void {
   // Add new page for scorecard
   pdf.addPage();
   
@@ -187,6 +193,10 @@ function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tour
   pdf.setFontSize(10);
   pdf.text(`${formattedDate} • ${tournamentLocation || 'Location TBD'}`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 5;
+  if (pointsPerMatch) {
+    pdf.text(`${pointsPerMatch} total points per match`, pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 5;
+  }
   
   pdf.text(`${playersCount} Players • ${courtsCount} Courts`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 10;
@@ -273,7 +283,7 @@ function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tour
 
 }
 
-export function generatePDFPreviewHTML({ tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, rounds }: PDFConfig): string {
+export function generatePDFPreviewHTML({ tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, pointsPerMatch, rounds }: PDFConfig): string {
   const totalGames = rounds.reduce((sum, round) => sum + round.matches.length, 0);
   // Calculate average game length: 1.5 hours total / 7 rounds = ~13 minutes per game
   const totalMinutes = 90; // 1.5 hours
@@ -296,7 +306,7 @@ export function generatePDFPreviewHTML({ tournamentName, tournamentDate, tournam
         <h1 style="font-size: 24px; font-weight: bold; margin: 0; color: #000;">${tournamentName}</h1>
         <p style="font-size: 14px; color: #666; margin: 5px 0;">Americano Format Tournament Schedule</p>
         <p style="font-size: 12px; color: #666; margin: 5px 0;">${tournamentDate ? new Date(tournamentDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Date TBD'} • ${tournamentLocation || 'Location TBD'}</p>
-        <p style="font-size: 12px; color: #666; margin: 5px 0;">${playersCount} Players • ${courtsCount} Courts</p>
+        <p style="font-size: 12px; color: #666; margin: 5px 0;">${playersCount} Players • ${courtsCount} Courts${pointsPerMatch ? ` • ${pointsPerMatch} Points/Match` : ''}</p>
       </div>
 
       <!-- Tournament Schedule Table -->

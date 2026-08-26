@@ -12,6 +12,7 @@ interface PDFPreviewModalProps {
   tournamentLocation: string;
   playersCount: number;
   courtsCount: number;
+  pointsPerMatch?: number;
   rounds: Round[];
   onDownload: () => void;
 }
@@ -24,6 +25,7 @@ export function PDFPreviewModal({
   tournamentLocation,
   playersCount,
   courtsCount,
+  pointsPerMatch,
   rounds,
   onDownload,
 }: PDFPreviewModalProps) {
@@ -33,6 +35,7 @@ export function PDFPreviewModal({
     tournamentLocation,
     playersCount,
     courtsCount,
+    pointsPerMatch,
     rounds,
   });
 

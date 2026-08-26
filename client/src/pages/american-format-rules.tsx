@@ -45,7 +45,7 @@ export default function AmericanFormatRules() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-4 mb-4">
+            <div className="flex flex-wrap gap-4 mb-4">
               <Badge variant="secondary" className="text-sm">✅ Number of Players: 8</Badge>
               <Badge variant="secondary" className="text-sm">✅ Number of Courts: 2</Badge>
             </div>
@@ -57,7 +57,7 @@ export default function AmericanFormatRules() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                Each match is short, typically lasting 16 points total rather than a full set.
+                Each match uses the organizer's selected total: 16, 24, or 32 rally points.
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
@@ -84,7 +84,7 @@ export default function AmericanFormatRules() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-4 mb-4">
+            <div className="flex flex-wrap gap-4 mb-4">
               <Badge variant="secondary" className="text-sm">✅ Number of Players: 12</Badge>
               <Badge variant="secondary" className="text-sm">✅ Number of Courts: 3</Badge>
             </div>
@@ -100,7 +100,7 @@ export default function AmericanFormatRules() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                Matches last 16 points total per match.
+                Matches use the selected 16, 24, or 32-point total.
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
@@ -122,7 +122,7 @@ export default function AmericanFormatRules() {
             <ul className="space-y-3 text-foreground">
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                Each match consists of 16 points total.
+                Each match consists of 16, 24, or 32 points. New tournaments default to 24.
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
@@ -141,7 +141,7 @@ export default function AmericanFormatRules() {
             <div className="bg-muted p-4 rounded-lg">
               <h4 className="font-semibold mb-2">Example:</h4>
               <p className="text-sm text-muted-foreground">
-                If Team A wins all 16 points, each player on Team A earns 16 points, while each player on Team B earns 0 points.
+                In a 24-point match, a 15–9 result gives each Team A player 15 points and each Team B player 9 points.
               </p>
             </div>
           </CardContent>
@@ -159,7 +159,7 @@ export default function AmericanFormatRules() {
             <ul className="space-y-3 text-foreground">
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                To keep play fair and balanced, players switch sides after 8 points have been played (halfway through the 16-point match).
+                To keep play fair and balanced, players switch sides halfway through: after 8, 12, or 16 points.
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
@@ -167,7 +167,7 @@ export default function AmericanFormatRules() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                When the 8th point is completed, all players rotate sides clockwise.
+                When the halfway point is completed, all players rotate sides clockwise.
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
@@ -180,10 +180,10 @@ export default function AmericanFormatRules() {
               <div className="space-y-1 text-sm text-muted-foreground">
                 <div>1️⃣ Player A serves 4 points</div>
                 <div>2️⃣ Player B serves 4 points</div>
-                <div>➡️ After point 8, all players switch sides clockwise</div>
+                <div>➡️ In a 24-point match, switch sides after point 12</div>
                 <div>3️⃣ Player C serves 4 points</div>
                 <div>4️⃣ Player D serves 4 points</div>
-                <div className="mt-2 text-foreground">After the 16th point is played, the match is over, and players rotate partners and opponents for the next round.</div>
+                <div className="mt-2 text-foreground">Continue four-rally serve blocks until the selected match total is reached, then rotate partners and opponents.</div>
               </div>
             </div>
           </CardContent>
@@ -217,7 +217,7 @@ export default function AmericanFormatRules() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">✅ Switch Sides</Badge>
-                  <span className="text-sm text-muted-foreground">After 8 points (halfway through)</span>
+                  <span className="text-sm text-muted-foreground">Halfway through the selected total</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">✅ Winner</Badge>

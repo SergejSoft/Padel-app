@@ -85,6 +85,22 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  app.patch('/api/auth/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const { playtomicRating } = z.object({
+        playtomicRating: z.number().min(0).max(7).nullable(),
+      }).parse(req.body);
+      const user = await storage.updateUserProfile(getUserId(req)!, { playtomicRating });
+      if (!user) return res.status(404).json({ message: "User not found" });
+      res.json(user);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: error.issues?.[0]?.message ?? "Invalid profile" });
+      }
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   app.get('/api/my/registrations', isAuthenticated, async (req: any, res) => {
     try {
       const userId = getUserId(req)!;
@@ -205,19 +221,31 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Delete tournament (owner or admin only)
+  // Backward-compatible archive endpoint. Tournaments are never hard-deleted.
   app.delete("/api/tournaments/:id", isOwnerOrAdmin(async (req: any) => {
     return await storage.getTournamentOwnerId(parseInt(req.params.id));
   }), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const success = await storage.deleteTournament(id);
+      const tournament = await storage.archiveTournament(id);
       
-      if (!success) {
+      if (!tournament) {
         return res.status(404).json({ error: "Tournament not found" });
       }
       
-      res.json({ success: true });
+      res.json(tournament);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/tournaments/:id/archive", isOwnerOrAdmin(async (req: any) => {
+    return storage.getTournamentOwnerId(parseInt(req.params.id));
+  }), async (req, res) => {
+    try {
+      const tournament = await storage.archiveTournament(parseInt(req.params.id));
+      if (!tournament) return res.status(404).json({ error: "Tournament not found" });
+      res.json(tournament);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -416,6 +444,8 @@ export async function registerRoutes(app: Express): Promise<void> {
         tournamentDate: tournament.date,
         tournamentTime: tournament.time,
         tournamentLocation: tournament.location,
+        courtsCount: tournament.courtsCount,
+        pointsPerMatch: tournament.pointsPerMatch,
         results: tournament.results,
         finalScores: publicTournament.finalScores,
         completedAt: tournament.completedAt,
@@ -458,7 +488,8 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Registration validation schemas
   const registrationParticipantSchema = z.object({
     name: z.string().min(1, "Name is required").max(50, "Name too long"),
-    email: z.string().email("Invalid email").optional()
+    email: z.string().email("Invalid email").optional(),
+    playtomicRating: z.number().min(0, "Rating cannot be below 0").max(7, "Rating cannot exceed 7").nullable().optional(),
   });
 
   // === Self-Registration API Routes ===
@@ -533,6 +564,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         participants: participants.map(p => ({
           id: p.id,
           name: p.name,
+          playtomicRating: p.playtomicRating,
           registeredAt: p.registeredAt,
           status: p.status
         })), // Remove email for privacy
@@ -561,6 +593,10 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(400).json({ 
           error: "Registration failed. Tournament may be full, closed, or name already taken." 
         });
+      }
+
+      if (validatedData.playtomicRating !== undefined) {
+        await storage.updateUserProfile(userId, { playtomicRating: validatedData.playtomicRating });
       }
       
       // Real-time updates handled by client polling

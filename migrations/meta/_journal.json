@@ -15,6 +15,13 @@
       "when": 1787755042185,
       "tag": "0001_bouncy_johnny_blaze",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787774306808,
+      "tag": "0002_gray_tigra",
+      "breakpoints": true
     }
   ]
 }

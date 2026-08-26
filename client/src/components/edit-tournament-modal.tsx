@@ -1,13 +1,43 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Trash2, UserPlus } from "lucide-react";
+import {
+  Archive,
+  Ban,
+  Copy,
+  ExternalLink,
+  Loader2,
+  Play,
+  Trash2,
+  Trophy,
+  UserPlus,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { getPublicAppUrl } from "@/lib/public-url";
 import { generateAmericanFormat } from "@/lib/american-format";
+import RegistrationManagement from "@/components/registration-management";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TOURNAMENT_CONFIG } from "@shared/tournament-config";
 import type { Tournament } from "@shared/schema";
 
@@ -41,7 +71,9 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
   const [formData, setFormData] = useState({
     name: tournament?.name || "",
     date: tournament?.date || "",
+    time: tournament?.time || "",
     location: tournament?.location || "",
+    pointsPerMatch: tournament?.pointsPerMatch || TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH,
   });
   const [players, setPlayers] = useState<EditablePlayer[]>(
     tournament ? playersFromTournament(tournament) : []
@@ -53,13 +85,38 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
       setFormData({
         name: tournament.name,
         date: tournament.date || "",
+        time: tournament.time || "",
         location: tournament.location || "",
+        pointsPerMatch: tournament.pointsPerMatch,
       });
       setPlayers(playersFromTournament(tournament));
     }
   }, [tournament]);
 
   const isRegistrationMode = tournament?.tournamentMode === "registration";
+
+  const actionMutation = useMutation({
+    mutationFn: async ({ action }: { action: "active" | "cancelled" | "archived" }) => {
+      if (!tournament) return;
+      const response = action === "archived"
+        ? await apiRequest("PATCH", `/api/tournaments/${tournament.id}/archive`, {})
+        : await apiRequest("PATCH", `/api/tournaments/${tournament.id}/status`, { status: action });
+      return response.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+      toast({
+        title: variables.action === "archived" ? "Tournament archived" : "Tournament status updated",
+        description: variables.action === "archived"
+          ? "The tournament remains safely stored in your archive."
+          : `Tournament is now ${variables.action}.`,
+      });
+      if (variables.action === "archived") onClose();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Action failed", description: error.message, variant: "destructive" });
+    },
+  });
 
   const updateMutation = useMutation({
     mutationFn: async (data: { details: typeof formData; players: EditablePlayer[] }) => {
@@ -108,17 +165,20 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
       const playerNames = data.players.map(p => p.name);
       const playersChanged =
         JSON.stringify(playerNames) !== JSON.stringify(tournament.players);
+      const pointsChanged = data.details.pointsPerMatch !== tournament.pointsPerMatch;
 
       const payload: Record<string, unknown> = { ...data.details, players: playerNames };
 
-      if (playersChanged) {
+      if (playersChanged || pointsChanged) {
         // Schedule references player names, so it must be regenerated
         payload.playersCount = playerNames.length;
         payload.schedule = generateAmericanFormat({
           players: playerNames,
           courts: tournament.courtsCount,
-          pointsPerMatch: tournament.pointsPerMatch,
+          pointsPerMatch: data.details.pointsPerMatch,
         });
+        payload.finalScores = [];
+        payload.results = null;
       }
 
       const response = await apiRequest("PUT", `/api/tournaments/${tournament.id}`, payload);
@@ -173,6 +233,15 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const copyTournamentLink = async () => {
+    if (!tournament) return;
+    const path = tournament.registrationId
+      ? `/register/${tournament.registrationId}`
+      : `/shared/${tournament.urlSlug || tournament.shareId}`;
+    await navigator.clipboard.writeText(`${getPublicAppUrl()}${path}`);
+    toast({ title: "Link copied", description: "Tournament link copied to clipboard." });
+  };
+
   const handlePlayerChange = (index: number, value: string) => {
     setPlayers(prev => {
       const updated = [...prev];
@@ -201,14 +270,72 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
   const originalPlayers = playersFromTournament(tournament);
   const playersChanged =
     JSON.stringify(players) !== JSON.stringify(originalPlayers);
+  const publicPath = tournament.registrationId
+    ? `/register/${tournament.registrationId}`
+    : `/shared/${tournament.urlSlug || tournament.shareId}`;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-4xl max-h-[92vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>Edit Tournament</DialogTitle>
+          <DialogTitle>Manage Tournament</DialogTitle>
         </DialogHeader>
-        
+
+        <section className="rounded-lg border bg-muted/30 p-3 sm:p-4">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <Button type="button" variant="outline" onClick={copyTournamentLink}>
+              <Copy className="mr-2 h-4 w-4" />
+              Copy link
+            </Button>
+            <Button type="button" variant="outline" onClick={() => window.open(publicPath, "_blank")}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Preview
+            </Button>
+            {tournament.leaderboardId && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => window.open(`/leaderboard/${tournament.leaderboardId}`, "_blank")}
+              >
+                <Trophy className="mr-2 h-4 w-4" />
+                Leaderboard
+              </Button>
+            )}
+            {tournament.status === "cancelled" ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={actionMutation.isPending}
+                onClick={() => actionMutation.mutate({ action: "active" })}
+              >
+                <Play className="mr-2 h-4 w-4" />
+                Activate
+              </Button>
+            ) : tournament.status !== "archived" && tournament.status !== "completed" ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={actionMutation.isPending}
+                onClick={() => actionMutation.mutate({ action: "cancelled" })}
+              >
+                <Ban className="mr-2 h-4 w-4" />
+                Cancel tournament
+              </Button>
+            ) : null}
+            {tournament.status === "archived" && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={actionMutation.isPending}
+                onClick={() => actionMutation.mutate({ action: "active" })}
+              >
+                <Play className="mr-2 h-4 w-4" />
+                Restore
+              </Button>
+            )}
+          </div>
+        </section>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Tournament Name</Label>
@@ -230,6 +357,39 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
               onChange={(e) => handleChange("date", e.target.value)}
               required
             />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="time">Time</Label>
+              <Input
+                id="time"
+                type="time"
+                value={formData.time}
+                onChange={(e) => handleChange("time", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="points-per-match">Total points per match</Label>
+              <Select
+                value={String(formData.pointsPerMatch)}
+                onValueChange={(value) => setFormData(prev => ({
+                  ...prev,
+                  pointsPerMatch: Number(value),
+                }))}
+              >
+                <SelectTrigger id="points-per-match">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TOURNAMENT_CONFIG.POINTS_PER_MATCH_OPTIONS.map(points => (
+                    <SelectItem key={points} value={String(points)}>
+                      {points} points
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -303,9 +463,9 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
             )}
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
+          <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end">
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              Close
             </Button>
             <Button type="submit" disabled={updateMutation.isPending}>
               {updateMutation.isPending ? (
@@ -319,6 +479,41 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
             </Button>
           </div>
         </form>
+
+        {isRegistrationMode && (
+          <section className="border-t pt-5">
+            <RegistrationManagement tournament={tournament} />
+          </section>
+        )}
+
+        {tournament.status !== "archived" && (
+        <section className="border-t pt-5">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="outline" className="w-full text-amber-700 sm:w-auto">
+                <Archive className="mr-2 h-4 w-4" />
+                Archive tournament
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Archive {tournament.name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  The tournament and all scores will remain stored. You can restore it later.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep tournament</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => actionMutation.mutate({ action: "archived" })}
+                >
+                  Archive
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </section>
+        )}
       </DialogContent>
     </Dialog>
   );

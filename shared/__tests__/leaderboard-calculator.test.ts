@@ -135,6 +135,53 @@ describe('calculatePlayerStats', () => {
     expect(alice.totalPoints).toBe(20); // 12 + 8
     expect(alice.averageScore).toBe(10);
   });
+
+  it('should accumulate each player team score with a 24-point match format', () => {
+    const rounds: ImmutableRound[] = [
+      {
+        round: 1,
+        matches: [{
+          court: 1,
+          team1: ['Alice', 'Bob'],
+          team2: ['Charlie', 'Diana'],
+          round: 1,
+          gameNumber: 1,
+          status: 'completed',
+          score: {
+            team1Score: 15,
+            team2Score: 9,
+            isValid: true,
+            totalPoints: 24,
+            validationErrors: [],
+          },
+        }],
+      },
+      {
+        round: 2,
+        matches: [{
+          court: 1,
+          team1: ['Alice', 'Charlie'],
+          team2: ['Bob', 'Diana'],
+          round: 2,
+          gameNumber: 2,
+          status: 'completed',
+          score: {
+            team1Score: 11,
+            team2Score: 13,
+            isValid: true,
+            totalPoints: 24,
+            validationErrors: [],
+          },
+        }],
+      },
+    ];
+
+    const stats = calculatePlayerStats(rounds);
+    expect(stats.find(stat => stat.player === 'Alice')?.totalPoints).toBe(26);
+    expect(stats.find(stat => stat.player === 'Bob')?.totalPoints).toBe(28);
+    expect(stats.find(stat => stat.player === 'Charlie')?.totalPoints).toBe(20);
+    expect(stats.find(stat => stat.player === 'Diana')?.totalPoints).toBe(22);
+  });
 });
 
 describe('rankPlayerStats', () => {

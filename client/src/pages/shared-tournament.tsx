@@ -199,6 +199,10 @@ export default function SharedTournament() {
               <Clock className="h-4 w-4" />
               <span>~{avgGameMinutes} min/game</span>
             </div>
+            <div className="flex items-center gap-2">
+              <Trophy className="h-4 w-4" />
+              <span>{tournament.pointsPerMatch} points per match</span>
+            </div>
           </div>
         </div>
 
@@ -295,7 +299,7 @@ export default function SharedTournament() {
         {isRegistrationMode ? (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
+              <CardTitle className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <span>Registration Status</span>
                 <Badge variant="outline" className="text-sm">
                   {tournament.registeredParticipants?.length || 0} / {tournament.playersCount} Registered
@@ -334,6 +338,11 @@ export default function SharedTournament() {
                             </div>
                             <div>
                               <div className="font-medium">{participant.name}</div>
+                              {participant.playtomicRating != null && (
+                                <div className="text-sm font-medium text-purple-700">
+                                  Playtomic {participant.playtomicRating.toFixed(2)}
+                                </div>
+                              )}
                               <div className="text-sm text-gray-500">
                                 Registered {new Date(participant.registeredAt).toLocaleDateString()}
                               </div>
@@ -433,6 +442,7 @@ export default function SharedTournament() {
                     tournamentLocation: tournament.location ?? "",
                     playersCount: tournament.playersCount,
                     courtsCount: tournament.courtsCount,
+                    pointsPerMatch: tournament.pointsPerMatch,
                     rounds: schedule,
                   });
                   pdf.save(`${tournament.name.replace(/\s+/g, '_')}_schedule.pdf`);
@@ -463,6 +473,7 @@ export default function SharedTournament() {
         tournamentLocation={tournament.location ?? ""}
         playersCount={tournament.playersCount}
         courtsCount={tournament.courtsCount}
+        pointsPerMatch={tournament.pointsPerMatch}
         rounds={schedule}
         onDownload={() => {
           const pdf = generateTournamentPDF({
@@ -471,6 +482,7 @@ export default function SharedTournament() {
             tournamentLocation: tournament.location ?? "",
             playersCount: tournament.playersCount,
             courtsCount: tournament.courtsCount,
+            pointsPerMatch: tournament.pointsPerMatch,
             rounds: schedule,
           });
           pdf.save(`${tournament.name.replace(/\s+/g, '_')}_schedule.pdf`);

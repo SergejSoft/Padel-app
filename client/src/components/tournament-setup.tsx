@@ -41,6 +41,7 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
       location: initialData?.location || "",
       playersCount: initialData?.playersCount || 8,
       courtsCount: initialData?.courtsCount || 2,
+      pointsPerMatch: initialData?.pointsPerMatch || TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH,
     },
   });
 
@@ -191,6 +192,34 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="pointsPerMatch"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Total points per match</FormLabel>
+                    <Select
+                      value={String(field.value ?? TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH)}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select total points" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {TOURNAMENT_CONFIG.POINTS_PER_MATCH_OPTIONS.map((points) => (
+                          <SelectItem key={points} value={String(points)}>
+                            {points} points
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               {validationError && (
                 <Alert variant="destructive">
                   <AlertDescription>{validationError}</AlertDescription>
@@ -203,8 +232,8 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
                   Partners and opponents rotate between rounds. When capacity is limited, sit-outs are distributed as evenly as possible.
                 </p>
                 <div className="text-xs text-muted-foreground">
-                  • Rally-point scoring to 16 points<br/>
-                  • 4-rally serve blocks with changeover at 8 points<br/>
+                  • Each match totals {watchedValues.pointsPerMatch ?? TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH} points<br/>
+                  • Every player accumulates their team's points<br/>
                   • ~90 minutes total duration including warm-up
                 </div>
               </div>

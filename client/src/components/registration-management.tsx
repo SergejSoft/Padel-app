@@ -57,9 +57,11 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
   const [editingParticipant, setEditingParticipant] = useState<RegisteredParticipant | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  const [editPlaytomicRating, setEditPlaytomicRating] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [newPlaytomicRating, setNewPlaytomicRating] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -93,7 +95,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
 
   // Add participant manually (organizer)
   const addParticipantMutation = useMutation({
-    mutationFn: async (data: { name: string; email?: string }) => {
+    mutationFn: async (data: { name: string; email?: string; playtomicRating?: number }) => {
       const response = await apiRequest('POST', `/api/tournaments/${tournament.id}/participants`, data);
       return response.json();
     },
@@ -105,6 +107,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
       setIsAddDialogOpen(false);
       setNewName('');
       setNewEmail('');
+      setNewPlaytomicRating('');
       queryClient.invalidateQueries({ queryKey: ['/api/tournaments'] });
     },
     onError: (error: Error) => {
@@ -140,10 +143,11 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
 
   // Update participant
   const updateParticipantMutation = useMutation({
-    mutationFn: async (data: { participantId: string; name: string; email?: string }) => {
+    mutationFn: async (data: { participantId: string; name: string; email?: string; playtomicRating: number | null }) => {
       const response = await apiRequest('PUT', `/api/tournaments/${tournament.id}/participants/${data.participantId}`, {
         name: data.name,
         email: data.email,
+        playtomicRating: data.playtomicRating,
       });
       return response.json();
     },
@@ -222,6 +226,9 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
     setEditingParticipant(participant);
     setEditName(participant.name);
     setEditEmail(participant.email || '');
+    setEditPlaytomicRating(
+      participant.playtomicRating == null ? '' : String(participant.playtomicRating),
+    );
   };
 
   const handleUpdateParticipant = () => {
@@ -230,6 +237,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
         participantId: editingParticipant.id,
         name: editName.trim(),
         email: editEmail.trim() || undefined,
+        playtomicRating: editPlaytomicRating ? Number(editPlaytomicRating) : null,
       });
     }
   };
@@ -239,6 +247,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
       addParticipantMutation.mutate({
         name: newName.trim(),
         email: newEmail.trim() || undefined,
+        playtomicRating: newPlaytomicRating ? Number(newPlaytomicRating) : undefined,
       });
     }
   };
@@ -379,6 +388,11 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
                         {participant.email && `${participant.email} • `}
                         {new Date(participant.registeredAt).toLocaleString()}
                       </div>
+                      {participant.playtomicRating != null && (
+                        <div className="text-sm font-medium text-purple-700">
+                          Playtomic {participant.playtomicRating.toFixed(2)}
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -465,6 +479,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
         if (!open) {
           setNewName('');
           setNewEmail('');
+          setNewPlaytomicRating('');
         }
       }}>
         <DialogContent>
@@ -498,6 +513,20 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 placeholder="Enter email (optional)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-playtomic-rating">Playtomic rating</Label>
+              <Input
+                id="add-playtomic-rating"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                max="7"
+                step="0.01"
+                value={newPlaytomicRating}
+                onChange={(e) => setNewPlaytomicRating(e.target.value)}
+                placeholder="Optional, from 0 to 7"
               />
             </div>
           </div>
@@ -545,6 +574,20 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
                 placeholder="Enter email (optional)"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-playtomic-rating">Playtomic rating</Label>
+              <Input
+                id="edit-playtomic-rating"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                max="7"
+                step="0.01"
+                value={editPlaytomicRating}
+                onChange={(e) => setEditPlaytomicRating(e.target.value)}
+                placeholder="Optional, from 0 to 7"
               />
             </div>
           </div>

@@ -15,9 +15,10 @@ export const TOURNAMENT_CONFIG = {
   MAX_COURTS: 5,
   
   // Scoring configuration
-  DEFAULT_POINTS_PER_MATCH: 16,
-  MIN_POINTS_PER_MATCH: 10,
-  MAX_POINTS_PER_MATCH: 30,
+  POINTS_PER_MATCH_OPTIONS: [16, 24, 32] as const,
+  DEFAULT_POINTS_PER_MATCH: 24,
+  MIN_POINTS_PER_MATCH: 16,
+  MAX_POINTS_PER_MATCH: 32,
   
   // Time configuration (in minutes)
   DEFAULT_GAME_DURATION: 13,
@@ -29,7 +30,8 @@ export const TOURNAMENT_CONFIG = {
     ACTIVE: 'active',
     CANCELLED: 'cancelled', 
     PAST: 'past',
-    COMPLETED: 'completed'
+    COMPLETED: 'completed',
+    ARCHIVED: 'archived'
   } as const,
   
   // Registration status

@@ -15,6 +15,8 @@ interface LeaderboardData {
   tournamentDate: string;
   tournamentTime?: string;
   tournamentLocation: string;
+  courtsCount: number;
+  pointsPerMatch: number;
   results: PlayerStats[];
   finalScores: any[];
   completedAt: string;
@@ -45,7 +47,8 @@ export default function Leaderboard() {
       tournamentTime: leaderboardData.tournamentTime,
       tournamentLocation: leaderboardData.tournamentLocation,
       playersCount: leaderboardData.results.length,
-      courtsCount: 2, // Assuming 2 courts for American format
+      courtsCount: leaderboardData.courtsCount,
+      pointsPerMatch: leaderboardData.pointsPerMatch,
       rounds: leaderboardData.finalScores || [],
     });
 

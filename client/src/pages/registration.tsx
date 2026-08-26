@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Users, Calendar, MapPin, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { apiRequest } from '@/lib/queryClient';
 import type { RegistrationInfo, RegisteredParticipant } from '@shared/schema';
 
@@ -26,9 +27,11 @@ export default function RegistrationPage() {
   const { registrationId } = useParams<{ registrationId: string }>();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [playtomicRating, setPlaytomicRating] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user, isSignedIn, isLoaded } = useUser();
+  const { user: appUser } = useAuth();
   const didPrefillAccount = useRef(false);
 
   useEffect(() => {
@@ -40,6 +43,12 @@ export default function RegistrationPage() {
     if (accountEmail) setEmail(accountEmail);
     didPrefillAccount.current = true;
   }, [user]);
+
+  useEffect(() => {
+    if (appUser?.playtomicRating != null && !playtomicRating) {
+      setPlaytomicRating(String(appUser.playtomicRating));
+    }
+  }, [appUser?.playtomicRating, playtomicRating]);
 
   if (!registrationId) {
     return (
@@ -76,7 +85,7 @@ export default function RegistrationPage() {
 
   // Registration mutation
   const registerMutation = useMutation({
-    mutationFn: async (data: { name: string; email?: string }) => {
+    mutationFn: async (data: { name: string; email?: string; playtomicRating?: number }) => {
       const response = await apiRequest(
         'POST',
         `/api/registration/${registrationId}/register`,
@@ -91,6 +100,7 @@ export default function RegistrationPage() {
       });
       setName('');
       setEmail('');
+      setPlaytomicRating('');
       queryClient.invalidateQueries({ queryKey: ['registration', registrationId, 'participants'] });
       queryClient.invalidateQueries({ queryKey: ["/api/my/registrations"] });
     },
@@ -123,6 +133,7 @@ export default function RegistrationPage() {
     registerMutation.mutate({
       name: name.trim(),
       email: email.trim() || undefined,
+      playtomicRating: playtomicRating ? Number(playtomicRating) : undefined,
     });
   };
 
@@ -184,12 +195,17 @@ export default function RegistrationPage() {
             </div>
             
             <div className="flex justify-center">
-              <Badge 
-                variant={isRegistrationClosed ? "destructive" : "default"}
-                className="text-sm px-4 py-2"
-              >
-                {isFull ? "Tournament Full" : isRegistrationClosed ? "Registration Closed" : "Registration Open"}
-              </Badge>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Badge
+                  variant={isRegistrationClosed ? "destructive" : "default"}
+                  className="text-sm px-4 py-2"
+                >
+                  {isFull ? "Tournament Full" : isRegistrationClosed ? "Registration Closed" : "Registration Open"}
+                </Badge>
+                <Badge variant="outline" className="text-sm px-4 py-2">
+                  {registrationInfo.pointsPerMatch} points per match
+                </Badge>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -251,6 +267,22 @@ export default function RegistrationPage() {
                       placeholder="Enter your email"
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="playtomic-rating">Playtomic rating (optional)</Label>
+                    <Input
+                      id="playtomic-rating"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      max="7"
+                      step="0.01"
+                      value={playtomicRating}
+                      onChange={(e) => setPlaytomicRating(e.target.value)}
+                      placeholder="For example, 3.25"
+                    />
+                    <p className="text-xs text-muted-foreground">Enter a rating from 0 to 7.</p>
+                  </div>
                   
                   <Button 
                     type="submit" 
@@ -311,6 +343,11 @@ export default function RegistrationPage() {
                           <div className="font-medium text-gray-900">
                             {participant.name}
                           </div>
+                          {participant.playtomicRating != null && (
+                            <div className="text-sm font-medium text-purple-700">
+                              Playtomic {participant.playtomicRating.toFixed(2)}
+                            </div>
+                          )}
                           <div className="text-sm text-gray-500">
                             {new Date(participant.registeredAt).toLocaleString()}
                           </div>

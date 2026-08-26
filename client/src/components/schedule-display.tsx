@@ -113,6 +113,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
         const generatedSchedule = generateAmericanFormat({
           players,
           courts: tournamentSetup.courtsCount,
+          pointsPerMatch: tournamentSetup.pointsPerMatch,
         });
 
         setSchedule(generatedSchedule);
@@ -126,6 +127,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
             location: tournamentSetup.location,
             playersCount: tournamentSetup.playersCount,
             courtsCount: tournamentSetup.courtsCount,
+            pointsPerMatch: tournamentSetup.pointsPerMatch,
             players,
             schedule: generatedSchedule,
           };
@@ -150,6 +152,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
       tournamentLocation: tournamentSetup.location,
       playersCount: tournamentSetup.playersCount,
       courtsCount: tournamentSetup.courtsCount,
+      pointsPerMatch: tournamentSetup.pointsPerMatch,
       rounds: schedule,
     });
 
@@ -165,6 +168,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
       location: tournamentSetup.location,
       playersCount: tournamentSetup.playersCount,
       courtsCount: tournamentSetup.courtsCount,
+      pointsPerMatch: tournamentSetup.pointsPerMatch,
       players: players,
       schedule: schedule,
     };
@@ -373,6 +377,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
         tournamentLocation={tournamentSetup.location}
         playersCount={tournamentSetup.playersCount}
         courtsCount={tournamentSetup.courtsCount}
+        pointsPerMatch={tournamentSetup.pointsPerMatch}
         rounds={schedule}
         onDownload={handleDownloadPDF}
       />
