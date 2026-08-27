@@ -101,9 +101,9 @@ export default function Landing() {
                 onClick={() => window.location.href = "/login"}
                 className="bg-primary text-primary-foreground hover:bg-[#2563eb] transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
               >
-                Get Started
+                Sign in to get started
               </Button>
-              <BouncingBallIcon size="2rem" className="text-primary" />
+              <BouncingBallIcon size="2rem" className="text-[#d7f542]" />
             </div>
 
             
@@ -171,31 +171,6 @@ export default function Landing() {
             </Card>
           </div>
 
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-foreground mb-4">
-              Ready to organize your tournament?
-            </h2>
-            <p className="text-muted-foreground mb-8">
-              Sign in to start creating and managing your padel tournaments
-            </p>
-            <div className="flex gap-4 justify-center">
-              <Button 
-                size="lg" 
-                onClick={() => window.location.href = "/login"}
-                className="bg-primary text-primary-foreground hover:bg-[#2563eb] transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                Sign In to Get Started
-              </Button>
-              <Button 
-                variant="outline" 
-                size="lg"
-                onClick={() => window.location.href = "/american-format-rules"}
-                className="transition-all duration-300 hover:scale-105 hover:bg-blue-500 hover:text-white hover:border-blue-500 active:scale-95"
-              >
-                View Scoring Demo
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
       

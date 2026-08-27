@@ -19,7 +19,7 @@ export function Footer() {
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-primary transition-colors"
             >
-              Padel Camp GranCanaria 2025/26
+              Join Padel Camp in Gran Canaria
             </a>
           </div>
           <p className="text-sm text-muted-foreground flex items-center justify-center gap-1">
