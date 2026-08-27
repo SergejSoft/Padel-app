@@ -21,6 +21,8 @@ import { buildParticipantRegistrationPredicate } from "./participant-query.js";
 export interface IStorage {
   // User profile and role operations
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  migrateUserId(oldId: string, newId: string, profile: { firstName: string | null; lastName: string | null; profileImageUrl: string | null }): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   setUserRole(id: string, role: "player" | "organizer" | "admin"): Promise<User | undefined>;
   updateUserProfile(id: string, profile: { playtomicRating: number | null }): Promise<User | undefined>;
@@ -216,6 +218,78 @@ export class DatabaseStorage implements IStorage {
       console.error('Storage error in getUser:', error);
       throw error;
     }
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(sql`lower(${users.email}) = lower(${email})`);
+    return user || undefined;
+  }
+
+  /**
+   * Re-keys an existing user to a new Clerk ID (same person, new auth
+   * instance). tournaments.organizer_id references users.id without cascade,
+   * so the new row must exist before references move and the old row can
+   * only be deleted afterwards.
+   */
+  async migrateUserId(
+    oldId: string,
+    newId: string,
+    profile: { firstName: string | null; lastName: string | null; profileImageUrl: string | null },
+  ): Promise<User> {
+    const oldUser = await this.getUser(oldId);
+    if (!oldUser) throw new Error(`Cannot migrate unknown user ${oldId}`);
+
+    // Free the unique email before inserting the new row
+    await db
+      .update(users)
+      .set({ email: `migrated-${oldId}@retired.invalid` })
+      .where(eq(users.id, oldId));
+
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        id: newId,
+        email: oldUser.email,
+        firstName: profile.firstName ?? oldUser.firstName,
+        lastName: profile.lastName ?? oldUser.lastName,
+        profileImageUrl: profile.profileImageUrl ?? oldUser.profileImageUrl,
+        playtomicRating: oldUser.playtomicRating,
+        role: oldUser.role,
+        createdAt: oldUser.createdAt,
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    await db
+      .update(tournaments)
+      .set({ organizerId: newId })
+      .where(eq(tournaments.organizerId, oldId));
+
+    await db.execute(sql`
+      UPDATE ${tournaments}
+      SET registered_participants = (
+        SELECT json_agg(
+          CASE
+            WHEN participant->>'userId' = ${oldId}
+            THEN (participant::jsonb || jsonb_build_object('userId', ${newId}::text))::json
+            ELSE participant
+          END
+        )
+        FROM json_array_elements(${tournaments.registeredParticipants}) AS participant
+      )
+      WHERE EXISTS (
+        SELECT 1
+        FROM json_array_elements(COALESCE(${tournaments.registeredParticipants}, '[]'::json)) AS participant
+        WHERE participant->>'userId' = ${oldId}
+      )
+    `);
+
+    await db.delete(users).where(eq(users.id, oldId));
+
+    return newUser;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {

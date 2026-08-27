@@ -36,9 +36,26 @@ async function getOrCreateUser(userId: string) {
   if (existing) return existing;
 
   const clerkUser = await clerkClient.users.getUser(userId);
+  const email = clerkUser.primaryEmailAddress?.emailAddress ?? null;
+
+  // A user who existed under a previous Clerk instance (e.g. after the
+  // dev -> production migration) signs in with a new Clerk ID but the same
+  // email. Adopt the new ID so their role, rating, tournaments, and
+  // registrations carry over instead of crashing on the unique email.
+  if (email) {
+    const sameEmailUser = await storage.getUserByEmail(email);
+    if (sameEmailUser && sameEmailUser.id !== userId) {
+      return storage.migrateUserId(sameEmailUser.id, userId, {
+        firstName: clerkUser.firstName,
+        lastName: clerkUser.lastName,
+        profileImageUrl: clerkUser.imageUrl,
+      });
+    }
+  }
+
   return storage.upsertUser({
     id: userId,
-    email: clerkUser.primaryEmailAddress?.emailAddress ?? null,
+    email,
     firstName: clerkUser.firstName,
     lastName: clerkUser.lastName,
     profileImageUrl: clerkUser.imageUrl,
