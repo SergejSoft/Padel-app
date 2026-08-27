@@ -39,6 +39,8 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
       date: initialData?.date || "",
       time: initialData?.time || "",
       location: initialData?.location || "",
+      price: initialData?.price || "",
+      currency: initialData?.currency || "EUR",
       playersCount: initialData?.playersCount || 8,
       courtsCount: initialData?.courtsCount || 2,
       pointsPerMatch: initialData?.pointsPerMatch || TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH,
@@ -143,6 +145,51 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-[1fr_7rem] gap-4">
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tournament price (optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          inputMode="decimal"
+                          placeholder="15"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <Select value={field.value || "EUR"} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="EUR">EUR</SelectItem>
+                          <SelectItem value="GBP">GBP</SelectItem>
+                          <SelectItem value="USD">USD</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}

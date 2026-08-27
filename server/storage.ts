@@ -7,10 +7,11 @@ import {
   type UpsertUser,
   type RegisteredParticipant,
   type RegistrationInfo,
+  type UpcomingTournament,
   type JoinedTournamentSummary,
 } from "../shared/schema.js";
 import { db } from "./db.js";
-import { eq, desc, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { TOURNAMENT_CONFIG, type RegistrationStatus } from "../shared/tournament-config.js";
 import { generateAmericanFormatTournament } from "../shared/american-format-generator.js";
 import type { AmericanFormatConfig } from "../shared/tournament-types.js";
@@ -32,6 +33,7 @@ export interface IStorage {
   generateShareId(tournamentId: number): Promise<string>;
   generateUrlSlug(tournamentName: string): Promise<string>;
   getAllTournaments(): Promise<Tournament[]>;
+  getUpcomingOpenTournaments(limit?: number): Promise<UpcomingTournament[]>;
   getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]>;
   updateTournament(id: number, tournament: Partial<InsertTournament>): Promise<Tournament | undefined>;
   updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined>;
@@ -153,6 +155,54 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(tournaments)
       .orderBy(desc(tournaments.createdAt));
+  }
+
+  async getUpcomingOpenTournaments(limit = 6): Promise<UpcomingTournament[]> {
+    const today = new Date().toISOString().slice(0, 10);
+    const upcoming = await db
+      .select({
+        id: tournaments.id,
+        name: tournaments.name,
+        date: tournaments.date,
+        time: tournaments.time,
+        location: tournaments.location,
+        price: tournaments.price,
+        currency: tournaments.currency,
+        playersCount: tournaments.playersCount,
+        maxParticipants: tournaments.maxParticipants,
+        registeredParticipants: tournaments.registeredParticipants,
+        pointsPerMatch: tournaments.pointsPerMatch,
+        registrationId: tournaments.registrationId,
+      })
+      .from(tournaments)
+      .where(and(
+        eq(tournaments.status, TOURNAMENT_CONFIG.STATUS.ACTIVE),
+        eq(tournaments.tournamentMode, TOURNAMENT_CONFIG.TOURNAMENT_MODE.SELF_REGISTRATION),
+        eq(tournaments.registrationStatus, TOURNAMENT_CONFIG.REGISTRATION_STATUS.OPEN),
+        isNotNull(tournaments.registrationId),
+        isNotNull(tournaments.date),
+        gte(tournaments.date, today),
+        or(
+          isNull(tournaments.registrationDeadline),
+          gt(tournaments.registrationDeadline, new Date()),
+        ),
+      ))
+      .orderBy(asc(tournaments.date), asc(tournaments.time))
+      .limit(limit);
+
+    return upcoming.map((tournament) => ({
+      id: tournament.id,
+      name: tournament.name,
+      date: tournament.date!,
+      time: tournament.time ?? "",
+      location: tournament.location ?? "",
+      price: tournament.price ?? undefined,
+      currency: tournament.currency ?? undefined,
+      currentParticipants: tournament.registeredParticipants?.length ?? 0,
+      maxParticipants: tournament.maxParticipants ?? tournament.playersCount,
+      pointsPerMatch: tournament.pointsPerMatch,
+      registrationId: tournament.registrationId!,
+    }));
   }
 
   // User profile and role operations
@@ -556,6 +606,8 @@ export class DatabaseStorage implements IStorage {
       date: tournament.date || '',
       time: tournament.time || '',
       location: tournament.location || '',
+      price: tournament.price || undefined,
+      currency: tournament.currency || undefined,
       currentParticipants: currentParticipants.length,
       maxParticipants: tournament.maxParticipants || tournament.playersCount,
       pointsPerMatch: tournament.pointsPerMatch,

@@ -73,6 +73,8 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
     date: tournament?.date || "",
     time: tournament?.time || "",
     location: tournament?.location || "",
+    price: tournament?.price || "",
+    currency: tournament?.currency || "EUR",
     pointsPerMatch: tournament?.pointsPerMatch || TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH,
   });
   const [players, setPlayers] = useState<EditablePlayer[]>(
@@ -87,6 +89,8 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
         date: tournament.date || "",
         time: tournament.time || "",
         location: tournament.location || "",
+        price: tournament.price || "",
+        currency: tournament.currency || "EUR",
         pointsPerMatch: tournament.pointsPerMatch,
       });
       setPlayers(playersFromTournament(tournament));
@@ -401,6 +405,38 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
               placeholder="Enter tournament location"
               required
             />
+          </div>
+
+          <div className="grid grid-cols-[1fr_7rem] gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="price">Tournament price (optional)</Label>
+              <Input
+                id="price"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                value={formData.price}
+                onChange={(e) => handleChange("price", e.target.value)}
+                placeholder="15"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="currency">Currency</Label>
+              <Select
+                value={formData.currency}
+                onValueChange={(value) => handleChange("currency", value)}
+              >
+                <SelectTrigger id="currency">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EUR">EUR</SelectItem>
+                  <SelectItem value="GBP">GBP</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">

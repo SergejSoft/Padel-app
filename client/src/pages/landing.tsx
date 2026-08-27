@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Footer } from "@/components/footer";
 import { FeaturePreviewModal } from "@/components/feature-preview-modal";
-import { Calendar, Users, Trophy, Share, Heart, Eye } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, Calendar, Clock, MapPin, Share, Users } from "lucide-react";
+import type { UpcomingTournament } from "@shared/schema";
 import setupPreviewImage from "@assets/1_1749482036883.png";
 import playersPreviewImage from "@assets/2_1749482562652.png";
 import schedulePreviewImage from "@assets/3_1749482762994.png";
@@ -47,7 +49,23 @@ export const TennisIcon = ({ size = "1em", color = 'currentColor', ...props }) =
   </svg>
 );
 
+const formatTournamentDate = (date: string) => new Intl.DateTimeFormat("en", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+}).format(new Date(`${date}T00:00:00`));
+
+const formatPrice = (price: string, currency = "EUR") => new Intl.NumberFormat("en", {
+  style: "currency",
+  currency,
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+}).format(Number(price));
+
 export default function Landing() {
+  const { data: upcomingTournaments = [] } = useQuery<UpcomingTournament[]>({
+    queryKey: ["/api/public/upcoming-tournaments"],
+  });
   const [previewModal, setPreviewModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -170,6 +188,71 @@ export default function Landing() {
               </CardContent>
             </Card>
           </div>
+
+          {upcomingTournaments.length > 0 && (
+            <section aria-labelledby="upcoming-tournaments-heading">
+              <div className="mb-8 text-center">
+                <h2 id="upcoming-tournaments-heading" className="text-2xl font-bold text-foreground">
+                  Upcoming tournaments
+                </h2>
+                <p className="mt-2 text-muted-foreground">
+                  Find your next game and reserve your place.
+                </p>
+              </div>
+              <div className="mx-auto flex max-w-6xl flex-wrap justify-center gap-4">
+                {upcomingTournaments.map((tournament) => {
+                  const placesRemaining = tournament.maxParticipants - tournament.currentParticipants;
+
+                  return (
+                    <Card
+                      key={tournament.id}
+                      className={`flex h-full w-full flex-col ${
+                        upcomingTournaments.length === 1
+                          ? "max-w-md"
+                          : "md:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.75rem)]"
+                      }`}
+                    >
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-xl">{tournament.name}</CardTitle>
+                        <CardDescription>
+                          {placesRemaining} {placesRemaining === 1 ? "place" : "places"} remaining
+                          {tournament.price && (
+                            <> · {formatPrice(tournament.price, tournament.currency)}</>
+                          )}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-1 flex-col gap-4">
+                        <div className="space-y-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 shrink-0" />
+                            <span>{formatTournamentDate(tournament.date)}</span>
+                          </div>
+                          {tournament.time && (
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 shrink-0" />
+                              <span>{tournament.time}</span>
+                            </div>
+                          )}
+                          {tournament.location && (
+                            <div className="flex items-center gap-2">
+                              <MapPin className="h-4 w-4 shrink-0" />
+                              <span>{tournament.location}</span>
+                            </div>
+                          )}
+                        </div>
+                        <Button asChild className="mt-auto w-full sm:w-auto sm:self-start">
+                          <a href={`/register/${tournament.registrationId}`}>
+                            Open registration
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </a>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
         </div>
       </div>

@@ -30,6 +30,8 @@ export function TournamentCreationSummary({ tournamentSetup, onBack }: Tournamen
         date: tournamentSetup.date,
         time: tournamentSetup.time,
         location: tournamentSetup.location,
+        price: tournamentSetup.price || null,
+        currency: tournamentSetup.currency || "EUR",
         playersCount: tournamentSetup.playersCount,
         courtsCount: tournamentSetup.courtsCount,
         pointsPerMatch: tournamentSetup.pointsPerMatch || TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH,
@@ -169,6 +171,14 @@ export function TournamentCreationSummary({ tournamentSetup, onBack }: Tournamen
             <div className="flex justify-between">
               <span className="text-muted-foreground">Location:</span>
               <span className="font-medium">{tournamentSetup.location}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Price:</span>
+              <span className="font-medium">
+                {tournamentSetup.price
+                  ? `${tournamentSetup.price} ${tournamentSetup.currency || "EUR"}`
+                  : "Free"}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Players:</span>

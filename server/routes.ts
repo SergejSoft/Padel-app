@@ -113,6 +113,17 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Public, privacy-safe list for the landing page.
+  app.get("/api/public/upcoming-tournaments", async (_req, res) => {
+    try {
+      const upcomingTournaments = await storage.getUpcomingOpenTournaments();
+      res.json(upcomingTournaments);
+    } catch (error) {
+      console.error("Error fetching upcoming tournaments:", error);
+      res.status(500).json({ message: "Failed to fetch upcoming tournaments" });
+    }
+  });
+
   // Create tournament (organizer or admin only)
   app.post("/api/tournaments", isAuthenticated, isOrganizer, async (req: any, res) => {
     try {

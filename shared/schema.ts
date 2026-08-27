@@ -83,11 +83,27 @@ export interface RegistrationInfo {
   date: string;
   time: string;
   location: string;
+  price?: string;
+  currency?: string;
   currentParticipants: number;
   maxParticipants: number;
   pointsPerMatch: number;
   registrationStatus: 'open' | 'closed' | 'full';
   deadline?: string;
+}
+
+export interface UpcomingTournament {
+  id: number;
+  name: string;
+  date: string;
+  time: string;
+  location: string;
+  price?: string;
+  currency?: string;
+  currentParticipants: number;
+  maxParticipants: number;
+  pointsPerMatch: number;
+  registrationId: string;
 }
 
 export interface JoinedTournamentSummary {
@@ -113,6 +129,14 @@ export const tournamentSetupSchema = z.object({
   location: z.string()
     .min(TOURNAMENT_CONFIG.VALIDATION.MIN_LOCATION_LENGTH, "Tournament location is required")
     .max(TOURNAMENT_CONFIG.VALIDATION.MAX_LOCATION_LENGTH, "Tournament location too long"),
+  price: z.string()
+    .trim()
+    .refine(
+      value => value === "" || (Number.isFinite(Number(value)) && Number(value) >= 0),
+      "Price cannot be negative",
+    )
+    .optional(),
+  currency: z.enum(["EUR", "GBP", "USD"]).default("EUR").optional(),
   playersCount: z.number()
     .min(TOURNAMENT_CONFIG.MIN_PLAYERS, `Minimum ${TOURNAMENT_CONFIG.MIN_PLAYERS} players required`)
     .max(TOURNAMENT_CONFIG.MAX_PLAYERS, `Maximum ${TOURNAMENT_CONFIG.MAX_PLAYERS} players allowed`),

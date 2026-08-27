@@ -23,6 +23,13 @@ interface ParticipantsResponse {
   maxParticipants: number;
 }
 
+const formatPrice = (price: string, currency = "EUR") => new Intl.NumberFormat("en", {
+  style: "currency",
+  currency,
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+}).format(Number(price));
+
 export default function RegistrationPage() {
   const { registrationId } = useParams<{ registrationId: string }>();
   const [name, setName] = useState('');
@@ -205,6 +212,11 @@ export default function RegistrationPage() {
                 <Badge variant="outline" className="text-sm px-4 py-2">
                   {registrationInfo.pointsPerMatch} points per match
                 </Badge>
+                {registrationInfo.price && (
+                  <Badge variant="outline" className="text-sm px-4 py-2">
+                    Entry {formatPrice(registrationInfo.price, registrationInfo.currency)}
+                  </Badge>
+                )}
               </div>
             </div>
           </CardContent>
