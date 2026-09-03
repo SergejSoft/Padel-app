@@ -746,6 +746,7 @@ export class DatabaseStorage implements IStorage {
       .update(tournaments)
       .set({ 
         players: playerNames as any,
+        playersCount: playerNames.length, // capacity may exceed actual sign-ups
         schedule: rounds as any,
         tournamentMode: TOURNAMENT_CONFIG.TOURNAMENT_MODE.FIXED_PLAYERS,
         registrationStatus: TOURNAMENT_CONFIG.REGISTRATION_STATUS.CLOSED
