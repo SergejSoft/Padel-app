@@ -208,9 +208,20 @@ export default function Dashboard() {
                       <div className="flex flex-wrap items-center gap-2 mb-2">
                         <h3 className="font-semibold text-foreground truncate flex-shrink-0">{tournament.name}</h3>
                         <div className="flex flex-wrap gap-1">
-                          <Badge variant="outline" className="text-xs">
-                            {tournament.playersCount} Players
-                          </Badge>
+                          {tournament.tournamentMode === 'registration' ? (
+                            <Badge
+                              variant={tournament.registrationStatus === 'full' ? 'default' : 'outline'}
+                              className="text-xs"
+                              title="Registered players / capacity"
+                            >
+                              <Users className="mr-1 h-3 w-3" />
+                              {tournament.registeredParticipants?.length ?? 0}/{tournament.maxParticipants ?? tournament.playersCount} registered
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">
+                              {tournament.playersCount} Players
+                            </Badge>
+                          )}
                           <Badge variant="outline" className="text-xs">
                             {tournament.courtsCount} Courts
                           </Badge>
