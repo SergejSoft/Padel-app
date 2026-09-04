@@ -435,29 +435,40 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
         </section>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Tournament Name</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => handleChange("name", e.target.value)}
-              placeholder="Enter tournament name"
-              required
-            />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="name">Tournament Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleChange("name", e.target.value)}
+                placeholder="Enter tournament name"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                value={formData.location}
+                onChange={(e) => handleChange("location", e.target.value)}
+                placeholder="Enter tournament location"
+                required
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
-            <Input
-              id="date"
-              type="date"
-              value={formData.date}
-              onChange={(e) => handleChange("date", e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="date">Date</Label>
+              <Input
+                id="date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => handleChange("date", e.target.value)}
+                required
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="time">Time</Label>
               <Input
@@ -490,18 +501,7 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              value={formData.location}
-              onChange={(e) => handleChange("location", e.target.value)}
-              placeholder="Enter tournament location"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-[1fr_7rem] gap-4">
+          <div className="grid grid-cols-[1fr_7rem] gap-4 md:max-w-md">
             <div className="space-y-2">
               <Label htmlFor="price">Tournament price (optional)</Label>
               <Input
@@ -556,7 +556,7 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
                 {isRegistrationMode ? " or share the registration link." : "."}
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-x-6">
                 {players.map((player, index) => (
                   <div key={player.participantId ?? `new-${index}`} className="flex items-center space-x-2">
                     <span className="text-sm text-gray-500 w-8">#{index + 1}</span>

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { SignIn, useAuth } from "@clerk/react";
+import { SignIn, useAuth } from "@/lib/auth";
 
 export const TennisIcon = ({ size = "1em", color = 'currentColor', ...props }) => (
   <svg 

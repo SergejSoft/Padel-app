@@ -7,6 +7,7 @@ import { z } from "zod";
 import { rateLimit } from "express-rate-limit";
 import { isRegisteredParticipant } from "./participant-query.js";
 import { TOURNAMENT_CONFIG } from "../shared/tournament-config.js";
+import { getLocalUserProfile, isLocalAuthEnabled } from "./localAuth.js";
 
 const registrationRateLimit = rateLimit({
   windowMs: 60_000,
@@ -38,6 +39,19 @@ function toPublicTournament(tournament: any) {
 async function getOrCreateUser(userId: string) {
   const existing = await storage.getUser(userId);
   if (existing) return storage.claimCoOrganizerByEmail(existing);
+
+  if (isLocalAuthEnabled()) {
+    const profile = getLocalUserProfile(userId);
+    if (!profile) throw new Error(`Unknown local user ${userId}`);
+    const created = await storage.upsertUser({
+      id: profile.id,
+      email: profile.email,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      role: profile.role,
+    });
+    return storage.claimCoOrganizerByEmail(created);
+  }
 
   const clerkUser = await clerkClient.users.getUser(userId);
   const email = clerkUser.primaryEmailAddress?.emailAddress ?? null;

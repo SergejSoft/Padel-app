@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { useState } from "react";
-import { useAuth as useClerkAuth } from "@clerk/react";
+import { useAuth as useClerkAuth } from "@/lib/auth";
 import { fetchTournamentView, isTournamentAccessError } from "@/lib/tournament-access";
 import { TournamentAccessGate } from "@/components/tournament-access-gate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Trophy, Calendar, MapPin, Users, Clock, ArrowLeft } from "lucide-react";
-import { SimpleScoreInput } from "@/components/simple-score-input";
 import { FinalsLeaderboard } from "@/components/finals-leaderboard";
 import { type Tournament, type Match, type Round, type PlayerStats } from "@shared/schema";
 

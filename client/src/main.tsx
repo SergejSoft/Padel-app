@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { ClerkProvider } from "@clerk/react";
+import { ClerkProvider, isLocalAuth } from "@/lib/auth";
 import { shadcn } from "@clerk/ui/themes";
 import "@clerk/ui/themes/shadcn.css";
 import App from "./App";
@@ -7,7 +7,7 @@ import "./index.css";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-if (!PUBLISHABLE_KEY) {
+if (!PUBLISHABLE_KEY && !isLocalAuth) {
   throw new Error(
     "Missing VITE_CLERK_PUBLISHABLE_KEY. Add it to the .env file in the project root.",
   );
@@ -15,7 +15,7 @@ if (!PUBLISHABLE_KEY) {
 
 createRoot(document.getElementById("root")!).render(
   <ClerkProvider
-    publishableKey={PUBLISHABLE_KEY}
+    publishableKey={PUBLISHABLE_KEY ?? ""}
     appearance={{ theme: shadcn }}
     afterSignOutUrl="/"
   >

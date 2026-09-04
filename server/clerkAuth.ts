@@ -1,9 +1,15 @@
 import { clerkMiddleware, getAuth } from "@clerk/express";
 import type { Express, Request, RequestHandler } from "express";
 import { storage } from "./storage.js";
+import { getLocalUserId, isLocalAuthEnabled } from "./localAuth.js";
 
 export function setupAuth(app: Express) {
   app.set("trust proxy", 1);
+
+  if (isLocalAuthEnabled()) {
+    console.warn("LOCAL_AUTH is on: Clerk is bypassed and 'Bearer local:<id>' tokens are trusted.");
+    return;
+  }
 
   app.use(
     clerkMiddleware({
@@ -16,6 +22,9 @@ export function setupAuth(app: Express) {
 }
 
 export function getUserId(req: Request): string | null {
+  if (isLocalAuthEnabled()) {
+    return getLocalUserId(req.headers.authorization);
+  }
   return getAuth(req).userId;
 }
 
