@@ -198,7 +198,7 @@ export default function SharedTournament() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <h1 className="text-3xl font-bold text-gray-900">{tournament.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">{tournament.name}</h1>
             {status === 'cancelled' && <Badge variant="destructive">Cancelled</Badge>}
             {status === 'past' && <Badge variant="secondary">Past</Badge>}
             {status === 'active' && <Badge variant="default">Active</Badge>}
@@ -412,18 +412,18 @@ export default function SharedTournament() {
                 return (
                 <section
                   key={round.round}
-                  className="overflow-hidden rounded-xl border border-gray-200 shadow-sm"
+                  className="overflow-hidden rounded-xl border border-gray-200"
                   aria-label={`Round ${round.round}`}
                 >
-                  <header className="flex flex-wrap items-center gap-x-3 gap-y-1 bg-gray-900 px-3 py-2 text-white sm:px-4">
-                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-gray-900">
+                  <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 sm:px-4">
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-sm font-bold text-white">
                       {round.round}
                     </span>
                     <h3 className="text-base font-semibold sm:text-lg">Round {round.round}</h3>
-                    <span className="ml-auto inline-flex items-center gap-1 text-xs text-gray-300 sm:text-sm">
+                    <span className="ml-auto inline-flex items-center gap-1 text-xs text-gray-500 sm:text-sm">
                       {scoredInRound === round.matches.length ? (
                         <>
-                          <CheckCircle2 className="h-4 w-4 text-green-400" />
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
                           Complete
                         </>
                       ) : (
@@ -432,7 +432,7 @@ export default function SharedTournament() {
                     </span>
                     {sittingOut.length > 0 && (
                       <span
-                        className="inline-flex w-full items-center gap-1 rounded-full bg-amber-400/20 px-2.5 py-0.5 text-xs font-medium text-amber-200 ring-1 ring-inset ring-amber-400/40 sm:w-auto"
+                        className="inline-flex w-full items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-200 sm:w-auto"
                         title="These players rest this round"
                       >
                         <Coffee className="h-3 w-3" />
@@ -470,7 +470,7 @@ export default function SharedTournament() {
                                 <span className="font-medium text-sm sm:text-base">{match.team2[0]} & {match.team2[1]}</span>
                               </div>
                             </div>
-                            <div className="bg-gray-100 rounded px-3 py-2 text-sm text-gray-600 flex-shrink-0 tabular-nums">
+                            <div className="bg-gray-100 rounded-lg px-3 py-2 text-sm text-gray-600 flex-shrink-0 tabular-nums">
                               {gameScores[match.gameNumber]
                                 ? `${gameScores[match.gameNumber].team1Score} - ${gameScores[match.gameNumber].team2Score}`
                                 : "–"}

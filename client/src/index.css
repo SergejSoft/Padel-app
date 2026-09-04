@@ -7,7 +7,7 @@
 :root {
   --background: hsl(0, 0%, 100%);
   --foreground: hsl(0, 0%, 0%);
-  --muted: hsl(0, 0%, 97%);
+  --muted: hsl(0, 0%, 95%);
   --muted-foreground: hsl(0, 0%, 42%);
   --popover: hsl(0, 0%, 100%);
   --popover-foreground: hsl(0, 0%, 0%);
@@ -17,14 +17,14 @@
   --input: hsl(0, 0%, 90%);
   --primary: hsl(0, 0%, 0%);
   --primary-foreground: hsl(0, 0%, 100%);
-  --secondary: hsl(0, 0%, 97%);
+  --secondary: hsl(0, 0%, 95%);
   --secondary-foreground: hsl(0, 0%, 7%);
   --accent: hsl(0, 0%, 97%);
   --accent-foreground: hsl(0, 0%, 7%);
   --destructive: hsl(0, 84%, 60%);
   --destructive-foreground: hsl(0, 0%, 98%);
   --ring: hsl(0, 0%, 0%);
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 }
 
 .dark {
@@ -56,7 +56,8 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
