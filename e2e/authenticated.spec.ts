@@ -42,9 +42,9 @@ test("organizer can add players from the edit modal of a registration tournament
     await page.reload();
 
     // Open the edit modal from the tournament row
-    const row = page.locator("div.border-border", { hasText: tournamentName });
+    const row = page.getByRole("button", { name: `Edit tournament ${tournamentName}` });
     await expect(row).toBeVisible();
-    await row.getByRole("button", { name: "Edit tournament" }).click();
+    await row.click();
 
     const modal = page.getByRole("dialog");
     await expect(modal.getByText("Manage Tournament")).toBeVisible();
@@ -74,8 +74,8 @@ test("organizer can add players from the edit modal of a registration tournament
 
     // Reopen the modal and remove one player
     await page.reload();
-    const rowAfter = page.locator("div.border-border", { hasText: tournamentName });
-    await rowAfter.getByRole("button", { name: "Edit tournament" }).click();
+    const rowAfter = page.getByRole("button", { name: `Edit tournament ${tournamentName}` });
+    await rowAfter.click();
     const modalAfter = page.getByRole("dialog");
     await expect(modalAfter.getByPlaceholder("Player 1 name")).toHaveValue("Manual Player One");
     await modalAfter.getByRole("button", { name: "Remove player" }).first().click();

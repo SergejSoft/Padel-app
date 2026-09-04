@@ -200,9 +200,12 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-4">
                 {sortedTournaments.map((tournament) => (
-                  <div
+                  <button
                     key={tournament.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border border-border rounded-lg gap-4"
+                    type="button"
+                    onClick={() => setEditingTournament(tournament)}
+                    aria-label={`Edit tournament ${tournament.name}`}
+                    className="flex w-full flex-col sm:flex-row sm:items-center sm:justify-between p-4 border border-border rounded-lg gap-4 text-left cursor-pointer bg-background transition-colors hover:bg-accent hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -253,18 +256,12 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-center">
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => setEditingTournament(tournament)}
-                        className="w-full sm:w-auto"
-                        aria-label="Edit tournament"
-                      >
+                      <span className="inline-flex w-full sm:w-auto items-center justify-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground">
                         <Edit className="mr-2 h-4 w-4" />
                         Manage
-                      </Button>
+                      </span>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
