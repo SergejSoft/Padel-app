@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, MapPin, Users, Target, Clock, Coffee, Ban, Download, Eye, Trophy, CheckCircle2, ChevronLeft } from "lucide-react";
+import { Calendar, MapPin, Users, Target, Clock, Ban, Download, Eye, Trophy, ChevronLeft } from "lucide-react";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import { PDFPreviewModal } from "@/components/pdf-preview-modal";
 import { ScoreSlider } from "@/components/score-slider";
+import { RoundSection, deriveRoundStatuses, roundCardStyles } from "@/components/round-section";
+import { useRoundFocus } from "@/hooks/use-round-focus";
 import { FinalsLeaderboard } from "@/components/finals-leaderboard";
 import { Footer } from "@/components/footer";
 import type { Round, Tournament } from "@shared/schema";
@@ -27,7 +29,7 @@ export default function SharedTournament() {
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [gameScores, setGameScores] = useState<Record<number, { team1Score: number; team2Score: number }>>({});
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const { user } = useAuth();
+  const { user, isLoading: userLoading } = useAuth();
   const { isLoaded: authLoaded } = useClerkAuth();
 
   // Wait for Clerk so the request carries the session token; otherwise a
@@ -48,6 +50,24 @@ export default function SharedTournament() {
     );
     setGameScores(scores);
   }, [tournament?.finalScores]);
+
+  // Check if tournament is in registration mode
+  const isRegistrationMode = tournament?.tournamentMode === 'registration' && (!tournament.schedule || tournament.schedule.length === 0);
+
+  // The stored schedule is the source of truth for every viewer.
+  const schedule: Round[] = tournament && !isRegistrationMode && Array.isArray(tournament.schedule)
+    ? tournament.schedule as Round[]
+    : [];
+
+  // Played rounds come from the scores; among the rest, the round scrolled into focus is current.
+  // Hold the auto-scroll until scores are hydrated (effect above) and the user
+  // record is in, since the cards grow into sliders once the organizer is known.
+  const firstOpenRound = deriveRoundStatuses(schedule, gameScores, null).firstOpenRound;
+  const { registerRound, focusedRound } = useRoundFocus({
+    initialRound: firstOpenRound,
+    ready: !userLoading && Object.keys(gameScores).length > 0,
+  });
+  const roundStatuses = deriveRoundStatuses(schedule, gameScores, focusedRound);
 
   if (isLoading || !authLoaded) {
     return (
@@ -85,14 +105,6 @@ export default function SharedTournament() {
   };
 
   const status = getTournamentStatus(tournament);
-
-  // Check if tournament is in registration mode
-  const isRegistrationMode = tournament.tournamentMode === 'registration' && (!tournament.schedule || tournament.schedule.length === 0);
-
-  // The stored schedule is the source of truth for every viewer.
-  const schedule: Round[] = !isRegistrationMode && Array.isArray(tournament.schedule)
-    ? tournament.schedule as Round[]
-    : [];
 
   // Full roster; older records may lack `players`, so derive it from the schedule.
   const roster: string[] = tournament.players?.length ? tournament.players : getSchedulePlayers(schedule);
@@ -418,42 +430,23 @@ export default function SharedTournament() {
                 {schedule.map((round) => {
                 const sittingOut = getSittingOutPlayers(round, roster);
                 const scoredInRound = round.matches.filter(match => gameScores[match.gameNumber]).length;
+                const roundStatus = roundStatuses.byRound.get(round.round) ?? "upcoming";
+                const cardStyles = roundCardStyles(roundStatus);
                 return (
-                <section
+                <RoundSection
                   key={round.round}
-                  className="overflow-hidden rounded-xl border border-gray-200"
-                  aria-label={`Round ${round.round}`}
+                  round={round}
+                  status={roundStatus}
+                  isFocused={focusedRound === round.round}
+                  isDimmed={focusedRound !== null && focusedRound !== round.round}
+                  scoredCount={scoredInRound}
+                  sittingOut={sittingOut}
+                  sectionRef={registerRound(round.round)}
                 >
-                  <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 sm:px-4">
-                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-sm font-bold text-white">
-                      {round.round}
-                    </span>
-                    <h3 className="text-base font-semibold sm:text-lg">Round {round.round}</h3>
-                    <span className="ml-auto inline-flex items-center gap-1 text-xs text-gray-500 sm:text-sm">
-                      {scoredInRound === round.matches.length ? (
-                        <>
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          Complete
-                        </>
-                      ) : (
-                        `${scoredInRound}/${round.matches.length} scored`
-                      )}
-                    </span>
-                    {sittingOut.length > 0 && (
-                      <span
-                        className="inline-flex w-full items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-200 sm:w-auto"
-                        title="These players rest this round"
-                      >
-                        <Coffee className="h-3 w-3" />
-                        Sitting out: {sittingOut.join(", ")}
-                      </span>
-                    )}
-                  </header>
-                  <div className="grid gap-2 bg-white p-2 sm:gap-3 sm:p-3">
                     {round.matches.map((match, matchIndex) => (
-                      <div key={matchIndex} className="rounded-lg bg-gray-50 p-2.5 ring-1 ring-inset ring-gray-100 sm:p-4">
+                      <div key={matchIndex} className={cardStyles.card}>
                         <div className="mb-2 flex items-center gap-2">
-                          <div className="bg-white rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-gray-700 flex-shrink-0">
+                          <div className={`${cardStyles.courtChip} rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium flex-shrink-0`}>
                             Court {match.court}
                           </div>
                           <span className="text-xs text-gray-500">Game {match.gameNumber}</span>
@@ -466,6 +459,8 @@ export default function SharedTournament() {
                             pointsPerMatch={tournament.pointsPerMatch}
                             gameNumber={match.gameNumber}
                             tournamentId={tournament.id}
+                            emphasis={roundStatus === "current"}
+                            muted={roundStatus === "played"}
                             onScoreChange={(team1Score, team2Score) =>
                               handleScoreChange(match.gameNumber, team1Score, team2Score)
                             }
@@ -489,8 +484,7 @@ export default function SharedTournament() {
                         )}
                       </div>
                     ))}
-                  </div>
-                </section>
+                </RoundSection>
                 );
               })}
             </div>
@@ -529,11 +523,11 @@ export default function SharedTournament() {
               </Button>
             </>
           )}
-          <Link href="/">
+          {/* <Link href="/">
             <Button variant="outline" size="lg">
               Create New Tournament
             </Button>
-          </Link>
+          </Link> */}
         </div>
       </div>
       

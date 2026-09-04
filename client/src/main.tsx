@@ -4,6 +4,7 @@ import { shadcn } from "@clerk/ui/themes";
 import "@clerk/ui/themes/shadcn.css";
 import App from "./App";
 import "./index.css";
+import { registerServiceWorker } from "@/lib/register-sw";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -22,3 +23,5 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </ClerkProvider>,
 );
+
+registerServiceWorker();

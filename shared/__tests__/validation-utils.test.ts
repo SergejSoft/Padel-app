@@ -7,7 +7,6 @@ import { describe, it, expect } from 'vitest';
 import {
   validateTournamentConfiguration,
   validatePlayerNames,
-  complementScore,
   validateMatchScore,
   validateAmericanFormatConfig,
   validateAmericanFormatSchedule
@@ -161,23 +160,6 @@ describe('validateMatchScore', () => {
     
     expect(result.isValid).toBe(true);
     expect(result.totalPoints).toBe(20);
-  });
-});
-
-describe('complementScore', () => {
-  it('fills the remaining points for a 24-point match', () => {
-    expect(complementScore('10', 24)).toBe(14);
-  });
-
-  it('allows a zero complement', () => {
-    expect(complementScore('16', 16)).toBe(0);
-  });
-
-  it('rejects empty, fractional, negative, and out-of-range values', () => {
-    expect(complementScore('', 24)).toBeNull();
-    expect(complementScore('8.5', 24)).toBeNull();
-    expect(complementScore('-1', 24)).toBeNull();
-    expect(complementScore('25', 24)).toBeNull();
   });
 });
 

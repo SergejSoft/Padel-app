@@ -1,6 +1,6 @@
 # User Flow Test Scenarios
 
-Persona-based end-to-end test scenarios for the Padel App. Complements `RELEASE_TEST_PLAN.md` (which is feature-based); this document is **journey-based** — each scenario walks one persona through the full app.
+Persona-based end-to-end test scenarios for the Padel App. Complements `release-test-plan.md` (which is feature-based); this document is **journey-based** — each scenario walks one persona through the full app.
 
 ---
 
@@ -270,7 +270,7 @@ sequenceDiagram
 - **Cover mobile viewport for the player journey only.** Players overwhelmingly open share links on phones; run C1 at 375 px width. Organiser flows can stay desktop-first.
 - **Suggested execution order:** C1 (anonymous join) → D (organiser lifecycle) → Section 7 combined flow → B (organiser-player) → C2 (signed-in player security) → A (admin). This front-loads the flows real users hit most, and leaves the manually-seeded admin case last.
 
-### Traceability to `RELEASE_TEST_PLAN.md`
+### Traceability to `release-test-plan.md`
 
 | Scenario here | Covers release-plan items |
 |---|---|

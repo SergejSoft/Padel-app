@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -18,9 +19,9 @@ import { Label } from "@/components/ui/label";
 import {
   Archive,
   Ban,
+  CalendarDays,
   Copy,
   Download,
-  ExternalLink,
   Loader2,
   Play,
   RefreshCw,
@@ -71,7 +72,8 @@ function playersFromTournament(tournament: Tournament): EditablePlayer[] {
 export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournamentModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+  const [, navigate] = useLocation();
+
   const [formData, setFormData] = useState({
     name: tournament?.name || "",
     date: tournament?.date || "",
@@ -370,8 +372,8 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
               <Copy className="mr-2 h-4 w-4" />
               Copy link
             </Button>
-            <Button type="button" variant="outline" onClick={() => window.open(publicPath, "_blank")}>
-              <ExternalLink className="mr-2 h-4 w-4" />
+            <Button type="button" variant="outline" onClick={() => navigate(publicPath)}>
+              <CalendarDays className="mr-2 h-4 w-4" />
               {hasSchedule ? "Open schedule" : "Preview"}
             </Button>
             {hasSchedule && (
@@ -454,7 +456,7 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => window.open(`/leaderboard/${tournament.leaderboardId}`, "_blank")}
+                onClick={() => navigate(`/leaderboard/${tournament.leaderboardId}`)}
               >
                 <Trophy className="mr-2 h-4 w-4" />
                 Leaderboard
