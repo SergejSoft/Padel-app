@@ -58,14 +58,15 @@ export default function SharedTournament() {
     ? tournament.schedule as Round[]
     : [];
 
-  // Played / current / upcoming per round, plus which round sits mid-viewport.
+  // Played rounds come from the scores; among the rest, the round scrolled into focus is current.
   // Hold the auto-scroll until scores are hydrated (effect above) and the user
   // record is in, since the cards grow into sliders once the organizer is known.
-  const roundStatuses = deriveRoundStatuses(schedule, gameScores);
+  const firstOpenRound = deriveRoundStatuses(schedule, gameScores, null).firstOpenRound;
   const { registerRound, focusedRound } = useRoundFocus({
-    currentRound: roundStatuses.currentRound,
+    initialRound: firstOpenRound,
     ready: !userLoading && Object.keys(gameScores).length > 0,
   });
+  const roundStatuses = deriveRoundStatuses(schedule, gameScores, focusedRound);
 
   if (isLoading || !authLoaded) {
     return (
@@ -427,7 +428,6 @@ export default function SharedTournament() {
                   key={round.round}
                   round={round}
                   status={roundStatus}
-                  isUpNext={round.round === roundStatuses.upNextRound}
                   isFocused={focusedRound === round.round}
                   isDimmed={focusedRound !== null && focusedRound !== round.round}
                   scoredCount={scoredInRound}

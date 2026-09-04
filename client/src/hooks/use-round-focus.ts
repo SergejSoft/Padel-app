@@ -1,110 +1,91 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseRoundFocusOptions {
-  /** Round to scroll to on load; null when every round is played. */
-  currentRound: number | null;
-  /** True once saved scores are hydrated, so the auto-scroll targets the real current round. */
+  /** Round to scroll to on load (first round with an open game); null when every round is played. */
+  initialRound: number | null;
+  /** True once saved scores are hydrated, so the auto-scroll targets the right round. */
   ready: boolean;
 }
 
-/** Vertical band around the middle of the viewport that "focuses" a round. */
-const BAND_START = 0.45;
-const BAND_END = 0.55;
+/**
+ * Fraction of the viewport height that acts as the "focus line". The focused
+ * round is the last one whose top edge has scrolled above this line, which is
+ * monotonic in the scroll position, so a round changing size when it gains
+ * or loses focus cannot flip the choice back and forth.
+ */
+const FOCUS_LINE = 0.4;
 
 /**
- * Tracks which round section sits in the middle of the viewport and, once per
- * page load, scrolls the current round to the top so the organizer lands on
- * the games being played rather than on round 1.
+ * Scroll spy over the round sections: the organizer picks the current round
+ * by scrolling it into focus. Also scrolls once, on load, to `initialRound`.
  */
-export function useRoundFocus({ currentRound, ready }: UseRoundFocusOptions) {
+export function useRoundFocus({ initialRound, ready }: UseRoundFocusOptions) {
   const elements = useRef(new Map<number, HTMLElement>());
-  const roundOf = useRef(new Map<Element, number>());
   const refCallbacks = useRef(new Map<number, (el: HTMLElement | null) => void>());
-  const observer = useRef<IntersectionObserver | null>(null);
-  const inBand = useRef(new Set<number>());
   const didAutoScroll = useRef(false);
+  const frame = useRef<number | null>(null);
   const [focusedRound, setFocusedRound] = useState<number | null>(null);
+
+  const pickFocused = useCallback(() => {
+    frame.current = null;
+    const rounds = Array.from(elements.current.entries()).sort((a, b) => a[0] - b[0]);
+    if (rounds.length === 0) return;
+
+    const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+    if (atBottom) {
+      setFocusedRound(rounds[rounds.length - 1][0]);
+      return;
+    }
+
+    const line = window.innerHeight * FOCUS_LINE;
+    let focused = rounds[0][0];
+    for (const [round, el] of rounds) {
+      if (el.getBoundingClientRect().top <= line) focused = round;
+      else break;
+    }
+    setFocusedRound(focused);
+  }, []);
+
+  const schedulePick = useCallback(() => {
+    if (frame.current !== null) return;
+    frame.current = window.requestAnimationFrame(pickFocused);
+  }, [pickFocused]);
 
   /** Stable ref callback for a round's <section>; safe to pass on every render. */
   const registerRound = useCallback((round: number) => {
     let cb = refCallbacks.current.get(round);
     if (!cb) {
       cb = (el: HTMLElement | null) => {
-        const prev = elements.current.get(round);
-        if (prev && prev !== el) {
-          observer.current?.unobserve(prev);
-          roundOf.current.delete(prev);
-          inBand.current.delete(round);
-        }
-        if (el) {
-          elements.current.set(round, el);
-          roundOf.current.set(el, round);
-          observer.current?.observe(el);
-        } else {
-          elements.current.delete(round);
-        }
+        if (el) elements.current.set(round, el);
+        else elements.current.delete(round);
+        schedulePick();
       };
       refCallbacks.current.set(round, cb);
     }
     return cb;
-  }, []);
+  }, [schedulePick]);
 
   useEffect(() => {
-    if (typeof IntersectionObserver === "undefined") return;
-
-    const pickFocused = () => {
-      // Several sections can touch the band at once (short sections, the gap
-      // between two rounds); keep the one that covers most of it.
-      const viewport = window.innerHeight;
-      const bandTop = viewport * BAND_START;
-      const bandBottom = viewport * BAND_END;
-      let best: number | null = null;
-      let bestOverlap = 0;
-      inBand.current.forEach((round) => {
-        const el = elements.current.get(round);
-        if (!el) return;
-        const rect = el.getBoundingClientRect();
-        const overlap = Math.min(rect.bottom, bandBottom) - Math.max(rect.top, bandTop);
-        if (overlap > bestOverlap) {
-          best = round;
-          bestOverlap = overlap;
-        }
-      });
-      setFocusedRound(best);
-    };
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const round = roundOf.current.get(entry.target);
-          if (round === undefined) continue;
-          if (entry.isIntersecting) inBand.current.add(round);
-          else inBand.current.delete(round);
-        }
-        pickFocused();
-      },
-      { rootMargin: `-${BAND_START * 100}% 0px -${(1 - BAND_END) * 100}% 0px`, threshold: 0 },
-    );
-    observer.current = io;
-    elements.current.forEach((el) => io.observe(el));
-
+    window.addEventListener("scroll", schedulePick, { passive: true });
+    window.addEventListener("resize", schedulePick);
+    schedulePick();
     return () => {
-      io.disconnect();
-      observer.current = null;
-      inBand.current.clear();
+      window.removeEventListener("scroll", schedulePick);
+      window.removeEventListener("resize", schedulePick);
+      if (frame.current !== null) window.cancelAnimationFrame(frame.current);
     };
-  }, []);
+  }, [schedulePick]);
 
   useEffect(() => {
     if (!ready || didAutoScroll.current) return;
     didAutoScroll.current = true;
     // Round 1 is already at the top of the schedule; nothing to skip past.
-    if (currentRound === null || currentRound <= 1) return;
-    const el = elements.current.get(currentRound);
+    if (initialRound === null || initialRound <= 1) return;
+    const el = elements.current.get(initialRound);
     if (!el) return;
     const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     el.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "smooth" });
-  }, [ready, currentRound]);
+  }, [ready, initialRound]);
 
   return { registerRound, focusedRound };
 }

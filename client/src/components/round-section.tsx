@@ -5,43 +5,30 @@ import { cn } from "@/lib/utils";
 
 export type RoundStatus = "played" | "current" | "upcoming";
 
-export interface RoundStatuses {
-  byRound: Map<number, RoundStatus>;
-  /** Lowest-numbered round that is not fully scored; null once everything is played. */
-  currentRound: number | null;
-  /** The round right after the current one, if any. */
-  upNextRound: number | null;
-}
-
 /**
- * Classify rounds from the saved scores: everything before the first
- * incomplete round is "played", that round is "current", the rest "upcoming".
+ * A round is "played" once every game has a saved score. Among the others,
+ * the one the organizer has scrolled into focus is "current"; the rest are
+ * "upcoming". `firstOpenRound` is where the page scrolls to on load.
  */
 export function deriveRoundStatuses(
   rounds: readonly Round[],
   gameScores: Record<number, unknown>,
-): RoundStatuses {
-  const sorted = [...rounds].sort((a, b) => a.round - b.round);
+  focusedRound: number | null,
+): { byRound: Map<number, RoundStatus>; firstOpenRound: number | null } {
   const byRound = new Map<number, RoundStatus>();
-  let currentRound: number | null = null;
-  let upNextRound: number | null = null;
+  let firstOpenRound: number | null = null;
 
-  for (const round of sorted) {
-    if (currentRound === null) {
-      const played = round.matches.every((match) => gameScores[match.gameNumber] != null);
-      if (played) {
-        byRound.set(round.round, "played");
-      } else {
-        currentRound = round.round;
-        byRound.set(round.round, "current");
-      }
-    } else {
-      if (upNextRound === null) upNextRound = round.round;
-      byRound.set(round.round, "upcoming");
+  for (const round of [...rounds].sort((a, b) => a.round - b.round)) {
+    const played = round.matches.every((match) => gameScores[match.gameNumber] != null);
+    if (played) {
+      byRound.set(round.round, "played");
+      continue;
     }
+    if (firstOpenRound === null) firstOpenRound = round.round;
+    byRound.set(round.round, round.round === focusedRound ? "current" : "upcoming");
   }
 
-  return { byRound, currentRound, upNextRound };
+  return { byRound, firstOpenRound };
 }
 
 /** Classes for one court card and its "Court N" chip, matching the round state. */
@@ -69,8 +56,6 @@ export function roundCardStyles(status: RoundStatus): { card: string; courtChip:
 interface RoundSectionProps {
   round: Round;
   status: RoundStatus;
-  /** First upcoming round: gets the "Up next" label. */
-  isUpNext?: boolean;
   /** The round sitting in the middle of the viewport. */
   isFocused?: boolean;
   /** Another round is focused, so this one steps back a little. */
@@ -107,13 +92,12 @@ const BODY_BY_STATUS: Record<RoundStatus, string> = {
 
 /**
  * One round of the schedule: a status-coloured header plus the court cards
- * passed as children. Played rounds recede into gray, the current round is
- * the single dark element on the page, upcoming rounds are drawn dashed.
+ * passed as children. Played rounds recede into gray, the round scrolled
+ * into focus is the single dark element on the page, the rest are dashed.
  */
 export function RoundSection({
   round,
   status,
-  isUpNext = false,
   isFocused = false,
   isDimmed = false,
   scoredCount,
@@ -162,11 +146,6 @@ export function RoundSection({
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-sm font-semibold text-gray-950 shadow-sm">
             <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse motion-reduce:animate-none" aria-hidden="true" />
             Now playing
-          </span>
-        )}
-        {isUpNext && (
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-200">
-            Up next
           </span>
         )}
         <span
