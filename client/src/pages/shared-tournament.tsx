@@ -13,7 +13,7 @@ import { Footer } from "@/components/footer";
 import type { Round, Tournament } from "@shared/schema";
 import { getSchedulePlayers, getSittingOutPlayers } from "@shared/schedule-utils";
 import { useState, useEffect } from "react";
-import { useAuth as useClerkAuth } from "@clerk/react";
+import { useAuth as useClerkAuth } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
 import { getPublicAppUrl } from "@/lib/public-url";
 import { fetchTournamentView, isTournamentAccessError } from "@/lib/tournament-access";

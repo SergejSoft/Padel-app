@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { UserButton, useClerk } from "@clerk/react";
+import { UserButton, useClerk } from "@/lib/auth";
 import { Link } from "wouter";
 import {
   Calendar,

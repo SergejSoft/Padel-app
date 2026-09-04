@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { useState } from "react";
-import { useAuth as useClerkAuth } from "@clerk/react";
+import { useAuth as useClerkAuth } from "@/lib/auth";
 import { fetchTournamentView, isTournamentAccessError } from "@/lib/tournament-access";
 import { TournamentAccessGate } from "@/components/tournament-access-gate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

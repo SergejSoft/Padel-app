@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Plus, Settings, Users, Calendar, Edit, Crown, Share, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { UserButton, useClerk } from "@clerk/react";
+import { UserButton, useClerk } from "@/lib/auth";
 import { TournamentWizard } from "@/components/tournament-wizard";
 import { EditTournamentModal } from "@/components/edit-tournament-modal";
 import { Footer } from "@/components/footer";

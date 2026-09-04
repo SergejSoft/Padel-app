@@ -1,0 +1,21 @@
+# Local development database. Start with `npm run db:local`.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: padel-postgres
+    environment:
+      POSTGRES_USER: padel
+      POSTGRES_PASSWORD: padel
+      POSTGRES_DB: padel
+    ports:
+      - "5432:5432"
+    volumes:
+      - padel-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U padel -d padel"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  padel-postgres:

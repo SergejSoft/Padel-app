@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Calendar, MapPin, Trophy, Medal, Award, Crown, ArrowLeft, Download } from "lucide-react";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import { Footer } from "@/components/footer";
-import { useAuth as useClerkAuth } from "@clerk/react";
+import { useAuth as useClerkAuth } from "@/lib/auth";
 import { fetchTournamentView, isTournamentAccessError } from "@/lib/tournament-access";
 import { TournamentAccessGate } from "@/components/tournament-access-gate";
 import type { PlayerStats } from "@shared/schema";
