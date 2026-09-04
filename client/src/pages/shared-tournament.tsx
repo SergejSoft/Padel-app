@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, MapPin, Users, Target, Clock, Coffee, Ban, Download, Eye, Trophy, CheckCircle2 } from "lucide-react";
+import { Calendar, MapPin, Users, Target, Clock, Coffee, Ban, Download, Eye, Trophy, CheckCircle2, ArrowLeft } from "lucide-react";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import { PDFPreviewModal } from "@/components/pdf-preview-modal";
 import { ScoreSlider } from "@/components/score-slider";
@@ -172,6 +172,19 @@ export default function SharedTournament() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 md:px-8">
+        {/* Way back for signed-in users; the Manage modal opens this page in a new tab */}
+        {user && (
+          <div className="mb-4 -ml-2">
+            <Link
+              href="/"
+              className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {user.role === "player" ? "Back to My Padel" : "Back to dashboard"}
+            </Link>
+          </div>
+        )}
+
         {/* Status Alert for Cancelled Tournaments */}
         {status === 'cancelled' && (
           <Alert className="mb-6 border-red-200 bg-red-50">
