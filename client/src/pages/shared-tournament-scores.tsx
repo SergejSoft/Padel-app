@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Trophy, Calendar, MapPin, Users, Clock, ArrowLeft } from "lucide-react";
-import { SimpleScoreInput } from "@/components/simple-score-input";
 import { FinalsLeaderboard } from "@/components/finals-leaderboard";
 import { type Tournament, type Match, type Round, type PlayerStats } from "@shared/schema";
 

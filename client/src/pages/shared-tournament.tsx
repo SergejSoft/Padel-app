@@ -4,10 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, MapPin, Users, Target, Clock, Coffee, Ban, Download, Eye, Trophy } from "lucide-react";
+import { Calendar, MapPin, Users, Target, Clock, Coffee, Ban, Download, Eye, Trophy, CheckCircle2 } from "lucide-react";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import { PDFPreviewModal } from "@/components/pdf-preview-modal";
-import { SimpleScoreInput } from "@/components/simple-score-input";
+import { ScoreSlider } from "@/components/score-slider";
 import { FinalsLeaderboard } from "@/components/finals-leaderboard";
 import { Footer } from "@/components/footer";
 import type { Round, Tournament } from "@shared/schema";
@@ -232,62 +232,62 @@ export default function SharedTournament() {
 
         {/* Tournament Stats */}
         {isRegistrationMode ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-3 gap-2 mb-6 sm:gap-4 sm:mb-8">
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="p-3 sm:p-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">{tournament.registeredParticipants?.length || 0}</div>
-                  <div className="text-sm text-gray-600">Registered</div>
+                  <div className="text-xl sm:text-2xl font-bold text-gray-900">{tournament.registeredParticipants?.length || 0}</div>
+                  <div className="text-xs sm:text-sm text-gray-600">Registered</div>
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="p-3 sm:p-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">{tournament.playersCount}</div>
-                  <div className="text-sm text-gray-600">Max Players</div>
+                  <div className="text-xl sm:text-2xl font-bold text-gray-900">{tournament.playersCount}</div>
+                  <div className="text-xs sm:text-sm text-gray-600">Max Players</div>
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="p-3 sm:p-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-xl sm:text-2xl font-bold text-gray-900">
                     {tournament.registrationStatus === 'open' ? 'Open' : 
                      tournament.registrationStatus === 'full' ? 'Full' : 'Closed'}
                   </div>
-                  <div className="text-sm text-gray-600">Registration</div>
+                  <div className="text-xs sm:text-sm text-gray-600">Registration</div>
                 </div>
               </CardContent>
             </Card>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-3 gap-2 mb-6 sm:gap-4 sm:mb-8">
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="p-3 sm:p-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">{schedule.length}</div>
-                  <div className="text-sm text-gray-600">Rounds</div>
+                  <div className="text-xl sm:text-2xl font-bold text-gray-900">{schedule.length}</div>
+                  <div className="text-xs sm:text-sm text-gray-600">Rounds</div>
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="p-3 sm:p-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">{totalGames}</div>
-                  <div className="text-sm text-gray-600">Total Games</div>
+                  <div className="text-xl sm:text-2xl font-bold text-gray-900">{totalGames}</div>
+                  <div className="text-xs sm:text-sm text-gray-600">Total Games</div>
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="p-3 sm:p-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">{gamesPerPlayer}</div>
-                  <div className="text-sm text-gray-600">Games per Player</div>
+                  <div className="text-xl sm:text-2xl font-bold text-gray-900">{gamesPerPlayer}</div>
+                  <div className="text-xs sm:text-sm text-gray-600">Games per Player</div>
                 </div>
               </CardContent>
             </Card>
@@ -395,28 +395,61 @@ export default function SharedTournament() {
               <div className="space-y-6">
                 {schedule.map((round) => {
                 const sittingOut = getSittingOutPlayers(round, roster);
+                const scoredInRound = round.matches.filter(match => gameScores[match.gameNumber]).length;
                 return (
-                <div key={round.round} className="border-l-2 border-gray-200 pl-6">
-                  <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <h3 className="text-lg font-semibold text-gray-900">Round {round.round}</h3>
+                <section
+                  key={round.round}
+                  className="overflow-hidden rounded-xl border border-gray-200 shadow-sm"
+                  aria-label={`Round ${round.round}`}
+                >
+                  <header className="flex flex-wrap items-center gap-x-3 gap-y-1 bg-gray-900 px-3 py-2 text-white sm:px-4">
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-sm font-bold text-gray-900">
+                      {round.round}
+                    </span>
+                    <h3 className="text-base font-semibold sm:text-lg">Round {round.round}</h3>
+                    <span className="ml-auto inline-flex items-center gap-1 text-xs text-gray-300 sm:text-sm">
+                      {scoredInRound === round.matches.length ? (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 text-green-400" />
+                          Complete
+                        </>
+                      ) : (
+                        `${scoredInRound}/${round.matches.length} scored`
+                      )}
+                    </span>
                     {sittingOut.length > 0 && (
                       <span
-                        className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-200"
+                        className="inline-flex w-full items-center gap-1 rounded-full bg-amber-400/20 px-2.5 py-0.5 text-xs font-medium text-amber-200 ring-1 ring-inset ring-amber-400/40 sm:w-auto"
                         title="These players rest this round"
                       >
                         <Coffee className="h-3 w-3" />
                         Sitting out: {sittingOut.join(", ")}
                       </span>
                     )}
-                  </div>
-                  <div className="grid gap-3">
+                  </header>
+                  <div className="grid gap-2 bg-white p-2 sm:gap-3 sm:p-3">
                     {round.matches.map((match, matchIndex) => (
-                      <div key={matchIndex} className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                          <div className="flex items-start gap-2 sm:items-center sm:space-x-4 flex-1 min-w-0">
-                            <div className="bg-white rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-gray-700 flex-shrink-0">
-                              Court {match.court}
-                            </div>
+                      <div key={matchIndex} className="rounded-lg bg-gray-50 p-2.5 ring-1 ring-inset ring-gray-100 sm:p-4">
+                        <div className="mb-2 flex items-center gap-2">
+                          <div className="bg-white rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-gray-700 flex-shrink-0">
+                            Court {match.court}
+                          </div>
+                          <span className="text-xs text-gray-500">Game {match.gameNumber}</span>
+                        </div>
+                        {canEditScores() ? (
+                          <ScoreSlider
+                            team1={match.team1}
+                            team2={match.team2}
+                            score={gameScores[match.gameNumber] ?? null}
+                            pointsPerMatch={tournament.pointsPerMatch}
+                            gameNumber={match.gameNumber}
+                            tournamentId={tournament.id}
+                            onScoreChange={(team1Score, team2Score) =>
+                              handleScoreChange(match.gameNumber, team1Score, team2Score)
+                            }
+                          />
+                        ) : (
+                          <div className="flex items-center justify-between gap-3">
                             <div className="text-gray-900 flex-1 min-w-0">
                               <div className="flex flex-col gap-1 lg:block">
                                 <span className="font-medium text-sm sm:text-base">{match.team1[0]} & {match.team1[1]}</span>
@@ -424,36 +457,17 @@ export default function SharedTournament() {
                                 <span className="font-medium text-sm sm:text-base">{match.team2[0]} & {match.team2[1]}</span>
                               </div>
                             </div>
+                            <div className="bg-gray-100 rounded px-3 py-2 text-sm text-gray-600 flex-shrink-0 tabular-nums">
+                              {gameScores[match.gameNumber]
+                                ? `${gameScores[match.gameNumber].team1Score} - ${gameScores[match.gameNumber].team2Score}`
+                                : "–"}
+                            </div>
                           </div>
-                          <div className="flex-shrink-0 self-end md:self-center">
-                            {canEditScores() ? (
-                              <SimpleScoreInput
-                                team1={match.team1}
-                                team2={match.team2}
-                                team1Score={gameScores[match.gameNumber]?.team1Score || 0}
-                                team2Score={gameScores[match.gameNumber]?.team2Score || 0}
-                                onScoreChange={(team1Score, team2Score) => 
-                                  handleScoreChange(match.gameNumber, team1Score, team2Score)
-                                }
-                                gameNumber={match.gameNumber}
-                                tournamentId={tournament.id}
-                                pointsPerMatch={tournament.pointsPerMatch}
-                              />
-                            ) : (
-                              <div className="bg-gray-100 rounded px-3 py-2 text-sm text-gray-600">
-                                <div className="flex items-center gap-2">
-                                  <span>{gameScores[match.gameNumber]?.team1Score || 0}</span>
-                                  <span>-</span>
-                                  <span>{gameScores[match.gameNumber]?.team2Score || 0}</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                        )}
                       </div>
                     ))}
                   </div>
-                </div>
+                </section>
                 );
               })}
             </div>
