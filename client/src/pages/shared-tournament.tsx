@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, MapPin, Users, Target, Clock, Coffee, Ban, Download, Eye, Trophy, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Calendar, MapPin, Users, Target, Clock, Coffee, Ban, Download, Eye, Trophy, CheckCircle2, ChevronLeft } from "lucide-react";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import { PDFPreviewModal } from "@/components/pdf-preview-modal";
 import { ScoreSlider } from "@/components/score-slider";
@@ -174,13 +174,13 @@ export default function SharedTournament() {
       <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 md:px-8">
         {/* Way back for signed-in users; the Manage modal opens this page in a new tab */}
         {user && (
-          <div className="mb-4 -ml-2">
+          <div className="mb-3 -ml-1.5">
             <Link
               href="/"
-              className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
+              className="inline-flex min-h-11 items-center gap-0.5 rounded-lg pr-3 pl-1 text-[17px] font-normal text-blue-600 transition-opacity active:opacity-50 hover:opacity-70"
             >
-              <ArrowLeft className="h-4 w-4" />
-              {user.role === "player" ? "Back to My Padel" : "Back to dashboard"}
+              <ChevronLeft className="h-6 w-6 stroke-[2.25]" />
+              {user.role === "player" ? "My Padel" : "Dashboard"}
             </Link>
           </div>
         )}
@@ -490,6 +490,15 @@ export default function SharedTournament() {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+          {canEditScores() && allGamesHaveScores() && (
+            <Button
+              onClick={() => setShowLeaderboard(true)}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold"
+            >
+              <Trophy className="h-4 w-4 mr-2" />
+              View Leaderboard
+            </Button>
+          )}
           {!isRegistrationMode && (
             <>
               <Button 
