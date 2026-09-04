@@ -5,6 +5,7 @@ import { setupAuth, getUserId, isAuthenticated, isAdmin, isOrganizer, isOwnerOrA
 import { clerkClient } from "@clerk/express";
 import { z } from "zod";
 import { rateLimit } from "express-rate-limit";
+import { isRegisteredParticipant } from "./participant-query.js";
 
 const registrationRateLimit = rateLimit({
   windowMs: 60_000,
@@ -67,6 +68,41 @@ async function canManageTournament(req: any, tournament: any): Promise<boolean> 
   if (!userId) return false;
   if (tournament.organizerId === userId) return true;
   return (await storage.getUser(userId))?.role === "admin";
+}
+
+type TournamentAccess =
+  | { canView: true; canEdit: boolean }
+  | { canView: false; canEdit: false; status: 401 | 403; code: "sign_in_required" | "not_participant" };
+
+/**
+ * Schedules, scores and results are visible only to the organizer, admins,
+ * and signed-in players who hold a registration in that tournament.
+ */
+async function getTournamentAccess(req: any, tournament: any): Promise<TournamentAccess> {
+  const userId = getUserId(req);
+  if (!userId) return { canView: false, canEdit: false, status: 401, code: "sign_in_required" };
+
+  if (tournament.organizerId === userId) return { canView: true, canEdit: true };
+
+  // First visit after sign-in may land here before /api/auth/user has synced
+  // the profile; resolve the user (and their email) rather than treating a
+  // registered player as a stranger.
+  const user = await getOrCreateUser(userId);
+  if (user.role === "admin") return { canView: true, canEdit: true };
+
+  if (isRegisteredParticipant(tournament.registeredParticipants, userId, user.email)) {
+    return { canView: true, canEdit: false };
+  }
+
+  return { canView: false, canEdit: false, status: 403, code: "not_participant" };
+}
+
+/** Sends the access-denied response; the body carries only the tournament name. */
+function denyTournamentAccess(res: any, access: Extract<TournamentAccess, { canView: false }>, tournament: any) {
+  const message = access.code === "sign_in_required"
+    ? "Sign in to view this tournament"
+    : "Only players registered in this tournament, its organizer, and admins can view it";
+  return res.status(access.status).json({ error: message, code: access.code, tournamentName: tournament.name });
 }
 
 export async function registerRoutes(app: Express): Promise<void> {
@@ -411,10 +447,13 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!tournament) {
         return res.status(404).json({ error: "Shared tournament not found" });
       }
+
+      const access = await getTournamentAccess(req, tournament);
+      if (!access.canView) return denyTournamentAccess(res, access, tournament);
       
       res.json({
         ...toPublicTournament(tournament),
-        canEdit: await canManageTournament(req, tournament),
+        canEdit: access.canEdit,
       });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -460,6 +499,9 @@ export async function registerRoutes(app: Express): Promise<void> {
         return res.status(404).json({ error: "Leaderboard not found" });
       }
 
+      const access = await getTournamentAccess(req, tournament);
+      if (!access.canView) return denyTournamentAccess(res, access, tournament);
+
       if (tournament.status !== 'completed' || !tournament.results) {
         return res.status(404).json({ error: "Tournament results not available" });
       }
@@ -498,6 +540,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       if (!tournament) {
         return res.status(404).json({ error: "Tournament not found" });
       }
+
+      const access = await getTournamentAccess(req, tournament);
+      if (!access.canView) return denyTournamentAccess(res, access, tournament);
       
       // Return tournament with finalScores and results
       res.json({
@@ -506,7 +551,7 @@ export async function registerRoutes(app: Express): Promise<void> {
           finalScores: tournament.finalScores || [],
           results: tournament.results || []
         }),
-        canEdit: await canManageTournament(req, tournament),
+        canEdit: access.canEdit,
       });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
@@ -727,7 +772,9 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       res.json(tournament);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      // Refusing to convert (already scheduled / too few players) is a
+      // conflict with the current state, not a server failure.
+      res.status(409).json({ error: error.message });
     }
   });
 

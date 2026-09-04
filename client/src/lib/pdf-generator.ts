@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import type { Round } from "@shared/schema";
+import { getSchedulePlayers, getSittingOutPlayers } from "@shared/schedule-utils";
 
 export interface PDFConfig {
   tournamentName: string;
@@ -10,6 +11,26 @@ export interface PDFConfig {
   courtsCount: number;
   pointsPerMatch?: number;
   rounds: Round[];
+  /** Full roster, including players who only rest in some rounds. */
+  players?: string[];
+}
+
+/** Roster to print: the tournament's list when known, else derived from matches. */
+function resolveRoster({ players, rounds }: PDFConfig): string[] {
+  return players && players.length > 0 ? players : getSchedulePlayers(rounds);
+}
+
+/**
+ * Black header cell with white centred label. jsPDF's text() writes the text
+ * colour as the current fill colour, so the fill must be reset per cell or
+ * every header after the first is drawn white-on-white.
+ */
+function drawHeaderCell(pdf: jsPDF, x: number, y: number, width: number, height: number, label: string): void {
+  pdf.setFillColor(0, 0, 0);
+  pdf.setDrawColor(0, 0, 0);
+  pdf.rect(x, y, width, height, 'FD');
+  pdf.setTextColor(255, 255, 255);
+  pdf.text(label, x + width / 2, y + height / 2 + 1.3, { align: 'center' });
 }
 
 export function generateTournamentPDF(config: PDFConfig): jsPDF {
@@ -19,7 +40,9 @@ export function generateTournamentPDF(config: PDFConfig): jsPDF {
   return pdf;
 }
 
-function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, pointsPerMatch, rounds }: PDFConfig): jsPDF {
+function generateSchedulePDF(config: PDFConfig): jsPDF {
+  const { tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, pointsPerMatch, rounds } = config;
+  const roster = resolveRoster(config);
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.width;
   const pageHeight = pdf.internal.pageSize.height;
@@ -74,28 +97,15 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
   
   pdf.setFontSize(10);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFillColor(0, 0, 0); // Black background for headers
-  pdf.setTextColor(255, 255, 255); // White text
-  pdf.setDrawColor(0, 0, 0);
   
   let currentX = tableStartX;
   const headerHeight = 6;
   
   // Draw header
-  pdf.rect(currentX, yPosition, colWidths[0], headerHeight, 'FD');
-  pdf.text('Round', currentX + colWidths[0]/2, yPosition + 4, { align: 'center' });
-  currentX += colWidths[0];
-  
-  pdf.rect(currentX, yPosition, colWidths[1], headerHeight, 'FD');
-  pdf.text('Court', currentX + colWidths[1]/2, yPosition + 4, { align: 'center' });
-  currentX += colWidths[1];
-  
-  pdf.rect(currentX, yPosition, colWidths[2], headerHeight, 'FD');
-  pdf.text('Match', currentX + colWidths[2]/2, yPosition + 4, { align: 'center' });
-  currentX += colWidths[2];
-  
-  pdf.rect(currentX, yPosition, colWidths[3], headerHeight, 'FD');
-  pdf.text('Score', currentX + colWidths[3]/2, yPosition + 4, { align: 'center' });
+  ['Round', 'Court', 'Match', 'Score'].forEach((label, index) => {
+    drawHeaderCell(pdf, currentX, yPosition, colWidths[index], headerHeight, label);
+    currentX += colWidths[index];
+  });
   
   yPosition += headerHeight;
   
@@ -104,15 +114,22 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
   pdf.setFontSize(9);
   pdf.setTextColor(0, 0, 0); // Reset to black text for table body
   
+  const rowHeight = 7;
+  const sitOutRowHeight = 5;
+  const roundGap = 2;
+
   rounds.forEach((round) => {
+    const sittingOut = getSittingOutPlayers(round, roster);
+    const roundBlockHeight =
+      round.matches.length * rowHeight + (sittingOut.length > 0 ? sitOutRowHeight : 0) + roundGap;
+
+    // Keep each round together on one page
+    if (yPosition + roundBlockHeight > pageHeight - margin) {
+      pdf.addPage();
+      yPosition = margin;
+    }
+
     round.matches.forEach((match, matchIndex) => {
-      // Check if we need a new page - more generous threshold to keep on single page
-      if (yPosition + 8 > pageHeight - margin - 10) {
-        pdf.addPage();
-        yPosition = margin + 20;
-      }
-      
-      const rowHeight = 8;
       currentX = tableStartX;
       
       // Round number (only show for first match of round)
@@ -120,14 +137,14 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
       pdf.rect(currentX, yPosition, colWidths[0], rowHeight, 'S');
       if (matchIndex === 0) {
         pdf.setFont('helvetica', 'bold');
-        pdf.text(`${round.round}`, currentX + colWidths[0]/2, yPosition + 5.5, { align: 'center' });
+        pdf.text(`${round.round}`, currentX + colWidths[0]/2, yPosition + 5, { align: 'center' });
         pdf.setFont('helvetica', 'normal');
       }
       currentX += colWidths[0];
       
       // Court
       pdf.rect(currentX, yPosition, colWidths[1], rowHeight, 'S');
-      pdf.text(`${match.court}`, currentX + colWidths[1]/2, yPosition + 5.5, { align: 'center' });
+      pdf.text(`${match.court}`, currentX + colWidths[1]/2, yPosition + 5, { align: 'center' });
       currentX += colWidths[1];
       
       // Match details
@@ -141,18 +158,34 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
       const displayText = matchText.length > maxMatchLength ? 
         matchText.substring(0, maxMatchLength - 3) + '...' : matchText;
       
-      pdf.text(displayText, currentX + 2, yPosition + 5.5);
+      pdf.text(displayText, currentX + 2, yPosition + 5);
       currentX += colWidths[2];
       
       // Score column (empty for filling in)
       pdf.rect(currentX, yPosition, colWidths[3], rowHeight, 'S');
-      pdf.text('___ - ___', currentX + colWidths[3]/2, yPosition + 5.5, { align: 'center' });
+      pdf.text('___ - ___', currentX + colWidths[3]/2, yPosition + 5, { align: 'center' });
       
       yPosition += rowHeight;
     });
+
+    // Who rests this round
+    if (sittingOut.length > 0) {
+      pdf.setFillColor(255, 251, 235);
+      pdf.setDrawColor(200, 200, 200);
+      pdf.rect(tableStartX, yPosition, totalTableWidth, sitOutRowHeight, 'FD');
+      pdf.setFont('helvetica', 'italic');
+      pdf.setTextColor(120, 83, 9);
+      pdf.text(
+        `Sitting out: ${sittingOut.join(', ')}`,
+        tableStartX + colWidths[0] + colWidths[1] + 2,
+        yPosition + 3.6,
+      );
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(0, 0, 0);
+      yPosition += sitOutRowHeight;
+    }
     
-    // Add small gap between rounds
-    yPosition += 3;
+    yPosition += roundGap;
   });
 
 
@@ -160,7 +193,9 @@ function generateSchedulePDF({ tournamentName, tournamentDate, tournamentLocatio
   return pdf;
 }
 
-function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, pointsPerMatch, rounds }: PDFConfig): void {
+function generateScorecardPDF(pdf: jsPDF, config: PDFConfig): void {
+  const { tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, pointsPerMatch, rounds } = config;
+  const roster = resolveRoster(config);
   // Add new page for scorecard
   pdf.addPage();
   
@@ -201,15 +236,9 @@ function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tour
   pdf.text(`${playersCount} Players • ${courtsCount} Courts`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 10;
 
-  // Extract all unique players
-  const allPlayers = new Set<string>();
-  rounds.forEach(round => {
-    round.matches.forEach(match => {
-      match.team1.forEach(player => allPlayers.add(player));
-      match.team2.forEach(player => allPlayers.add(player));
-    });
-  });
-  const players = Array.from(allPlayers).sort();
+  const players = [...roster].sort();
+  // Per-round set of resting players, so "rest" cells can be marked
+  const restingByRound = rounds.map(round => new Set(getSittingOutPlayers(round, roster)));
 
   // Create scorecard table
   const totalRounds = rounds.length;
@@ -219,28 +248,16 @@ function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tour
   
   pdf.setFontSize(10);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFillColor(0, 0, 0); // Black background for headers
-  pdf.setTextColor(255, 255, 255); // White text
-  pdf.setDrawColor(0, 0, 0);
   
   let currentX = tableStartX;
   const headerHeight = 8;
   
-  // Draw headers
-  pdf.rect(currentX, yPosition, colWidths[0], headerHeight, 'FD');
-  pdf.text('Player', currentX + colWidths[0]/2, yPosition + 5.5, { align: 'center' });
-  currentX += colWidths[0];
-  
-  // Round headers
-  for (let i = 1; i <= totalRounds; i++) {
-    pdf.rect(currentX, yPosition, colWidths[i], headerHeight, 'FD');
-    pdf.text(`${i}`, currentX + colWidths[i]/2, yPosition + 5.5, { align: 'center' });
-    currentX += colWidths[i];
-  }
-  
-  // Total header
-  pdf.rect(currentX, yPosition, colWidths[colWidths.length - 1], headerHeight, 'FD');
-  pdf.text('Total', currentX + colWidths[colWidths.length - 1]/2, yPosition + 5.5, { align: 'center' });
+  // Draw headers: Player, one column per round, Total
+  const headerLabels = ['Player', ...Array.from({ length: totalRounds }, (_, i) => `${i + 1}`), 'Total'];
+  headerLabels.forEach((label, index) => {
+    drawHeaderCell(pdf, currentX, yPosition, colWidths[index], headerHeight, label);
+    currentX += colWidths[index];
+  });
   
   yPosition += headerHeight;
   
@@ -267,10 +284,21 @@ function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tour
     pdf.text(player, currentX + 2, yPosition + 7.5);
     currentX += colWidths[0];
     
-    // Round scores (empty for manual entry)
+    // Round scores (empty for manual entry; greyed out when the player rests)
     for (let i = 1; i <= totalRounds; i++) {
-      pdf.rect(currentX, yPosition, colWidths[i], rowHeight, 'S');
-      pdf.text('___', currentX + colWidths[i]/2, yPosition + 7.5, { align: 'center' });
+      const rests = restingByRound[i - 1]?.has(player);
+      if (rests) {
+        pdf.setFillColor(240, 240, 240);
+        pdf.rect(currentX, yPosition, colWidths[i], rowHeight, 'FD');
+        pdf.setTextColor(150, 150, 150);
+        pdf.setFontSize(7);
+        pdf.text('rest', currentX + colWidths[i]/2, yPosition + 7.5, { align: 'center' });
+        pdf.setFontSize(9);
+        pdf.setTextColor(0, 0, 0);
+      } else {
+        pdf.rect(currentX, yPosition, colWidths[i], rowHeight, 'S');
+        pdf.text('___', currentX + colWidths[i]/2, yPosition + 7.5, { align: 'center' });
+      }
       currentX += colWidths[i];
     }
     
@@ -283,21 +311,11 @@ function generateScorecardPDF(pdf: jsPDF, { tournamentName, tournamentDate, tour
 
 }
 
-export function generatePDFPreviewHTML({ tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, pointsPerMatch, rounds }: PDFConfig): string {
-  const totalGames = rounds.reduce((sum, round) => sum + round.matches.length, 0);
-  // Calculate average game length: 1.5 hours total / 7 rounds = ~13 minutes per game
-  const totalMinutes = 90; // 1.5 hours
-  const avgGameMinutes = Math.round(totalMinutes / rounds.length);
-
-  // Extract all unique players for scorecard
-  const allPlayers = new Set<string>();
-  rounds.forEach(round => {
-    round.matches.forEach(match => {
-      match.team1.forEach(player => allPlayers.add(player));
-      match.team2.forEach(player => allPlayers.add(player));
-    });
-  });
-  const players = Array.from(allPlayers).sort();
+export function generatePDFPreviewHTML(config: PDFConfig): string {
+  const { tournamentName, tournamentDate, tournamentLocation, playersCount, courtsCount, pointsPerMatch, rounds } = config;
+  const roster = resolveRoster(config);
+  const players = [...roster].sort();
+  const restingByRound = rounds.map(round => new Set(getSittingOutPlayers(round, roster)));
 
   return `
     <div style="font-family: 'Inter', sans-serif; background: white; color: black; line-height: 1.5;">
@@ -320,8 +338,8 @@ export function generatePDFPreviewHTML({ tournamentName, tournamentDate, tournam
           </tr>
         </thead>
         <tbody>
-          ${rounds.map(round => 
-            round.matches.map((match, matchIndex) => {
+          ${rounds.map((round, roundIndex) => {
+            const matchRows = round.matches.map((match, matchIndex) => {
               const team1Text = `${match.team1[0]} & ${match.team1[1]}`;
               const team2Text = `${match.team2[0]} & ${match.team2[1]}`;
               const matchText = `${team1Text} vs ${team2Text}`;
@@ -336,8 +354,19 @@ export function generatePDFPreviewHTML({ tournamentName, tournamentDate, tournam
                   <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">___ - ___</td>
                 </tr>
               `;
-            }).join('')
-          ).join('')}
+            }).join('');
+
+            const sittingOut = Array.from(restingByRound[roundIndex] ?? []);
+            const sitOutRow = sittingOut.length > 0 ? `
+                <tr>
+                  <td colspan="4" style="border: 1px solid #ccc; padding: 6px 8px; background-color: #fffbeb; color: #78530a; font-style: italic;">
+                    Sitting out: ${sittingOut.join(', ')}
+                  </td>
+                </tr>
+              ` : '';
+
+            return matchRows + sitOutRow;
+          }).join('')}
         </tbody>
       </table>
 
@@ -361,7 +390,10 @@ export function generatePDFPreviewHTML({ tournamentName, tournamentDate, tournam
           ${players.map((player: string) => `
             <tr>
               <td style="border: 1px solid #ccc; padding: 8px; font-weight: bold; background-color: #fafafa;">${player}</td>
-              ${rounds.map(() => '<td style="border: 1px solid #ccc; padding: 8px; text-align: center;">___</td>').join('')}
+              ${rounds.map((_, roundIndex) => restingByRound[roundIndex]?.has(player)
+                ? '<td style="border: 1px solid #ccc; padding: 8px; text-align: center; background-color: #f0f0f0; color: #999; font-size: 10px;">rest</td>'
+                : '<td style="border: 1px solid #ccc; padding: 8px; text-align: center;">___</td>'
+              ).join('')}
               <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">___</td>
             </tr>
           `).join('')}

@@ -6,7 +6,7 @@ export function setAuthTokenProvider(provider: (() => Promise<string | null>) | 
   tokenProvider = provider;
 }
 
-async function buildHeaders(hasBody = false): Promise<Record<string, string>> {
+export async function buildHeaders(hasBody = false): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
   if (hasBody) headers["Content-Type"] = "application/json";
 

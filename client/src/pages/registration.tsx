@@ -316,6 +316,13 @@ export default function RegistrationPage() {
                       : "Registration for this tournament is no longer available"
                     }
                   </p>
+                  {registrationInfo.schedulePath && (
+                    <Button asChild className="mt-6">
+                      <a href={registrationInfo.schedulePath}>
+                        View match schedule
+                      </a>
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>

@@ -7,6 +7,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Calendar, MapPin, Trophy, Medal, Award, Crown, ArrowLeft, Download } from "lucide-react";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import { Footer } from "@/components/footer";
+import { useAuth as useClerkAuth } from "@clerk/react";
+import { fetchTournamentView, isTournamentAccessError } from "@/lib/tournament-access";
+import { TournamentAccessGate } from "@/components/tournament-access-gate";
 import type { PlayerStats } from "@shared/schema";
 
 interface LeaderboardData {
@@ -26,16 +29,12 @@ interface LeaderboardData {
 export default function Leaderboard() {
   const { leaderboardId } = useParams();
 
+  const { isLoaded: authLoaded } = useClerkAuth();
+
   const { data: leaderboardData, isLoading, error } = useQuery<LeaderboardData>({
     queryKey: ['/api/leaderboard', leaderboardId],
-    queryFn: async () => {
-      const response = await fetch(`/api/leaderboard/${leaderboardId}`);
-      if (!response.ok) {
-        throw new Error('Leaderboard not found');
-      }
-      return response.json();
-    },
-    enabled: !!leaderboardId,
+    queryFn: () => fetchTournamentView<LeaderboardData>(`/api/leaderboard/${leaderboardId}`),
+    enabled: !!leaderboardId && authLoaded,
   });
 
   const handleDownloadPDF = () => {
@@ -55,7 +54,7 @@ export default function Leaderboard() {
     pdf.save(`${leaderboardData.tournamentName.replace(/\s+/g, '_')}_final_results.pdf`);
   };
 
-  if (isLoading) {
+  if (isLoading || !authLoaded) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
@@ -64,6 +63,10 @@ export default function Leaderboard() {
         </div>
       </div>
     );
+  }
+
+  if (isTournamentAccessError(error)) {
+    return <TournamentAccessGate error={error} />;
   }
 
   if (error || !leaderboardData) {

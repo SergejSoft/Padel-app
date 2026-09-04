@@ -14,6 +14,7 @@ interface PDFPreviewModalProps {
   courtsCount: number;
   pointsPerMatch?: number;
   rounds: Round[];
+  players?: string[];
   onDownload: () => void;
 }
 
@@ -27,6 +28,7 @@ export function PDFPreviewModal({
   courtsCount,
   pointsPerMatch,
   rounds,
+  players,
   onDownload,
 }: PDFPreviewModalProps) {
   const previewHTML = generatePDFPreviewHTML({
@@ -37,6 +39,7 @@ export function PDFPreviewModal({
     courtsCount,
     pointsPerMatch,
     rounds,
+    players,
   });
 
   return (

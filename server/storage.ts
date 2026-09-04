@@ -673,8 +673,11 @@ export class DatabaseStorage implements IStorage {
     if (!tournament) return null;
 
     const currentParticipants = tournament.registeredParticipants || [];
-    
+    const hasSchedule = Array.isArray(tournament.schedule) && tournament.schedule.length > 0;
+    const publicId = tournament.urlSlug || tournament.shareId;
+
     return {
+      schedulePath: hasSchedule && publicId ? `/shared/${publicId}` : undefined,
       tournamentId: tournament.id,
       tournamentName: tournament.name,
       date: tournament.date || '',
@@ -722,11 +725,23 @@ export class DatabaseStorage implements IStorage {
     const tournament = await this.getTournament(tournamentId);
     if (!tournament) return undefined;
 
-    // Convert registered participants to players array
+    // Converting twice would regenerate the schedule and orphan any scores
+    // already recorded against the first one.
+    const hasSchedule = Array.isArray(tournament.schedule) && tournament.schedule.length > 0;
+    if (tournament.tournamentMode !== TOURNAMENT_CONFIG.TOURNAMENT_MODE.SELF_REGISTRATION || hasSchedule) {
+      throw new Error('This tournament already has a schedule. Edit players in Manage if you need to regenerate it.');
+    }
+
+    // Convert registered participants to players array. The registration
+    // list itself is left untouched so sign-up data is never lost.
     const participants = tournament.registeredParticipants || [];
     const playerNames = participants
       .filter(p => p.status === 'registered' || p.status === 'confirmed')
       .map(p => p.name);
+
+    if (playerNames.length < TOURNAMENT_CONFIG.MIN_PLAYERS) {
+      throw new Error(`At least ${TOURNAMENT_CONFIG.MIN_PLAYERS} registered players are required to generate a schedule.`);
+    }
 
     // Generate the tournament schedule
     const config: AmericanFormatConfig = {

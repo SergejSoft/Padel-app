@@ -4,17 +4,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Calendar, MapPin, Users, Target, Clock, Ban, Download, Eye, Trophy, Home, LayoutDashboard } from "lucide-react";
+import { Calendar, MapPin, Users, Target, Clock, Coffee, Ban, Download, Eye, Trophy } from "lucide-react";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import { PDFPreviewModal } from "@/components/pdf-preview-modal";
 import { SimpleScoreInput } from "@/components/simple-score-input";
 import { FinalsLeaderboard } from "@/components/finals-leaderboard";
 import { Footer } from "@/components/footer";
 import type { Round, Tournament } from "@shared/schema";
+import { getSchedulePlayers, getSittingOutPlayers } from "@shared/schedule-utils";
 import { useState, useEffect } from "react";
+import { useAuth as useClerkAuth } from "@clerk/react";
 import { useAuth } from "@/hooks/useAuth";
-import { apiRequest } from "@/lib/queryClient";
 import { getPublicAppUrl } from "@/lib/public-url";
+import { fetchTournamentView, isTournamentAccessError } from "@/lib/tournament-access";
+import { TournamentAccessGate } from "@/components/tournament-access-gate";
 
 type PublicTournament = Tournament & { canEdit?: boolean };
 
@@ -24,14 +27,14 @@ export default function SharedTournament() {
   const [gameScores, setGameScores] = useState<Record<number, { team1Score: number; team2Score: number }>>({});
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const { user } = useAuth();
+  const { isLoaded: authLoaded } = useClerkAuth();
 
+  // Wait for Clerk so the request carries the session token; otherwise a
+  // signed-in player would be treated as anonymous and asked to sign in.
   const { data: tournament, isLoading, error } = useQuery<PublicTournament>({
     queryKey: ['/api/shared', shareId],
-    queryFn: async () => {
-      const response = await apiRequest("GET", `/api/shared/${shareId}`);
-      return response.json();
-    },
-    enabled: !!shareId,
+    queryFn: () => fetchTournamentView<PublicTournament>(`/api/shared/${shareId}`),
+    enabled: !!shareId && authLoaded,
   });
 
   useEffect(() => {
@@ -45,7 +48,7 @@ export default function SharedTournament() {
     setGameScores(scores);
   }, [tournament?.finalScores]);
 
-  if (isLoading) {
+  if (isLoading || !authLoaded) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
@@ -54,6 +57,10 @@ export default function SharedTournament() {
         </div>
       </div>
     );
+  }
+
+  if (isTournamentAccessError(error)) {
+    return <TournamentAccessGate error={error} />;
   }
 
   if (error || !tournament) {
@@ -85,6 +92,9 @@ export default function SharedTournament() {
   const schedule: Round[] = !isRegistrationMode && Array.isArray(tournament.schedule)
     ? tournament.schedule as Round[]
     : [];
+
+  // Full roster; older records may lack `players`, so derive it from the schedule.
+  const roster: string[] = tournament.players?.length ? tournament.players : getSchedulePlayers(schedule);
 
   const totalGames = schedule.length > 0 ? schedule.reduce((sum, round) => sum + round.matches.length, 0) : 0;
   const gamesPerPlayer = tournament.playersCount > 0 ? Math.floor(totalGames * 4 / tournament.playersCount) : 0;
@@ -143,6 +153,20 @@ export default function SharedTournament() {
   const allGamesHaveScores = () => {
     const totalMatches = schedule.reduce((sum, round) => sum + round.matches.length, 0);
     return Object.keys(gameScores).length === totalMatches;
+  };
+
+  const downloadSchedulePDF = () => {
+    const pdf = generateTournamentPDF({
+      tournamentName: tournament.name,
+      tournamentDate: tournament.date ?? "",
+      tournamentLocation: tournament.location ?? "",
+      playersCount: tournament.playersCount,
+      courtsCount: tournament.courtsCount,
+      pointsPerMatch: tournament.pointsPerMatch,
+      rounds: schedule,
+      players: roster,
+    });
+    pdf.save(`${tournament.name.replace(/\s+/g, '_')}_schedule.pdf`);
   };
 
   return (
@@ -289,7 +313,7 @@ export default function SharedTournament() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-blue-800 text-sm">
                 <Eye className="h-4 w-4 inline mr-2" />
-                You're viewing this tournament as a guest. Only the organizer can update scores.
+                You're viewing this tournament as a player. Only the organizer can update scores.
               </p>
             </div>
           </div>
@@ -369,9 +393,22 @@ export default function SharedTournament() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {schedule.map((round) => (
+                {schedule.map((round) => {
+                const sittingOut = getSittingOutPlayers(round, roster);
+                return (
                 <div key={round.round} className="border-l-2 border-gray-200 pl-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Round {round.round}</h3>
+                  <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <h3 className="text-lg font-semibold text-gray-900">Round {round.round}</h3>
+                    {sittingOut.length > 0 && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-200"
+                        title="These players rest this round"
+                      >
+                        <Coffee className="h-3 w-3" />
+                        Sitting out: {sittingOut.join(", ")}
+                      </span>
+                    )}
+                  </div>
                   <div className="grid gap-3">
                     {round.matches.map((match, matchIndex) => (
                       <div key={matchIndex} className="bg-gray-50 rounded-lg p-3 sm:p-4">
@@ -417,7 +454,8 @@ export default function SharedTournament() {
                     ))}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -435,18 +473,7 @@ export default function SharedTournament() {
                 Preview Schedule
               </Button>
               <Button 
-                onClick={() => {
-                  const pdf = generateTournamentPDF({
-                    tournamentName: tournament.name,
-                    tournamentDate: tournament.date ?? "",
-                    tournamentLocation: tournament.location ?? "",
-                    playersCount: tournament.playersCount,
-                    courtsCount: tournament.courtsCount,
-                    pointsPerMatch: tournament.pointsPerMatch,
-                    rounds: schedule,
-                  });
-                  pdf.save(`${tournament.name.replace(/\s+/g, '_')}_schedule.pdf`);
-                }}
+                onClick={downloadSchedulePDF}
                 variant="outline"
                 className="flex items-center gap-2"
               >
@@ -475,18 +502,8 @@ export default function SharedTournament() {
         courtsCount={tournament.courtsCount}
         pointsPerMatch={tournament.pointsPerMatch}
         rounds={schedule}
-        onDownload={() => {
-          const pdf = generateTournamentPDF({
-            tournamentName: tournament.name,
-            tournamentDate: tournament.date ?? "",
-            tournamentLocation: tournament.location ?? "",
-            playersCount: tournament.playersCount,
-            courtsCount: tournament.courtsCount,
-            pointsPerMatch: tournament.pointsPerMatch,
-            rounds: schedule,
-          });
-          pdf.save(`${tournament.name.replace(/\s+/g, '_')}_schedule.pdf`);
-        }}
+        players={roster}
+        onDownload={downloadSchedulePDF}
       />
 
       <FinalsLeaderboard

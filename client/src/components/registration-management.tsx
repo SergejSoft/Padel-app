@@ -198,8 +198,8 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
     },
     onSuccess: () => {
       toast({
-        title: "Tournament Ready",
-        description: "Tournament has been converted and is ready to start",
+        title: "Schedule generated",
+        description: "Use \"Open schedule\" to see every round, or \"Download PDF\" to print score sheets.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/tournaments'] });
     },
@@ -447,23 +447,34 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
                 <AlertDialogTrigger asChild>
                   <Button className="w-full">
                     <Play className="h-4 w-4 mr-2" />
-                    Convert to Tournament & Start
+                    Generate Schedule & Start
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Convert to Tournament</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will close registration and convert the participant list to a tournament. 
-                      You'll then be able to generate the schedule and start the tournament.
+                    <AlertDialogTitle>Generate the match schedule?</AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                      <div className="space-y-2">
+                        <p>
+                          This creates the round-by-round schedule for the {participants.length} registered
+                          players on {tournament.courtsCount} {tournament.courtsCount === 1 ? 'court' : 'courts'}
+                          {participants.length > tournament.courtsCount * 4 &&
+                            `, with ${participants.length - tournament.courtsCount * 4} sitting out each round`}.
+                        </p>
+                        <p>
+                          Registration closes for new sign-ups. All existing registrations stay stored, and
+                          you can still edit the player list afterwards in Manage.
+                        </p>
+                      </div>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction 
                       onClick={() => convertToTournamentMutation.mutate()}
+                      disabled={convertToTournamentMutation.isPending}
                     >
-                      Convert & Start
+                      Generate & Start
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

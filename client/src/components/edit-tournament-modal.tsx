@@ -19,6 +19,7 @@ import {
   Archive,
   Ban,
   Copy,
+  Download,
   ExternalLink,
   Loader2,
   Play,
@@ -30,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { getPublicAppUrl } from "@/lib/public-url";
 import { generateAmericanFormat } from "@/lib/american-format";
+import { generateTournamentPDF } from "@/lib/pdf-generator";
 import RegistrationManagement from "@/components/registration-management";
 import {
   Select,
@@ -39,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TOURNAMENT_CONFIG } from "@shared/tournament-config";
-import type { Tournament } from "@shared/schema";
+import type { Round, Tournament } from "@shared/schema";
 
 interface EditTournamentModalProps {
   tournament: Tournament | null;
@@ -237,13 +239,36 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Registration link while sign-ups are open; the schedule page once the
+  // tournament has been converted (registrationId is kept for history).
+  const publicPath = tournament
+    ? tournament.registrationId && tournament.tournamentMode === "registration"
+      ? `/register/${tournament.registrationId}`
+      : `/shared/${tournament.urlSlug || tournament.shareId}`
+    : "/";
+
+  const hasSchedule = Array.isArray(tournament?.schedule) && tournament!.schedule!.length > 0;
+
   const copyTournamentLink = async () => {
     if (!tournament) return;
-    const path = tournament.registrationId
-      ? `/register/${tournament.registrationId}`
-      : `/shared/${tournament.urlSlug || tournament.shareId}`;
-    await navigator.clipboard.writeText(`${getPublicAppUrl()}${path}`);
+    await navigator.clipboard.writeText(`${getPublicAppUrl()}${publicPath}`);
     toast({ title: "Link copied", description: "Tournament link copied to clipboard." });
+  };
+
+  const downloadSchedulePDF = () => {
+    if (!tournament || !hasSchedule) return;
+    const rounds = tournament.schedule as Round[];
+    const pdf = generateTournamentPDF({
+      tournamentName: tournament.name,
+      tournamentDate: tournament.date ?? "",
+      tournamentLocation: tournament.location ?? "",
+      playersCount: tournament.playersCount,
+      courtsCount: tournament.courtsCount,
+      pointsPerMatch: tournament.pointsPerMatch,
+      rounds,
+      players: tournament.players ?? [],
+    });
+    pdf.save(`${tournament.name.replace(/\s+/g, "_")}_schedule.pdf`);
   };
 
   const handlePlayerChange = (index: number, value: string) => {
@@ -274,9 +299,6 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
   const originalPlayers = playersFromTournament(tournament);
   const playersChanged =
     JSON.stringify(players) !== JSON.stringify(originalPlayers);
-  const publicPath = tournament.registrationId
-    ? `/register/${tournament.registrationId}`
-    : `/shared/${tournament.urlSlug || tournament.shareId}`;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -293,8 +315,14 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
             </Button>
             <Button type="button" variant="outline" onClick={() => window.open(publicPath, "_blank")}>
               <ExternalLink className="mr-2 h-4 w-4" />
-              Preview
+              {hasSchedule ? "Open schedule" : "Preview"}
             </Button>
+            {hasSchedule && (
+              <Button type="button" variant="outline" onClick={downloadSchedulePDF}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+              </Button>
+            )}
             {tournament.leaderboardId && (
               <Button
                 type="button"

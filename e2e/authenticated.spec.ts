@@ -37,10 +37,11 @@ test("organizer can add players from the edit modal of a registration tournament
     await row.getByRole("button", { name: "Edit tournament" }).click();
 
     const modal = page.getByRole("dialog");
-    await expect(modal.getByText("Edit Tournament")).toBeVisible();
+    await expect(modal.getByText("Manage Tournament")).toBeVisible();
 
-    // Add two players manually
-    const addButton = modal.getByRole("button", { name: "Add Player" });
+    // Add two players manually (the players editor button; the registration
+    // section further down has its own "Add Player" dialog trigger)
+    const addButton = modal.getByRole("button", { name: "Add Player" }).first();
     await expect(addButton).toBeVisible();
 
     await addButton.click();
@@ -171,9 +172,28 @@ test("organizer can run a complete registration and scoring flow", async ({ page
     });
     expect(scoreResponse.ok()).toBe(true);
 
+    // Schedule and scores are private: anonymous visitors are asked to sign in
+    const anonymousContext = await browser.newContext({
+      baseURL: testInfo.project.use.baseURL as string,
+      storageState: { cookies: [], origins: [] },
+    });
+    const anonymousResponse = await anonymousContext.request.get(`/api/shared/${converted.shareId}`);
+    expect(anonymousResponse.status()).toBe(401);
+    expect(await anonymousResponse.json()).toMatchObject({ code: "sign_in_required" });
+    const anonymousScores = await anonymousContext.request.get(`/api/shared/${converted.shareId}/scores`);
+    expect(anonymousScores.status()).toBe(401);
+    const anonymousPage = await anonymousContext.newPage();
+    await anonymousPage.goto(`/shared/${converted.shareId}`);
+    await expect(anonymousPage.getByRole("heading", { name: "Sign in to view this tournament" })).toBeVisible();
+    await anonymousPage.getByRole("link", { name: "Sign in" }).click();
+    await expect(anonymousPage).toHaveURL(/\/login\?redirect=/);
+    await anonymousContext.close();
+
+    // The organizer sees the full view, still without private participant data
     const publicResponse = await page.request.get(`/api/shared/${converted.shareId}`);
     expect(publicResponse.ok()).toBe(true);
     const publicTournament = await publicResponse.json();
+    expect(publicTournament.canEdit).toBe(true);
     expect(publicTournament).not.toHaveProperty("organizerId");
     expect(publicTournament.registeredParticipants.every((participant: any) => !("email" in participant))).toBe(true);
     expect(publicTournament.registeredParticipants.every((participant: any) => !("userId" in participant))).toBe(true);

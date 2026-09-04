@@ -90,6 +90,8 @@ export interface RegistrationInfo {
   pointsPerMatch: number;
   registrationStatus: 'open' | 'closed' | 'full';
   deadline?: string;
+  /** Public schedule page, present once the organizer has generated the schedule. */
+  schedulePath?: string;
 }
 
 export interface UpcomingTournament {

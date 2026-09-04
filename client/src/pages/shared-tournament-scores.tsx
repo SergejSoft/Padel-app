@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { useState } from "react";
+import { useAuth as useClerkAuth } from "@clerk/react";
+import { fetchTournamentView, isTournamentAccessError } from "@/lib/tournament-access";
+import { TournamentAccessGate } from "@/components/tournament-access-gate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,16 +20,14 @@ export default function SharedTournamentScores() {
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const shareId = params.shareId as string;
 
+  const { isLoaded: authLoaded } = useClerkAuth();
+
   const { data: tournament, isLoading, error } = useQuery<Tournament>({
     queryKey: ['/api/shared', shareId, 'scores'],
-    queryFn: async () => {
-      const response = await fetch(`/api/shared/${shareId}/scores`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch tournament scores');
-      }
-      return response.json();
-    },
-    refetchInterval: 10000, // Refetch every 10 seconds for real-time updates
+    queryFn: () => fetchTournamentView<Tournament>(`/api/shared/${shareId}/scores`),
+    enabled: !!shareId && authLoaded,
+    // Live updates for players following along; stop polling once access is denied
+    refetchInterval: (query) => (isTournamentAccessError(query.state.error) ? false : 10000),
   });
 
   const formatDate = (dateString: string) => {
@@ -147,7 +148,7 @@ export default function SharedTournamentScores() {
     return Object.values(playerStats).sort((a, b) => b.totalPoints - a.totalPoints);
   };
 
-  if (isLoading) {
+  if (isLoading || !authLoaded) {
     return (
       <div className="container mx-auto p-4">
         <Card>
@@ -157,6 +158,10 @@ export default function SharedTournamentScores() {
         </Card>
       </div>
     );
+  }
+
+  if (isTournamentAccessError(error)) {
+    return <TournamentAccessGate error={error} />;
   }
 
   if (error) {
