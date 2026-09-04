@@ -6,6 +6,7 @@ import { clerkClient } from "@clerk/express";
 import { z } from "zod";
 import { rateLimit } from "express-rate-limit";
 import { isRegisteredParticipant } from "./participant-query.js";
+import { TOURNAMENT_CONFIG } from "../shared/tournament-config.js";
 
 const registrationRateLimit = rateLimit({
   windowMs: 60_000,
@@ -291,6 +292,20 @@ export async function registerRoutes(app: Express): Promise<void> {
   }), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
+
+      // Deleting archives by default so tournament history is never lost.
+      // `?permanent=true` removes the row for good, but only once it has
+      // already been archived (two-step safety); used by test cleanup.
+      if (req.query.permanent === "true") {
+        const existing = await storage.getTournament(id);
+        if (!existing) return res.status(404).json({ error: "Tournament not found" });
+        if (existing.status !== TOURNAMENT_CONFIG.STATUS.ARCHIVED) {
+          return res.status(409).json({ error: "Archive the tournament before deleting it permanently" });
+        }
+        await storage.deleteTournamentPermanently(id);
+        return res.status(204).end();
+      }
+
       const tournament = await storage.archiveTournament(id);
       
       if (!tournament) {

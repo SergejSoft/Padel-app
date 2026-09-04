@@ -45,6 +45,7 @@ export interface IStorage {
   getTournamentByLeaderboardId(leaderboardId: string): Promise<Tournament | undefined>;
   generateLeaderboardId(tournamentId: number): Promise<string>;
   archiveTournament(id: number): Promise<Tournament | undefined>;
+  deleteTournamentPermanently(id: number): Promise<void>;
   getTournamentOwnerId(id: number): Promise<string | null>;
   
   // Self-registration operations
@@ -418,6 +419,10 @@ export class DatabaseStorage implements IStorage {
 
   async archiveTournament(id: number): Promise<Tournament | undefined> {
     return this.updateTournamentStatus(id, TOURNAMENT_CONFIG.STATUS.ARCHIVED);
+  }
+
+  async deleteTournamentPermanently(id: number): Promise<void> {
+    await db.delete(tournaments).where(eq(tournaments.id, id));
   }
 
   async updateTournamentResults(id: number, results: any, schedule: any): Promise<Tournament | undefined> {

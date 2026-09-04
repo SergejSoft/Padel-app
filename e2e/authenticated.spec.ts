@@ -1,4 +1,14 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+/**
+ * Deleting only archives a tournament, so fixtures would pile up in the
+ * organizer's dashboard. Archive first, then remove the row permanently.
+ */
+async function removeFixtureTournament(page: Page, tournamentId: number) {
+  await page.request.delete(`/api/tournaments/${tournamentId}`);
+  const permanent = await page.request.delete(`/api/tournaments/${tournamentId}?permanent=true`);
+  expect(permanent.status()).toBe(204);
+}
 
 test("organizer can add players from the edit modal of a registration tournament", async ({ page }) => {
   const unique = Date.now();
@@ -79,7 +89,7 @@ test("organizer can add players from the edit modal of a registration tournament
     expect(namesAfterRemove).toContain("Manual Player Two");
   } finally {
     if (tournamentId) {
-      await page.request.delete(`/api/tournaments/${tournamentId}`);
+      await removeFixtureTournament(page, tournamentId);
     }
   }
 });
@@ -203,7 +213,7 @@ test("organizer can run a complete registration and scoring flow", async ({ page
     expect(publicTournament.finalScores[0]).toMatchObject({ team1Score: 14, team2Score: 10 });
   } finally {
     if (tournamentId) {
-      await page.request.delete(`/api/tournaments/${tournamentId}`);
+      await removeFixtureTournament(page, tournamentId);
     }
   }
 });
