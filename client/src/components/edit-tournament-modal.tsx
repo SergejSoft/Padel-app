@@ -19,9 +19,9 @@ import { Label } from "@/components/ui/label";
 import {
   Archive,
   Ban,
+  CalendarDays,
   Copy,
   Download,
-  ExternalLink,
   Loader2,
   Play,
   RefreshCw,
@@ -349,7 +349,7 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
               Copy link
             </Button>
             <Button type="button" variant="outline" onClick={() => navigate(publicPath)}>
-              <ExternalLink className="mr-2 h-4 w-4" />
+              <CalendarDays className="mr-2 h-4 w-4" />
               {hasSchedule ? "Open schedule" : "Preview"}
             </Button>
             {hasSchedule && (
@@ -395,7 +395,7 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => window.open(`/leaderboard/${tournament.leaderboardId}`, "_blank")}
+                onClick={() => navigate(`/leaderboard/${tournament.leaderboardId}`)}
               >
                 <Trophy className="mr-2 h-4 w-4" />
                 Leaderboard
