@@ -1,11 +1,10 @@
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Save } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { validateMatchScore } from "@shared/validation-utils";
+import { complementScore, validateMatchScore } from "@shared/validation-utils";
 import { TOURNAMENT_CONFIG } from "@shared/tournament-config";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -32,9 +31,13 @@ export function SimpleScoreInput({
   pointsPerMatch = TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH,
   readOnly = false
 }: SimpleScoreInputProps) {
-  const [team1Input, setTeam1Input] = useState(team1Score === 0 ? "" : team1Score.toString());
-  const [team2Input, setTeam2Input] = useState(team2Score === 0 ? "" : team2Score.toString());
-  const [isValid, setIsValid] = useState(true);
+  const hasInitialScore = team1Score + team2Score === pointsPerMatch;
+  const [team1Input, setTeam1Input] = useState(
+    hasInitialScore ? team1Score.toString() : "",
+  );
+  const [team2Input, setTeam2Input] = useState(
+    hasInitialScore ? team2Score.toString() : "",
+  );
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -68,42 +71,51 @@ export function SimpleScoreInput({
   });
 
   useEffect(() => {
-    setTeam1Input(team1Score === 0 ? "" : team1Score.toString());
-    setTeam2Input(team2Score === 0 ? "" : team2Score.toString());
-  }, [team1Score, team2Score]);
-
-  const validateAndUpdate = (newTeam1: string, newTeam2: string) => {
-    const score1 = parseInt(newTeam1) || 0;
-    const score2 = parseInt(newTeam2) || 0;
-    
-    // Use the comprehensive validation system
-    const validation = validateMatchScore(score1, score2, pointsPerMatch);
-    setIsValid(validation.isValid);
-    
-    if (validation.isValid) {
-      onScoreChange(score1, score2);
-    }
-  };
+    const hasSavedScore = team1Score + team2Score === pointsPerMatch;
+    setTeam1Input(hasSavedScore ? team1Score.toString() : "");
+    setTeam2Input(hasSavedScore ? team2Score.toString() : "");
+  }, [team1Score, team2Score, pointsPerMatch]);
 
   const handleTeam1Change = (value: string) => {
     setTeam1Input(value);
-    validateAndUpdate(value, team2Input);
+    const complement = complementScore(value, pointsPerMatch);
+    if (complement === null) return;
+
+    setTeam2Input(complement.toString());
+    onScoreChange(Number(value), complement);
   };
 
   const handleTeam2Change = (value: string) => {
     setTeam2Input(value);
-    validateAndUpdate(team1Input, value);
+    const complement = complementScore(value, pointsPerMatch);
+    if (complement === null) return;
+
+    setTeam1Input(complement.toString());
+    onScoreChange(complement, Number(value));
   };
+
+  const parsedTeam1 = team1Input === "" ? Number.NaN : Number(team1Input);
+  const parsedTeam2 = team2Input === "" ? Number.NaN : Number(team2Input);
+  const scoreValidation = validateMatchScore(
+    parsedTeam1,
+    parsedTeam2,
+    pointsPerMatch,
+  );
+  const isValid = scoreValidation.isValid;
 
   const handleSave = () => {
-    if (isValid && tournamentId) {
-      const t1Score = parseInt(team1Input) || 0;
-      const t2Score = parseInt(team2Input) || 0;
-      saveScoreMutation.mutate({ gameNumber, team1Score: t1Score, team2Score: t2Score });
-    }
+    if (!isValid || !tournamentId) return;
+
+    saveScoreMutation.mutate({
+      gameNumber,
+      team1Score: parsedTeam1,
+      team2Score: parsedTeam2,
+    });
   };
 
-  const currentSum = (parseInt(team1Input) || 0) + (parseInt(team2Input) || 0);
+  const currentSum =
+    (Number.isFinite(parsedTeam1) ? parsedTeam1 : 0)
+    + (Number.isFinite(parsedTeam2) ? parsedTeam2 : 0);
 
   return (
     <div className="flex items-center gap-2 min-w-[120px] md:min-w-[148px]">
@@ -116,6 +128,7 @@ export function SimpleScoreInput({
         max={pointsPerMatch}
         value={team1Input}
         onChange={(e) => handleTeam1Change(e.target.value)}
+        aria-label={`${team1.join(" and ")} score`}
         className={`w-12 md:w-14 h-11 text-center text-base font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
         placeholder=""
       />
@@ -132,6 +145,7 @@ export function SimpleScoreInput({
         max={pointsPerMatch}
         value={team2Input}
         onChange={(e) => handleTeam2Change(e.target.value)}
+        aria-label={`${team2.join(" and ")} score`}
         className={`w-12 md:w-14 h-11 text-center text-base font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
         placeholder=""
       />

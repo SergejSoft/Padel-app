@@ -130,6 +130,23 @@ export function validatePlayerNames(players: readonly string[]): ValidationResul
 }
 
 /**
+ * Returns the other team's score for a fixed-total match.
+ * Empty, fractional, negative, and out-of-range values have no complement.
+ */
+export function complementScore(
+  entered: string,
+  totalPoints: number = TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH,
+): number | null {
+  const normalized = entered.trim();
+  if (!/^\d+$/.test(normalized)) return null;
+
+  const score = Number(normalized);
+  if (!Number.isInteger(score) || score < 0 || score > totalPoints) return null;
+
+  return totalPoints - score;
+}
+
+/**
  * Validates match score with configurable total points
  */
 export function validateMatchScore(
