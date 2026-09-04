@@ -1,8 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trophy, Medal, Award, Crown, Target } from "lucide-react";
+import { Trophy, Medal, Award, Crown, Radio, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface PlayerScore {
   player: string;
@@ -16,123 +17,148 @@ interface FinalsLeaderboardProps {
   onClose: () => void;
   playerScores: PlayerScore[];
   tournamentName: string;
+  /** Games with a saved score; used to label the standings as live or final. */
+  gamesScored?: number;
+  /** Total games in the schedule. */
+  totalGames?: number;
   onSaveResults?: () => void;
   canSaveResults?: boolean;
 }
 
-export function FinalsLeaderboard({ 
-  isOpen, 
-  onClose, 
-  playerScores, 
-  tournamentName, 
+const FINALISTS = 4;
+
+/**
+ * Ranks every player by accumulated team points. Ties share a rank, so two
+ * players on 84 points are both 3rd and the next player is 5th.
+ */
+export function rankPlayers(playerScores: readonly PlayerScore[]): Array<PlayerScore & { rank: number }> {
+  const sorted = [...playerScores].sort(
+    (a, b) => b.totalPoints - a.totalPoints || a.player.localeCompare(b.player),
+  );
+  const ranked: Array<PlayerScore & { rank: number }> = [];
+  sorted.forEach((player, index) => {
+    const previous = ranked[index - 1];
+    const rank = previous && previous.totalPoints === player.totalPoints ? previous.rank : index + 1;
+    ranked.push({ ...player, rank });
+  });
+  return ranked;
+}
+
+export function FinalsLeaderboard({
+  isOpen,
+  onClose,
+  playerScores,
+  tournamentName,
+  gamesScored,
+  totalGames,
   onSaveResults,
-  canSaveResults = false 
+  canSaveResults = false,
 }: FinalsLeaderboardProps) {
-  // Sort players by total points (descending)
-  const sortedPlayers = [...playerScores].sort((a, b) => b.totalPoints - a.totalPoints);
-  
-  const bestFour = sortedPlayers.slice(0, 4);
-  const worstFour = sortedPlayers.slice(4, 8);
+  const ranked = rankPlayers(playerScores);
+  const knowsProgress = typeof gamesScored === "number" && typeof totalGames === "number" && totalGames > 0;
+  const isFinal = !knowsProgress || gamesScored >= totalGames;
+  const hasConsolation = ranked.length >= FINALISTS * 2;
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
-      case 1: return <Crown className="h-5 w-5 text-yellow-500" />;
-      case 2: return <Trophy className="h-5 w-5 text-gray-400" />;
-      case 3: return <Medal className="h-5 w-5 text-amber-600" />;
-      case 4: return <Award className="h-5 w-5 text-blue-500" />;
-      default: return <span className="text-muted-foreground font-bold">#{rank}</span>;
+      case 1: return <Crown className="h-5 w-5 text-yellow-500" aria-label="1st" />;
+      case 2: return <Trophy className="h-5 w-5 text-gray-400" aria-label="2nd" />;
+      case 3: return <Medal className="h-5 w-5 text-amber-600" aria-label="3rd" />;
+      case 4: return <Award className="h-5 w-5 text-blue-500" aria-label="4th" />;
+      default: return <span className="w-5 text-center text-sm font-bold text-muted-foreground">{rank}</span>;
     }
   };
 
-  const PlayerCard = ({ player, rank, isTop }: { player: PlayerScore; rank: number; isTop: boolean }) => (
-    <Card className={`${isTop ? 'border-green-200 bg-green-50/50' : 'border-orange-200 bg-orange-50/50'}`}>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {getRankIcon(rank)}
-            <div>
-              <div className="font-semibold">{player.player}</div>
-              <div className="text-sm text-muted-foreground">
-                {player.gamesPlayed} games • Avg: {player.averageScore.toFixed(1)}
-              </div>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-primary">{player.totalPoints}</div>
-            <div className="text-xs text-muted-foreground">total points</div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const groupFor = (rank: number): "top" | "consolation" | "rest" => {
+    if (!isFinal) return "rest";
+    if (rank <= FINALISTS) return "top";
+    if (hasConsolation && rank <= FINALISTS * 2) return "consolation";
+    return "rest";
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            {tournamentName} - Finals Groups
+          <DialogTitle className="flex flex-wrap items-center gap-2">
+            <Trophy className="h-5 w-5" />
+            {tournamentName}
+            {knowsProgress && (
+              isFinal ? (
+                <Badge className="bg-green-600">
+                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                  Final standings
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
+                  <Radio className="mr-1 h-3 w-3" />
+                  Live · {gamesScored}/{totalGames} games scored
+                </Badge>
+              )
+            )}
           </DialogTitle>
+          <DialogDescription>
+            {isFinal
+              ? "Players ranked by total points collected with their teams across the tournament."
+              : "Standings update as scores are saved. Players who have played fewer games so far may still catch up."}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Best 4 Players */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Trophy className="h-5 w-5 text-green-600" />
-              <h3 className="text-lg font-semibold text-green-900">Championship Finals</h3>
-              <Badge variant="default" className="bg-green-600">Top 4 Players</Badge>
-            </div>
-            <div className="space-y-2">
-              {bestFour.map((player, index) => (
-                <PlayerCard 
-                  key={player.player} 
-                  player={player} 
-                  rank={index + 1} 
-                  isTop={true}
-                />
-              ))}
-            </div>
-          </div>
+        <div className="space-y-4">
+          <ol className="space-y-2" aria-label="Standings">
+            {ranked.map((player) => {
+              const group = groupFor(player.rank);
+              return (
+                <li key={player.player}>
+                  <Card
+                    className={cn(
+                      group === "top" && "border-green-200 bg-green-50/50",
+                      group === "consolation" && "border-orange-200 bg-orange-50/50",
+                    )}
+                  >
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex w-5 shrink-0 justify-center">{getRankIcon(player.rank)}</div>
+                          <div className="min-w-0">
+                            <div className="truncate font-semibold">{player.player}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {player.gamesPlayed} {player.gamesPlayed === 1 ? "game" : "games"} · avg {player.averageScore.toFixed(1)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-2xl font-bold tabular-nums text-primary">{player.totalPoints}</div>
+                          <div className="text-xs text-muted-foreground">points</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </li>
+              );
+            })}
+          </ol>
 
-          {/* Worst 4 Players */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Medal className="h-5 w-5 text-orange-600" />
-              <h3 className="text-lg font-semibold text-orange-900">Consolation Finals</h3>
-              <Badge variant="secondary" className="bg-orange-100 text-orange-800">Bottom 4 Players</Badge>
-            </div>
-            <div className="space-y-2">
-              {worstFour.map((player, index) => (
-                <PlayerCard 
-                  key={player.player} 
-                  player={player} 
-                  rank={index + 5} 
-                  isTop={false}
-                />
-              ))}
-            </div>
-          </div>
+          {isFinal && ranked.length >= FINALISTS && (
+            <Card className="bg-blue-50/50 border-blue-200">
+              <CardContent className="space-y-1 p-4 text-sm text-blue-800">
+                <div>
+                  <strong className="text-green-800">Championship finals:</strong> top {FINALISTS} players
+                  (highlighted green) play for 1st to 4th place.
+                </div>
+                {hasConsolation && (
+                  <div>
+                    <strong className="text-orange-800">Consolation finals:</strong> players ranked
+                    {" "}{FINALISTS + 1} to {FINALISTS * 2} (highlighted orange) play for 5th to 8th place.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Finals Instructions */}
-          <Card className="bg-blue-50/50 border-blue-200">
-            <CardHeader>
-              <CardTitle className="text-blue-900 text-base">Finals Format</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-blue-800 space-y-2">
-              <div><strong>Championship Finals:</strong> Top 4 players compete for 1st, 2nd, 3rd, and 4th place</div>
-              <div><strong>Consolation Finals:</strong> Bottom 4 players compete for 5th, 6th, 7th, and 8th place</div>
-              <div className="pt-2 text-xs">
-                <strong>Scoring:</strong> Players are ranked by total points accumulated across all 7 games
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Save Results Button */}
           {canSaveResults && onSaveResults && (
-            <div className="flex flex-col items-center gap-4 pt-4">
-              <Button 
+            <div className="flex flex-col items-center gap-4 pt-2">
+              <Button
                 onClick={onSaveResults}
                 className="bg-green-600 hover:bg-green-700 text-white px-8 py-2"
               >
@@ -145,13 +171,8 @@ export function FinalsLeaderboard({
             </div>
           )}
 
-          {/* Back to Dashboard Button */}
-          <div className="flex justify-center pt-4 border-t">
-            <Button 
-              variant="outline" 
-              onClick={onClose}
-              className="px-6"
-            >
+          <div className="flex justify-center border-t pt-4">
+            <Button variant="outline" onClick={onClose} className="px-6">
               Back to Tournament
             </Button>
           </div>

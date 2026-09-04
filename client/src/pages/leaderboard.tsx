@@ -86,6 +86,7 @@ export default function Leaderboard() {
   const sortedResults = [...leaderboardData.results].sort((a, b) => b.totalPoints - a.totalPoints);
   const bestFour = sortedResults.slice(0, 4);
   const worstFour = sortedResults.slice(4, 8);
+  const remaining = sortedResults.slice(8);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -97,8 +98,14 @@ export default function Leaderboard() {
     }
   };
 
-  const PlayerCard = ({ player, rank, isTop }: { player: PlayerStats; rank: number; isTop: boolean }) => (
-    <Card className={`${isTop ? 'border-green-200 bg-green-50/50' : 'border-orange-200 bg-orange-50/50'}`}>
+  const PlayerCard = ({ player, rank, isTop }: { player: PlayerStats; rank: number; isTop: boolean | null }) => (
+    <Card className={
+      isTop === true
+        ? 'border-green-200 bg-green-50/50'
+        : isTop === false
+          ? 'border-orange-200 bg-orange-50/50'
+          : ''
+    }>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -215,6 +222,27 @@ export default function Leaderboard() {
                     player={player} 
                     rank={index + 5} 
                     isTop={false}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Everyone else, so no player disappears from the standings */}
+          {remaining.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-6">
+                <Award className="h-6 w-6 text-gray-500" />
+                <h2 className="text-2xl font-semibold text-gray-900">Final Standings</h2>
+                <Badge variant="outline">Ranked 9th onwards</Badge>
+              </div>
+              <div className="space-y-3">
+                {remaining.map((player, index) => (
+                  <PlayerCard
+                    key={player.player}
+                    player={player}
+                    rank={index + 9}
+                    isTop={null}
                   />
                 ))}
               </div>
