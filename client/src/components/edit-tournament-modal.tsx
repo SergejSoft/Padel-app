@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -70,7 +71,8 @@ function playersFromTournament(tournament: Tournament): EditablePlayer[] {
 export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournamentModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+  const [, navigate] = useLocation();
+
   const [formData, setFormData] = useState({
     name: tournament?.name || "",
     date: tournament?.date || "",
@@ -346,7 +348,7 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
               <Copy className="mr-2 h-4 w-4" />
               Copy link
             </Button>
-            <Button type="button" variant="outline" onClick={() => window.open(publicPath, "_blank")}>
+            <Button type="button" variant="outline" onClick={() => navigate(publicPath)}>
               <ExternalLink className="mr-2 h-4 w-4" />
               {hasSchedule ? "Open schedule" : "Preview"}
             </Button>
