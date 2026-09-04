@@ -16,6 +16,8 @@ interface ScoreSliderProps {
   gameNumber: number;
   tournamentId: number;
   onScoreChange: (team1Score: number, team2Score: number) => void;
+  /** Larger names, digits and thumb, used for the round currently being played. */
+  emphasis?: boolean;
 }
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
@@ -35,6 +37,7 @@ export function ScoreSlider({
   gameNumber,
   tournamentId,
   onScoreChange,
+  emphasis = false,
 }: ScoreSliderProps) {
   const half = Math.round(pointsPerMatch / 2);
   const [team2Score, setTeam2Score] = useState(score?.team2Score ?? half);
@@ -122,13 +125,13 @@ export function ScoreSlider({
     <div className="space-y-2" data-testid={`score-slider-${gameNumber}`}>
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2 sm:gap-3">
         <div className="min-w-0 text-left">
-          <div className="truncate text-sm font-medium text-gray-900 sm:text-base">{team1[0]}</div>
-          <div className="truncate text-sm font-medium text-gray-900 sm:text-base">{team1[1]}</div>
+          <div className={cn("truncate font-medium text-gray-900", emphasis ? "text-base sm:text-lg" : "text-sm sm:text-base")}>{team1[0]}</div>
+          <div className={cn("truncate font-medium text-gray-900", emphasis ? "text-base sm:text-lg" : "text-sm sm:text-base")}>{team1[1]}</div>
         </div>
         <SaveIndicator state={saveState} hasScore={hasScore} />
         <div className="min-w-0 text-right">
-          <div className="truncate text-sm font-medium text-gray-900 sm:text-base">{team2[0]}</div>
-          <div className="truncate text-sm font-medium text-gray-900 sm:text-base">{team2[1]}</div>
+          <div className={cn("truncate font-medium text-gray-900", emphasis ? "text-base sm:text-lg" : "text-sm sm:text-base")}>{team2[0]}</div>
+          <div className={cn("truncate font-medium text-gray-900", emphasis ? "text-base sm:text-lg" : "text-sm sm:text-base")}>{team2[1]}</div>
         </div>
       </div>
 
@@ -140,6 +143,7 @@ export function ScoreSlider({
           label={`Give a point to ${team1Label}`}
           onTap={() => nudge(-1)}
           testId={`team1-score-${gameNumber}`}
+          emphasis={emphasis}
         />
 
         <SliderPrimitive.Root
@@ -152,7 +156,7 @@ export function ScoreSlider({
           onValueCommit={handleRelease}
           aria-label={`Score split between ${team1Label} and ${team2Label}`}
         >
-          <SliderPrimitive.Track className="relative h-2.5 w-full grow rounded-full bg-gray-200 sm:h-3">
+          <SliderPrimitive.Track className={cn("relative w-full grow rounded-full bg-gray-200", emphasis ? "h-3 sm:h-4" : "h-2.5 sm:h-3")}>
             <div
               className={cn(
                 "absolute h-full rounded-full transition-colors",
@@ -164,7 +168,8 @@ export function ScoreSlider({
           </SliderPrimitive.Track>
           <SliderPrimitive.Thumb
             className={cn(
-              "block h-7 w-7 rounded-full border-[3px] bg-white shadow-md ring-offset-background transition-colors sm:h-9 sm:w-9 sm:border-4",
+              "block rounded-full border-[3px] bg-white shadow-md ring-offset-background transition-colors sm:border-4",
+              emphasis ? "h-9 w-9 sm:h-11 sm:w-11" : "h-7 w-7 sm:h-9 sm:w-9",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
               hasScore ? "border-gray-900" : "border-gray-400",
             )}
@@ -179,6 +184,7 @@ export function ScoreSlider({
           label={`Give a point to ${team2Label}`}
           onTap={() => nudge(1)}
           testId={`team2-score-${gameNumber}`}
+          emphasis={emphasis}
         />
       </div>
     </div>
@@ -192,6 +198,7 @@ function ScoreDigit({
   label,
   onTap,
   testId,
+  emphasis,
 }: {
   value: number;
   placeholder: boolean;
@@ -199,6 +206,7 @@ function ScoreDigit({
   label: string;
   onTap: () => void;
   testId: string;
+  emphasis: boolean;
 }) {
   return (
     <button
@@ -208,7 +216,8 @@ function ScoreDigit({
       title={label}
       data-testid={testId}
       className={cn(
-        "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-2xl font-bold tabular-nums transition-colors sm:h-14 sm:w-14 sm:rounded-xl sm:text-3xl",
+        "flex shrink-0 items-center justify-center rounded-lg font-bold tabular-nums transition-colors sm:rounded-xl",
+        emphasis ? "h-14 w-14 text-3xl sm:h-[4.5rem] sm:w-[4.5rem] sm:text-4xl" : "h-11 w-11 text-2xl sm:h-14 sm:w-14 sm:text-3xl",
         "touch-manipulation select-none active:scale-95",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         placeholder
