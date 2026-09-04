@@ -300,6 +300,13 @@ export default function SharedTournamentScores() {
           averageScore: stat.matchesPlayed > 0 ? stat.totalPoints / stat.matchesPlayed : 0
         }))}
         tournamentName={tournament.name}
+        gamesScored={rounds.reduce(
+          (count, round) => count + round.matches.filter(match =>
+            (tournament.finalScores as any[] | null)?.some(score => score.gameNumber === match.gameNumber),
+          ).length,
+          0,
+        )}
+        totalGames={rounds.reduce((count, round) => count + round.matches.length, 0)}
       />
     </div>
   );

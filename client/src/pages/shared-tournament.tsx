@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getPublicAppUrl } from "@/lib/public-url";
 import { fetchTournamentView, isTournamentAccessError } from "@/lib/tournament-access";
 import { TournamentAccessGate } from "@/components/tournament-access-gate";
+import { cn } from "@/lib/utils";
 
 type PublicTournament = Tournament & { canEdit?: boolean };
 
@@ -105,26 +106,23 @@ export default function SharedTournament() {
     const playerScores: Record<string, { totalPoints: number; gamesPlayed: number }> = {};
     
     // Initialize all players
-    tournament.players.forEach((player: string) => {
+    roster.forEach((player: string) => {
       playerScores[player] = { totalPoints: 0, gamesPlayed: 0 };
     });
+
+    const addPoints = (player: string, points: number) => {
+      const entry = playerScores[player] ?? (playerScores[player] = { totalPoints: 0, gamesPlayed: 0 });
+      entry.totalPoints += points;
+      entry.gamesPlayed += 1;
+    };
 
     // Calculate scores from games
     schedule.forEach(round => {
       round.matches.forEach(match => {
         const score = gameScores[match.gameNumber];
         if (score) {
-          // Team 1 players
-          match.team1.forEach(player => {
-            playerScores[player].totalPoints += score.team1Score;
-            playerScores[player].gamesPlayed += 1;
-          });
-          
-          // Team 2 players  
-          match.team2.forEach(player => {
-            playerScores[player].totalPoints += score.team2Score;
-            playerScores[player].gamesPlayed += 1;
-          });
+          match.team1.forEach(player => addPoints(player, score.team1Score));
+          match.team2.forEach(player => addPoints(player, score.team2Score));
         }
       });
     });
@@ -157,10 +155,10 @@ export default function SharedTournament() {
     });
   };
 
-  const allGamesHaveScores = () => {
-    const totalMatches = schedule.reduce((sum, round) => sum + round.matches.length, 0);
-    return Object.keys(gameScores).length === totalMatches;
-  };
+  const scoredGames = Object.keys(gameScores).length;
+  const allGamesHaveScores = () => scoredGames === totalGames;
+  // Organizers and admins can check standings at any point, not only at the end
+  const canViewLeaderboard = canEditScores() && schedule.length > 0;
 
   const downloadSchedulePDF = () => {
     const pdf = generateTournamentPDF({
@@ -314,15 +312,19 @@ export default function SharedTournament() {
           </div>
         )}
 
-        {/* Leaderboard Button - only show if user can edit scores and all games have scores */}
-        {canEditScores() && allGamesHaveScores() && (
+        {/* Leaderboard for organizers and admins: live during play, final once every game is scored */}
+        {canViewLeaderboard && (
           <div className="text-center mb-6">
-            <Button 
+            <Button
               onClick={() => setShowLeaderboard(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg font-semibold w-full sm:w-auto"
+              variant={allGamesHaveScores() ? "default" : "outline"}
+              className={cn(
+                "px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg font-semibold w-full sm:w-auto",
+                allGamesHaveScores() && "bg-green-600 hover:bg-green-700 text-white",
+              )}
             >
               <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
-              View Leaderboard
+              {allGamesHaveScores() ? "View final leaderboard" : `Live leaderboard · ${scoredGames}/${totalGames} scored`}
             </Button>
           </div>
         )}
@@ -498,13 +500,14 @@ export default function SharedTournament() {
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
-          {canEditScores() && allGamesHaveScores() && (
+          {canViewLeaderboard && (
             <Button
               onClick={() => setShowLeaderboard(true)}
-              className="bg-green-600 hover:bg-green-700 text-white font-semibold"
+              variant={allGamesHaveScores() ? "default" : "outline"}
+              className={cn("font-semibold", allGamesHaveScores() && "bg-green-600 hover:bg-green-700 text-white")}
             >
               <Trophy className="h-4 w-4 mr-2" />
-              View Leaderboard
+              {allGamesHaveScores() ? "View final leaderboard" : "Live leaderboard"}
             </Button>
           )}
           {!isRegistrationMode && (
@@ -555,6 +558,8 @@ export default function SharedTournament() {
         onClose={() => setShowLeaderboard(false)}
         playerScores={calculatePlayerScores()}
         tournamentName={tournament.name}
+        gamesScored={scoredGames}
+        totalGames={totalGames}
       />
     </div>
   );
