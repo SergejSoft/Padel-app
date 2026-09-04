@@ -36,6 +36,8 @@ export const tournaments = pgTable("tournaments", {
   urlSlug: text("url_slug").unique(), // Custom friendly URL slug
   status: text("status").notNull().default("active"), // active, cancelled, past, completed
   organizerId: text("organizer_id").references(() => users.id),
+  coOrganizerId: text("co_organizer_id").references(() => users.id),
+  coOrganizerEmail: text("co_organizer_email"),
   
   // New self-registration fields (all optional for backward compatibility)
   tournamentMode: text("tournament_mode").notNull().default("fixed"), // 'fixed' or 'registration'

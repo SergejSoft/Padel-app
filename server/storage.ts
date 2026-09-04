@@ -37,6 +37,8 @@ export interface IStorage {
   getAllTournaments(): Promise<Tournament[]>;
   getUpcomingOpenTournaments(limit?: number): Promise<UpcomingTournament[]>;
   getTournamentsByOrganizer(organizerId: string): Promise<Tournament[]>;
+  getTournamentsForManager(userId: string, email?: string | null): Promise<Tournament[]>;
+  claimCoOrganizerByEmail(user: User): Promise<User>;
   updateTournament(id: number, tournament: Partial<InsertTournament>): Promise<Tournament | undefined>;
   updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined>;
   updateTournamentResults(id: number, results: any, schedule: any): Promise<Tournament | undefined>;
@@ -47,6 +49,7 @@ export interface IStorage {
   archiveTournament(id: number): Promise<Tournament | undefined>;
   deleteTournamentPermanently(id: number): Promise<void>;
   getTournamentOwnerId(id: number): Promise<string | null>;
+  getTournamentManagerIds(id: number): Promise<string[]>;
   
   // Self-registration operations
   getTournamentByRegistrationId(registrationId: string): Promise<Tournament | undefined>;
@@ -269,6 +272,11 @@ export class DatabaseStorage implements IStorage {
       .set({ organizerId: newId })
       .where(eq(tournaments.organizerId, oldId));
 
+    await db
+      .update(tournaments)
+      .set({ coOrganizerId: newId })
+      .where(eq(tournaments.coOrganizerId, oldId));
+
     await db.execute(sql`
       UPDATE ${tournaments}
       SET registered_participants = (
@@ -342,6 +350,40 @@ export class DatabaseStorage implements IStorage {
       console.error('Storage error in getTournamentsByOrganizer:', error);
       throw error;
     }
+  }
+
+  async getTournamentsForManager(userId: string, email?: string | null): Promise<Tournament[]> {
+    const normalizedEmail = email?.trim().toLowerCase() || null;
+    return db
+      .select()
+      .from(tournaments)
+      .where(or(
+        eq(tournaments.organizerId, userId),
+        eq(tournaments.coOrganizerId, userId),
+        normalizedEmail
+          ? sql`lower(${tournaments.coOrganizerEmail}) = ${normalizedEmail}`
+          : sql`false`,
+      ))
+      .orderBy(desc(tournaments.createdAt));
+  }
+
+  async claimCoOrganizerByEmail(user: User): Promise<User> {
+    if (!user.email) return user;
+
+    const claimed = await db
+      .update(tournaments)
+      .set({ coOrganizerId: user.id })
+      .where(and(
+        sql`lower(${tournaments.coOrganizerEmail}) = lower(${user.email})`,
+        or(isNull(tournaments.coOrganizerId), eq(tournaments.coOrganizerId, user.id)),
+      ))
+      .returning({ id: tournaments.id });
+
+    if (claimed.length === 0 || user.role === "organizer" || user.role === "admin") {
+      return user;
+    }
+
+    return (await this.setUserRole(user.id, "organizer")) ?? user;
   }
 
   async updateTournament(id: number, tournamentData: Partial<InsertTournament>): Promise<Tournament | undefined> {
@@ -481,6 +523,19 @@ export class DatabaseStorage implements IStorage {
       .from(tournaments)
       .where(eq(tournaments.id, id));
     return tournament?.organizerId || null;
+  }
+
+  async getTournamentManagerIds(id: number): Promise<string[]> {
+    const [tournament] = await db
+      .select({
+        organizerId: tournaments.organizerId,
+        coOrganizerId: tournaments.coOrganizerId,
+      })
+      .from(tournaments)
+      .where(eq(tournaments.id, id));
+    return [tournament?.organizerId, tournament?.coOrganizerId].filter(
+      (managerId): managerId is string => !!managerId,
+    );
   }
 
   async updateTournamentScores(id: number, gameNumber: number, team1Score: number, team2Score: number, updatedBy: string): Promise<Tournament | undefined> {

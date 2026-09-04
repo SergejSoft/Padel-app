@@ -232,6 +232,9 @@ export default function Dashboard() {
                             {tournament.pointsPerMatch} Points
                           </Badge>
                           {getStatusBadge(getTournamentStatus(tournament))}
+                          {user?.id && tournament.coOrganizerId === user.id && tournament.organizerId !== user.id && (
+                            <Badge variant="outline" className="text-xs">Co-organizer</Badge>
+                          )}
                         </div>
                       </div>
                       <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-muted-foreground">
@@ -256,7 +259,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-center">
-                      <span className="inline-flex w-full sm:w-auto items-center justify-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground">
+                      <span className="inline-flex w-full sm:w-auto min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
                         <Edit className="mr-2 h-4 w-4" />
                         Manage
                       </span>

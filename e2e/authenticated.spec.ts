@@ -205,6 +205,8 @@ test("organizer can run a complete registration and scoring flow", async ({ page
     const publicTournament = await publicResponse.json();
     expect(publicTournament.canEdit).toBe(true);
     expect(publicTournament).not.toHaveProperty("organizerId");
+    expect(publicTournament).not.toHaveProperty("coOrganizerId");
+    expect(publicTournament).not.toHaveProperty("coOrganizerEmail");
     expect(publicTournament.registeredParticipants.every((participant: any) => !("email" in participant))).toBe(true);
     expect(publicTournament.registeredParticipants.every((participant: any) => !("userId" in participant))).toBe(true);
     expect(publicTournament.finalScores[0]).not.toHaveProperty("updatedBy");

@@ -19,6 +19,8 @@ const registrationRateLimit = rateLimit({
 function toPublicTournament(tournament: any) {
   const {
     organizerId: _organizerId,
+    coOrganizerId: _coOrganizerId,
+    coOrganizerEmail: _coOrganizerEmail,
     registeredParticipants,
     finalScores,
     ...publicTournament
@@ -35,7 +37,7 @@ function toPublicTournament(tournament: any) {
 
 async function getOrCreateUser(userId: string) {
   const existing = await storage.getUser(userId);
-  if (existing) return existing;
+  if (existing) return storage.claimCoOrganizerByEmail(existing);
 
   const clerkUser = await clerkClient.users.getUser(userId);
   const email = clerkUser.primaryEmailAddress?.emailAddress ?? null;
@@ -47,28 +49,39 @@ async function getOrCreateUser(userId: string) {
   if (email) {
     const sameEmailUser = await storage.getUserByEmail(email);
     if (sameEmailUser && sameEmailUser.id !== userId) {
-      return storage.migrateUserId(sameEmailUser.id, userId, {
+      return storage.claimCoOrganizerByEmail(await storage.migrateUserId(sameEmailUser.id, userId, {
         firstName: clerkUser.firstName,
         lastName: clerkUser.lastName,
         profileImageUrl: clerkUser.imageUrl,
-      });
+      }));
     }
   }
 
-  return storage.upsertUser({
+  const created = await storage.upsertUser({
     id: userId,
     email,
     firstName: clerkUser.firstName,
     lastName: clerkUser.lastName,
     profileImageUrl: clerkUser.imageUrl,
   });
+  return storage.claimCoOrganizerByEmail(created);
 }
 
 async function canManageTournament(req: any, tournament: any): Promise<boolean> {
   const userId = getUserId(req);
   if (!userId) return false;
-  if (tournament.organizerId === userId) return true;
+  if (isTournamentManager(tournament, userId, (await storage.getUser(userId))?.email)) return true;
   return (await storage.getUser(userId))?.role === "admin";
+}
+
+function isTournamentManager(
+  tournament: any,
+  userId: string,
+  email?: string | null,
+): boolean {
+  if (tournament.organizerId === userId || tournament.coOrganizerId === userId) return true;
+  const normalizedEmail = email?.trim().toLowerCase();
+  return !!normalizedEmail && tournament.coOrganizerEmail?.trim().toLowerCase() === normalizedEmail;
 }
 
 type TournamentAccess =
@@ -83,13 +96,14 @@ async function getTournamentAccess(req: any, tournament: any): Promise<Tournamen
   const userId = getUserId(req);
   if (!userId) return { canView: false, canEdit: false, status: 401, code: "sign_in_required" };
 
-  if (tournament.organizerId === userId) return { canView: true, canEdit: true };
+  if (isTournamentManager(tournament, userId)) return { canView: true, canEdit: true };
 
   // First visit after sign-in may land here before /api/auth/user has synced
   // the profile; resolve the user (and their email) rather than treating a
   // registered player as a stranger.
   const user = await getOrCreateUser(userId);
   if (user.role === "admin") return { canView: true, canEdit: true };
+  if (isTournamentManager(tournament, userId, user.email)) return { canView: true, canEdit: true };
 
   if (isRegisteredParticipant(tournament.registeredParticipants, userId, user.email)) {
     return { canView: true, canEdit: false };
@@ -195,7 +209,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // Get tournament by ID (owner or admin only)
   app.get("/api/tournaments/:id", isOwnerOrAdmin(async (req) => {
-    return storage.getTournamentOwnerId(parseInt(req.params.id));
+    return storage.getTournamentManagerIds(parseInt(req.params.id));
   }), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -223,7 +237,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       const finalUser = await getOrCreateUser(userId);
       console.log(`API: User found: ${finalUser?.id} with role ${finalUser?.role}`);
       
-      let tournaments = await storage.getTournamentsByOrganizer(userId);
+      let tournaments = await storage.getTournamentsForManager(userId, finalUser.email);
       console.log(`API: User ${userId} owns ${tournaments.length} tournaments`);
       
       // If admin, also include all other tournaments
@@ -246,7 +260,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // Update tournament (owner or admin only)
   app.put("/api/tournaments/:id", isOwnerOrAdmin(async (req: any) => {
-    return await storage.getTournamentOwnerId(parseInt(req.params.id));
+    return await storage.getTournamentManagerIds(parseInt(req.params.id));
   }), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -265,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // Update tournament status (cancel/activate)
   app.patch("/api/tournaments/:id/status", isOwnerOrAdmin(async (req: any) => {
-    return await storage.getTournamentOwnerId(parseInt(req.params.id));
+    return await storage.getTournamentManagerIds(parseInt(req.params.id));
   }), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -288,7 +302,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // Backward-compatible archive endpoint. Tournaments are never hard-deleted.
   app.delete("/api/tournaments/:id", isOwnerOrAdmin(async (req: any) => {
-    return await storage.getTournamentOwnerId(parseInt(req.params.id));
+    return await storage.getTournamentManagerIds(parseInt(req.params.id));
   }), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -319,7 +333,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   });
 
   app.patch("/api/tournaments/:id/archive", isOwnerOrAdmin(async (req: any) => {
-    return storage.getTournamentOwnerId(parseInt(req.params.id));
+    return storage.getTournamentManagerIds(parseInt(req.params.id));
   }), async (req, res) => {
     try {
       const tournament = await storage.archiveTournament(parseInt(req.params.id));
@@ -363,7 +377,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // Generate share ID for tournament
   app.post("/api/tournaments/:id/share", isOwnerOrAdmin(async (req) => {
-    return storage.getTournamentOwnerId(parseInt(req.params.id));
+    return storage.getTournamentManagerIds(parseInt(req.params.id));
   }), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -385,7 +399,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Update tournament scores (requires owner or admin)
   app.put("/api/tournaments/:id/scores", isAuthenticated, isOwnerOrAdmin(async (req) => {
     const id = parseInt(req.params.id);
-    return await storage.getTournamentOwnerId(id);
+    return await storage.getTournamentManagerIds(id);
   }), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -426,7 +440,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Complete tournament and generate final leaderboard (requires owner or admin)
   app.post("/api/tournaments/:id/complete", isAuthenticated, isOwnerOrAdmin(async (req) => {
     const id = parseInt(req.params.id);
-    return await storage.getTournamentOwnerId(id);
+    return await storage.getTournamentManagerIds(id);
   }), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -477,7 +491,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // Save tournament results
   app.patch("/api/tournaments/:id/results", isOwnerOrAdmin(async (req) => {
-    return storage.getTournamentOwnerId(parseInt(req.params.id));
+    return storage.getTournamentManagerIds(parseInt(req.params.id));
   }), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -585,7 +599,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Generate registration link (requires authentication)
   app.post("/api/tournaments/:id/registration", isAuthenticated, isOwnerOrAdmin(async (req) => {
     const id = parseInt(req.params.id);
-    return await storage.getTournamentOwnerId(id);
+    return await storage.getTournamentManagerIds(id);
   }), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -701,7 +715,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Add participant manually (organizer only)
   app.post("/api/tournaments/:id/participants", isAuthenticated, isOwnerOrAdmin(async (req) => {
     const id = parseInt(req.params.id);
-    return await storage.getTournamentOwnerId(id);
+    return await storage.getTournamentManagerIds(id);
   }), async (req: any, res) => {
     try {
       const tournamentId = parseInt(req.params.id);
@@ -724,7 +738,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Remove participant (organizer only)
   app.delete("/api/tournaments/:id/participants/:participantId", isAuthenticated, isOwnerOrAdmin(async (req) => {
     const id = parseInt(req.params.id);
-    return await storage.getTournamentOwnerId(id);
+    return await storage.getTournamentManagerIds(id);
   }), async (req: any, res) => {
     try {
       const tournamentId = parseInt(req.params.id);
@@ -747,7 +761,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Update participant (organizer only)
   app.put("/api/tournaments/:id/participants/:participantId", isAuthenticated, isOwnerOrAdmin(async (req) => {
     const id = parseInt(req.params.id);
-    return await storage.getTournamentOwnerId(id);
+    return await storage.getTournamentManagerIds(id);
   }), async (req: any, res) => {
     try {
       const tournamentId = parseInt(req.params.id);
@@ -774,7 +788,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Convert registration to tournament (organizer only)
   app.post("/api/tournaments/:id/convert", isAuthenticated, isOwnerOrAdmin(async (req) => {
     const id = parseInt(req.params.id);
-    return await storage.getTournamentOwnerId(id);
+    return await storage.getTournamentManagerIds(id);
   }), async (req: any, res) => {
     try {
       const tournamentId = parseInt(req.params.id);
@@ -796,7 +810,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   // Update registration status (organizer only)
   app.put("/api/tournaments/:id/registration-status", isAuthenticated, isOwnerOrAdmin(async (req) => {
     const id = parseInt(req.params.id);
-    return await storage.getTournamentOwnerId(id);
+    return await storage.getTournamentManagerIds(id);
   }), async (req: any, res) => {
     try {
       const tournamentId = parseInt(req.params.id);

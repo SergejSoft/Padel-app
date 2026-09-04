@@ -59,7 +59,7 @@ export const isOrganizer: RequestHandler = async (req, res, next) => {
 
 // Check if user owns resource or is admin
 export const isOwnerOrAdmin = (
-  getResourceOwnerId: (req: any) => Promise<string | null>,
+  getResourceOwnerId: (req: any) => Promise<string | string[] | null>,
 ): RequestHandler => {
   return async (req, res, next) => {
     const userId = getUserId(req);
@@ -74,9 +74,9 @@ export const isOwnerOrAdmin = (
       return next();
     }
 
-    // Check if user owns the resource
     const resourceOwnerId = await getResourceOwnerId(req);
-    if (resourceOwnerId === userId) {
+    const owners = Array.isArray(resourceOwnerId) ? resourceOwnerId : [resourceOwnerId];
+    if (owners.includes(userId)) {
       return next();
     }
 

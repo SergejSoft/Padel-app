@@ -106,7 +106,7 @@ export function SimpleScoreInput({
   const currentSum = (parseInt(team1Input) || 0) + (parseInt(team2Input) || 0);
 
   return (
-    <div className="flex items-center gap-1 sm:gap-2 min-w-[80px] sm:min-w-[100px]">
+    <div className="flex items-center gap-2 min-w-[120px] md:min-w-[148px]">
       {/* Team 1 Score */}
       <Input
         type="number"
@@ -116,7 +116,7 @@ export function SimpleScoreInput({
         max={pointsPerMatch}
         value={team1Input}
         onChange={(e) => handleTeam1Change(e.target.value)}
-        className={`w-10 sm:w-12 h-7 sm:h-8 text-center text-xs sm:text-sm font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+        className={`w-12 md:w-14 h-11 text-center text-base font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
         placeholder=""
       />
       
@@ -132,7 +132,7 @@ export function SimpleScoreInput({
         max={pointsPerMatch}
         value={team2Input}
         onChange={(e) => handleTeam2Change(e.target.value)}
-        className={`w-10 sm:w-12 h-7 sm:h-8 text-center text-xs sm:text-sm font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+        className={`w-12 md:w-14 h-11 text-center text-base font-medium ${!isValid ? 'border-red-500' : ''} touch-manipulation [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
         placeholder=""
       />
 
@@ -152,7 +152,7 @@ export function SimpleScoreInput({
           size="sm"
           onClick={handleSave}
           disabled={!isValid || saveScoreMutation.isPending}
-          className="ml-2 h-7 w-8 p-0 flex items-center justify-center"
+          className="ml-2 h-11 w-11 p-0 flex items-center justify-center"
         >
           <Save className="h-3 w-3" />
         </Button>

@@ -171,7 +171,7 @@ export default function SharedTournament() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6 md:px-8">
         {/* Status Alert for Cancelled Tournaments */}
         {status === 'cancelled' && (
           <Alert className="mb-6 border-red-200 bg-red-50">
@@ -412,20 +412,20 @@ export default function SharedTournament() {
                   <div className="grid gap-3">
                     {round.matches.map((match, matchIndex) => (
                       <div key={matchIndex} className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div className="flex items-start gap-2 sm:items-center sm:space-x-4 flex-1 min-w-0">
                             <div className="bg-white rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium text-gray-700 flex-shrink-0">
                               Court {match.court}
                             </div>
                             <div className="text-gray-900 flex-1 min-w-0">
-                              <div className="block sm:inline">
+                              <div className="flex flex-col gap-1 lg:block">
                                 <span className="font-medium text-sm sm:text-base">{match.team1[0]} & {match.team1[1]}</span>
-                                <span className="mx-1 sm:mx-2 text-gray-500 text-sm">vs</span>
+                                <span className="mx-0 lg:mx-2 text-gray-500 text-sm">vs</span>
                                 <span className="font-medium text-sm sm:text-base">{match.team2[0]} & {match.team2[1]}</span>
                               </div>
                             </div>
                           </div>
-                          <div className="flex-shrink-0">
+                          <div className="flex-shrink-0 self-end md:self-center">
                             {canEditScores() ? (
                               <SimpleScoreInput
                                 team1={match.team1}

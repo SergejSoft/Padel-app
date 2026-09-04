@@ -22,6 +22,13 @@
       "when": 1787774306808,
       "tag": "0002_gray_tigra",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788537600000,
+      "tag": "0003_co_organizer",
+      "breakpoints": true
     }
   ]
 }
