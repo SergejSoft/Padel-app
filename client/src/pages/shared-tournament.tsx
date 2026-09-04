@@ -451,6 +451,7 @@ export default function SharedTournament() {
                             gameNumber={match.gameNumber}
                             tournamentId={tournament.id}
                             emphasis={roundStatus === "current"}
+                            muted={roundStatus === "played"}
                             onScoreChange={(team1Score, team2Score) =>
                               handleScoreChange(match.gameNumber, team1Score, team2Score)
                             }
@@ -511,11 +512,11 @@ export default function SharedTournament() {
               </Button>
             </>
           )}
-          <Link href="/">
+          {/* <Link href="/">
             <Button variant="outline" size="lg">
               Create New Tournament
             </Button>
-          </Link>
+          </Link> */}
         </div>
       </div>
       

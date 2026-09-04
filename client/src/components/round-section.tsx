@@ -6,9 +6,10 @@ import { cn } from "@/lib/utils";
 export type RoundStatus = "played" | "current" | "upcoming";
 
 /**
- * A round is "played" once every game has a saved score. Among the others,
- * the one the organizer has scrolled into focus is "current"; the rest are
- * "upcoming". `firstOpenRound` is where the page scrolls to on load.
+ * The round the organizer has scrolled into focus is "current" and gets the
+ * black treatment whatever its scores. Of the others, a round is "played"
+ * once every game has a saved score, otherwise "upcoming". `firstOpenRound`
+ * is where the page scrolls to on load.
  */
 export function deriveRoundStatuses(
   rounds: readonly Round[],
@@ -20,12 +21,9 @@ export function deriveRoundStatuses(
 
   for (const round of [...rounds].sort((a, b) => a.round - b.round)) {
     const played = round.matches.every((match) => gameScores[match.gameNumber] != null);
-    if (played) {
-      byRound.set(round.round, "played");
-      continue;
-    }
-    if (firstOpenRound === null) firstOpenRound = round.round;
-    byRound.set(round.round, round.round === focusedRound ? "current" : "upcoming");
+    if (!played && firstOpenRound === null) firstOpenRound = round.round;
+    if (round.round === focusedRound) byRound.set(round.round, "current");
+    else byRound.set(round.round, played ? "played" : "upcoming");
   }
 
   return { byRound, firstOpenRound };
@@ -37,7 +35,7 @@ export function roundCardStyles(status: RoundStatus): { card: string; courtChip:
     case "played":
       return {
         card: "rounded-lg bg-gray-100/70 p-2 ring-1 ring-inset ring-gray-200/70 sm:p-3",
-        courtChip: "bg-white text-gray-600",
+        courtChip: "bg-gray-200/70 text-gray-500",
       };
     case "upcoming":
       return {
@@ -92,8 +90,8 @@ const BODY_BY_STATUS: Record<RoundStatus, string> = {
 
 /**
  * One round of the schedule: a status-coloured header plus the court cards
- * passed as children. Played rounds recede into gray, the round scrolled
- * into focus is the single dark element on the page, the rest are dashed.
+ * passed as children. The round scrolled into focus is the single dark
+ * element on the page; played rounds recede into gray, the rest are dashed.
  */
 export function RoundSection({
   round,
@@ -142,7 +140,7 @@ export function RoundSection({
         <h3 className={cn("font-bold tracking-tight", isCurrent ? "text-2xl text-white sm:text-3xl" : "text-lg text-gray-900 sm:text-xl", status === "played" && "text-gray-600")}>
           Round {round.round}
         </h3>
-        {isCurrent && (
+        {isCurrent && scoredCount < total && (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-sm font-semibold text-gray-950 shadow-sm">
             <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse motion-reduce:animate-none" aria-hidden="true" />
             Now playing
@@ -156,8 +154,8 @@ export function RoundSection({
         >
           {scoredCount === total ? (
             <>
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              Complete
+              <CheckCircle2 className={cn("h-4 w-4", isCurrent ? "text-green-400" : "text-green-600")} />
+              <span className={cn(isCurrent && "font-semibold text-white")}>Complete</span>
             </>
           ) : (
             `${scoredCount}/${total} scored`

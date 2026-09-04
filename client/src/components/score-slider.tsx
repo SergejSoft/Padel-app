@@ -18,6 +18,8 @@ interface ScoreSliderProps {
   onScoreChange: (team1Score: number, team2Score: number) => void;
   /** Larger names, digits and thumb, used for the round currently being played. */
   emphasis?: boolean;
+  /** Receded greys for rounds that are already played and out of focus. */
+  muted?: boolean;
 }
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
@@ -38,6 +40,7 @@ export function ScoreSlider({
   tournamentId,
   onScoreChange,
   emphasis = false,
+  muted = false,
 }: ScoreSliderProps) {
   const half = Math.round(pointsPerMatch / 2);
   const [team2Score, setTeam2Score] = useState(score?.team2Score ?? half);
@@ -125,13 +128,13 @@ export function ScoreSlider({
     <div className="space-y-2" data-testid={`score-slider-${gameNumber}`}>
       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2 sm:gap-3">
         <div className="min-w-0 text-left">
-          <div className={cn("truncate font-medium text-gray-900", emphasis ? "text-base sm:text-lg" : "text-sm sm:text-base")}>{team1[0]}</div>
-          <div className={cn("truncate font-medium text-gray-900", emphasis ? "text-base sm:text-lg" : "text-sm sm:text-base")}>{team1[1]}</div>
+          <div className={cn("truncate font-medium", muted ? "text-gray-500" : "text-gray-900", emphasis ? "text-base sm:text-lg" : "text-sm sm:text-base")}>{team1[0]}</div>
+          <div className={cn("truncate font-medium", muted ? "text-gray-500" : "text-gray-900", emphasis ? "text-base sm:text-lg" : "text-sm sm:text-base")}>{team1[1]}</div>
         </div>
-        <SaveIndicator state={saveState} hasScore={hasScore} />
+        <SaveIndicator state={saveState} hasScore={hasScore} muted={muted} />
         <div className="min-w-0 text-right">
-          <div className={cn("truncate font-medium text-gray-900", emphasis ? "text-base sm:text-lg" : "text-sm sm:text-base")}>{team2[0]}</div>
-          <div className={cn("truncate font-medium text-gray-900", emphasis ? "text-base sm:text-lg" : "text-sm sm:text-base")}>{team2[1]}</div>
+          <div className={cn("truncate font-medium", muted ? "text-gray-500" : "text-gray-900", emphasis ? "text-base sm:text-lg" : "text-sm sm:text-base")}>{team2[0]}</div>
+          <div className={cn("truncate font-medium", muted ? "text-gray-500" : "text-gray-900", emphasis ? "text-base sm:text-lg" : "text-sm sm:text-base")}>{team2[1]}</div>
         </div>
       </div>
 
@@ -144,6 +147,7 @@ export function ScoreSlider({
           onTap={() => nudge(-1)}
           testId={`team1-score-${gameNumber}`}
           emphasis={emphasis}
+          muted={muted}
         />
 
         <SliderPrimitive.Root
@@ -156,11 +160,11 @@ export function ScoreSlider({
           onValueCommit={handleRelease}
           aria-label={`Score split between ${team1Label} and ${team2Label}`}
         >
-          <SliderPrimitive.Track className={cn("relative w-full grow rounded-full bg-gray-200", emphasis ? "h-3 sm:h-4" : "h-2.5 sm:h-3")}>
+          <SliderPrimitive.Track className={cn("relative w-full grow rounded-full bg-gray-200", emphasis ? "h-3 sm:h-4" : muted ? "h-2" : "h-2.5 sm:h-3")}>
             <div
               className={cn(
                 "absolute h-full rounded-full transition-colors",
-                hasScore ? "bg-gray-900" : "bg-gray-400",
+                hasScore && !muted ? "bg-gray-900" : "bg-gray-400",
               )}
               style={{ left: `${fillLeft}%`, width: `${fillWidth}%` }}
             />
@@ -169,9 +173,9 @@ export function ScoreSlider({
           <SliderPrimitive.Thumb
             className={cn(
               "block rounded-full border-[3px] bg-white shadow-md ring-offset-background transition-colors sm:border-4",
-              emphasis ? "h-9 w-9 sm:h-11 sm:w-11" : "h-7 w-7 sm:h-9 sm:w-9",
+              emphasis ? "h-9 w-9 sm:h-11 sm:w-11" : muted ? "h-6 w-6 sm:h-7 sm:w-7" : "h-7 w-7 sm:h-9 sm:w-9",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              hasScore ? "border-gray-900" : "border-gray-400",
+              hasScore && !muted ? "border-gray-900" : "border-gray-400",
             )}
             aria-valuetext={`${team1Label} ${team1Score}, ${team2Label} ${team2Score}`}
           />
@@ -185,6 +189,7 @@ export function ScoreSlider({
           onTap={() => nudge(1)}
           testId={`team2-score-${gameNumber}`}
           emphasis={emphasis}
+          muted={muted}
         />
       </div>
     </div>
@@ -199,6 +204,7 @@ function ScoreDigit({
   onTap,
   testId,
   emphasis,
+  muted,
 }: {
   value: number;
   placeholder: boolean;
@@ -207,6 +213,7 @@ function ScoreDigit({
   onTap: () => void;
   testId: string;
   emphasis: boolean;
+  muted: boolean;
 }) {
   return (
     <button
@@ -217,14 +224,22 @@ function ScoreDigit({
       data-testid={testId}
       className={cn(
         "flex shrink-0 items-center justify-center rounded-lg font-bold tabular-nums transition-colors sm:rounded-xl",
-        emphasis ? "h-14 w-14 text-3xl sm:h-[4.5rem] sm:w-[4.5rem] sm:text-4xl" : "h-11 w-11 text-2xl sm:h-14 sm:w-14 sm:text-3xl",
+        emphasis
+          ? "h-14 w-14 text-3xl sm:h-[4.5rem] sm:w-[4.5rem] sm:text-4xl"
+          : muted
+            ? "h-9 w-9 text-xl sm:h-11 sm:w-11 sm:text-2xl"
+            : "h-11 w-11 text-2xl sm:h-14 sm:w-14 sm:text-3xl",
         "touch-manipulation select-none active:scale-95",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         placeholder
           ? "bg-gray-100 text-gray-400"
-          : leading
-            ? "bg-gray-900 text-white"
-            : "bg-white text-gray-900 ring-1 ring-inset ring-gray-200",
+          : muted
+            ? leading
+              ? "bg-gray-300 text-gray-700"
+              : "bg-gray-100 text-gray-500"
+            : leading
+              ? "bg-gray-900 text-white"
+              : "bg-white text-gray-900 ring-1 ring-inset ring-gray-200",
       )}
     >
       {value}
@@ -232,8 +247,9 @@ function ScoreDigit({
   );
 }
 
-function SaveIndicator({ state, hasScore }: { state: SaveState; hasScore: boolean }) {
+function SaveIndicator({ state, hasScore, muted }: { state: SaveState; hasScore: boolean; muted: boolean }) {
   const base = "flex h-5 items-center justify-center gap-1 text-xs whitespace-nowrap";
+  if (muted && state === "idle") return <div className={base} aria-hidden="true" />;
   switch (state) {
     case "saving":
       return (
