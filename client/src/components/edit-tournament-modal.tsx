@@ -24,6 +24,7 @@ import {
   Loader2,
   Play,
   RefreshCw,
+  RotateCcw,
   Trash2,
   Trophy,
   UserPlus,
@@ -153,6 +154,29 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
     onError: (error: Error) => {
       toast({
         title: "Could not regenerate schedule",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resetScoresMutation = useMutation({
+    mutationFn: async () => {
+      if (!tournament) return;
+      const response = await apiRequest("DELETE", `/api/tournaments/${tournament.id}/scores`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/shared"] });
+      toast({
+        title: "Scores reset",
+        description: "All match results were cleared. The schedule and registrations were not changed.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Could not reset scores",
         description: error.message,
         variant: "destructive",
       });
@@ -384,6 +408,43 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
                       onClick={() => regenerateScheduleMutation.mutate()}
                     >
                       Regenerate schedule
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {hasSchedule && hasRecordedScores && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={resetScoresMutation.isPending}
+                    title="Clear every saved match result"
+                  >
+                    {resetScoresMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                    )}
+                    Reset all scores
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Reset all scores?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Every saved match result ({tournament.finalScores?.length ?? 0} game
+                      {tournament.finalScores?.length === 1 ? "" : "s"}) will be removed and the
+                      leaderboard starts from zero. Pairings, sit-outs and registrations stay as
+                      they are. To fix a single game, use the reset button next to that match on
+                      the schedule page instead.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep scores</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => resetScoresMutation.mutate()}>
+                      Reset all scores
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

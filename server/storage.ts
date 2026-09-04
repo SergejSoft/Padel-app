@@ -43,6 +43,8 @@ export interface IStorage {
   updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined>;
   updateTournamentResults(id: number, results: any, schedule: any): Promise<Tournament | undefined>;
   updateTournamentScores(id: number, gameNumber: number, team1Score: number, team2Score: number, updatedBy: string): Promise<Tournament | undefined>;
+  clearTournamentScore(id: number, gameNumber: number): Promise<Tournament | undefined>;
+  clearAllTournamentScores(id: number): Promise<Tournament | undefined>;
   completeTournament(id: number, finalResults: any[]): Promise<Tournament | undefined>;
   getTournamentByLeaderboardId(leaderboardId: string): Promise<Tournament | undefined>;
   generateLeaderboardId(tournamentId: number): Promise<string>;
@@ -568,6 +570,37 @@ export class DatabaseStorage implements IStorage {
       .returning();
 
     return updatedTournament;
+  }
+
+  /**
+   * Removes one game's score so it can be entered again. Any published
+   * results are cleared too, since they no longer reflect the scores.
+   */
+  async clearTournamentScore(id: number, gameNumber: number): Promise<Tournament | undefined> {
+    const tournament = await this.getTournament(id);
+    if (!tournament) return undefined;
+
+    const remaining = (tournament.finalScores || []).filter(
+      (score: any) => score.gameNumber !== gameNumber,
+    );
+
+    const [updatedTournament] = await db
+      .update(tournaments)
+      .set({ finalScores: remaining, results: null })
+      .where(eq(tournaments.id, id))
+      .returning();
+
+    return updatedTournament;
+  }
+
+  async clearAllTournamentScores(id: number): Promise<Tournament | undefined> {
+    const [updatedTournament] = await db
+      .update(tournaments)
+      .set({ finalScores: [], results: null })
+      .where(eq(tournaments.id, id))
+      .returning();
+
+    return updatedTournament || undefined;
   }
 
   async completeTournament(id: number, finalResults: any[]): Promise<Tournament | undefined> {

@@ -150,6 +150,13 @@ export default function SharedTournament() {
     }));
   };
 
+  const handleScoreReset = (gameNumber: number) => {
+    setGameScores(prev => {
+      const { [gameNumber]: _removed, ...rest } = prev;
+      return rest;
+    });
+  };
+
   const allGamesHaveScores = () => {
     const totalMatches = schedule.reduce((sum, round) => sum + round.matches.length, 0);
     return Object.keys(gameScores).length === totalMatches;
@@ -460,6 +467,7 @@ export default function SharedTournament() {
                             onScoreChange={(team1Score, team2Score) =>
                               handleScoreChange(match.gameNumber, team1Score, team2Score)
                             }
+                            onScoreReset={() => handleScoreReset(match.gameNumber)}
                           />
                         ) : (
                           <div className="flex items-center justify-between gap-3">

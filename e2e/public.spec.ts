@@ -23,6 +23,8 @@ test("signed-out users cannot mutate tournaments", async ({ request }) => {
     request.put("/api/tournaments/1/scores", {
       data: { gameNumber: 1, team1Score: 10, team2Score: 6 },
     }),
+    request.delete("/api/tournaments/1/scores/1"),
+    request.delete("/api/tournaments/1/scores"),
   ]);
 
   for (const response of attempts) {

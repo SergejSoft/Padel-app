@@ -173,13 +173,29 @@ test("organizer can run a complete registration and scoring flow", async ({ page
     expect(converted.schedule.every((round: any) => round.matches.length === 2)).toBe(true);
 
     const firstMatch = converted.schedule[0].matches[0];
-    const scoreResponse = await page.request.put(`/api/tournaments/${tournamentId}/scores`, {
-      data: {
-        gameNumber: firstMatch.gameNumber,
-        team1Score: 14,
-        team2Score: 10,
-      },
-    });
+    const secondMatch = converted.schedule[0].matches[1];
+    const saveScore = (gameNumber: number, team1Score: number, team2Score: number) =>
+      page.request.put(`/api/tournaments/${tournamentId}/scores`, {
+        data: { gameNumber, team1Score, team2Score },
+      });
+
+    // A wrong entry can be reset for one game without touching the others
+    expect((await saveScore(firstMatch.gameNumber, 20, 4)).ok()).toBe(true);
+    expect((await saveScore(secondMatch.gameNumber, 12, 12)).ok()).toBe(true);
+    const resetOne = await page.request.delete(
+      `/api/tournaments/${tournamentId}/scores/${firstMatch.gameNumber}`,
+    );
+    expect(resetOne.ok()).toBe(true);
+    expect((await resetOne.json()).finalScores).toMatchObject([
+      { gameNumber: secondMatch.gameNumber, team1Score: 12, team2Score: 12 },
+    ]);
+
+    // Or everything can be wiped after a test run
+    const resetAll = await page.request.delete(`/api/tournaments/${tournamentId}/scores`);
+    expect(resetAll.ok()).toBe(true);
+    expect((await resetAll.json()).finalScores).toEqual([]);
+
+    const scoreResponse = await saveScore(firstMatch.gameNumber, 14, 10);
     expect(scoreResponse.ok()).toBe(true);
 
     // Schedule and scores are private: anonymous visitors are asked to sign in

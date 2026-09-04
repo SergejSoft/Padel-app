@@ -451,6 +451,47 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Reset one game's score (requires owner or admin)
+  app.delete("/api/tournaments/:id/scores/:gameNumber", isAuthenticated, isOwnerOrAdmin(async (req) => {
+    const id = parseInt(req.params.id);
+    return await storage.getTournamentManagerIds(id);
+  }), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const gameNumber = parseInt(req.params.gameNumber);
+      if (!Number.isInteger(gameNumber) || gameNumber < 1) {
+        return res.status(400).json({ error: "Invalid game number" });
+      }
+
+      const updatedTournament = await storage.clearTournamentScore(id, gameNumber);
+      if (!updatedTournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+
+      res.json(updatedTournament);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Reset all scores of a tournament (requires owner or admin)
+  app.delete("/api/tournaments/:id/scores", isAuthenticated, isOwnerOrAdmin(async (req) => {
+    const id = parseInt(req.params.id);
+    return await storage.getTournamentManagerIds(id);
+  }), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updatedTournament = await storage.clearAllTournamentScores(id);
+      if (!updatedTournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+
+      res.json(updatedTournament);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Complete tournament and generate final leaderboard (requires owner or admin)
   app.post("/api/tournaments/:id/complete", isAuthenticated, isOwnerOrAdmin(async (req) => {
     const id = parseInt(req.params.id);

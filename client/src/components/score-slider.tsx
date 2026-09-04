@@ -1,7 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, RotateCcw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { TOURNAMENT_CONFIG } from "@shared/tournament-config";
@@ -16,6 +27,8 @@ interface ScoreSliderProps {
   gameNumber: number;
   tournamentId: number;
   onScoreChange: (team1Score: number, team2Score: number) => void;
+  /** Called after a saved score was removed on the server. */
+  onScoreReset: () => void;
 }
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
@@ -35,6 +48,7 @@ export function ScoreSlider({
   gameNumber,
   tournamentId,
   onScoreChange,
+  onScoreReset,
 }: ScoreSliderProps) {
   const half = Math.round(pointsPerMatch / 2);
   const [team2Score, setTeam2Score] = useState(score?.team2Score ?? half);
@@ -73,6 +87,33 @@ export function ScoreSlider({
       setTeam2Score(score?.team2Score ?? half);
       toast({
         title: "Score not saved",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: async () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      const response = await apiRequest(
+        "DELETE",
+        `/api/tournaments/${tournamentId}/scores/${gameNumber}`,
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      // Back to the unscored look; the parent drops the score so `hasScore` turns false.
+      setSaveState("idle");
+      setTeam2Score(half);
+      onScoreReset();
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments", tournamentId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/shared"] });
+      toast({ title: "Score reset", description: `Game ${gameNumber} can be scored again.` });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Score not reset",
         description: error.message,
         variant: "destructive",
       });
@@ -125,7 +166,49 @@ export function ScoreSlider({
           <div className="truncate text-sm font-medium text-gray-900 sm:text-base">{team1[0]}</div>
           <div className="truncate text-sm font-medium text-gray-900 sm:text-base">{team1[1]}</div>
         </div>
-        <SaveIndicator state={saveState} hasScore={hasScore} />
+        <div className="flex items-center gap-1">
+          <SaveIndicator state={saveState} hasScore={hasScore} />
+          {score !== null && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  type="button"
+                  disabled={resetMutation.isPending || saveState === "saving"}
+                  aria-label={`Reset score for game ${gameNumber}`}
+                  title="Reset score"
+                  data-testid={`reset-score-${gameNumber}`}
+                  className={cn(
+                    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors",
+                    "hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  )}
+                >
+                  {resetMutation.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset this score?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    The saved result {score.team1Score}–{score.team2Score} for {team1Label} vs{" "}
+                    {team2Label} will be removed and the game marked as not played yet.
+                    You can enter a new score right away.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep score</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => resetMutation.mutate()}>
+                    Reset score
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
         <div className="min-w-0 text-right">
           <div className="truncate text-sm font-medium text-gray-900 sm:text-base">{team2[0]}</div>
           <div className="truncate text-sm font-medium text-gray-900 sm:text-base">{team2[1]}</div>
