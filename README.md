@@ -74,6 +74,11 @@ New users receive the `organizer` role. Admins can manage all tournaments. Promo
 UPDATE users SET role = 'admin' WHERE id = 'user_clerk_id';
 ```
 
+## Testing documents
+
+- [docs/release-test-plan.md](docs/release-test-plan.md) — feature-based release checklist
+- [docs/user-flow-test-scenarios.md](docs/user-flow-test-scenarios.md) — persona-based end-to-end scenarios
+
 ## Commands
 
 - `npm run dev` — local development server
