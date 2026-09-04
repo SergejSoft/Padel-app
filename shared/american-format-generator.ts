@@ -120,7 +120,13 @@ function generateGeneralAmericanFormat(config: AmericanFormatConfig): AmericanFo
     courts * 4,
   );
   const activeCourts = activePlayerCount / 4;
-  const optimalRounds = Math.min(playerCount - 1, 12);
+  const targetRounds = Math.min(playerCount - 1, 12);
+  const optimalRounds = chooseFairRoundCount(
+    playerCount,
+    activePlayerCount,
+    targetRounds,
+    12,
+  );
 
   const rounds: ImmutableMatch[][] = [];
   const partnershipHistory = new Map<string, Set<string>>();
@@ -179,6 +185,48 @@ function generateGeneralAmericanFormat(config: AmericanFormatConfig): AmericanFo
     partnershipTracking,
     validation
   };
+}
+
+function greatestCommonDivisor(left: number, right: number): number {
+  let a = Math.abs(left);
+  let b = Math.abs(right);
+
+  while (b !== 0) {
+    [a, b] = [b, a % b];
+  }
+
+  return a;
+}
+
+/**
+ * Picks a round count that gives every player the same number of games when
+ * some players must sit out. Equal distribution requires the total number of
+ * player-slots (rounds * activePlayerCount) to divide evenly by playerCount.
+ */
+function chooseFairRoundCount(
+  playerCount: number,
+  activePlayerCount: number,
+  targetRounds: number,
+  maxRounds: number,
+): number {
+  if (activePlayerCount === playerCount) return targetRounds;
+
+  const period = playerCount / greatestCommonDivisor(playerCount, activePlayerCount);
+  if (period > maxRounds) return targetRounds;
+
+  const candidates: number[] = [];
+  for (let rounds = period; rounds <= maxRounds; rounds += period) {
+    candidates.push(rounds);
+  }
+
+  return candidates.reduce((best, candidate) => {
+    const candidateDistance = Math.abs(candidate - targetRounds);
+    const bestDistance = Math.abs(best - targetRounds);
+    return candidateDistance < bestDistance
+      || (candidateDistance === bestDistance && candidate > best)
+      ? candidate
+      : best;
+  });
 }
 
 /**

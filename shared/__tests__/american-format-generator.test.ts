@@ -180,6 +180,7 @@ describe('generateAmericanFormatTournament', () => {
     });
 
     expect(result.validation.isValid).toBe(true);
+    expect(result.rounds).toHaveLength(9);
     result.rounds.forEach((round) => expect(round.matches).toHaveLength(2));
 
     const matchCounts = new Map(players.map((player) => [player, 0]));
@@ -192,7 +193,33 @@ describe('generateAmericanFormatTournament', () => {
     });
 
     const counts = [...matchCounts.values()];
-    expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
+    expect(new Set(counts)).toEqual(new Set([8]));
+    expect(result.validation.warnings).not.toContain('Players have unequal game counts');
+  });
+
+  it('gives 10 players equal games and sit-outs on 2 courts', () => {
+    const players = Array.from({ length: 10 }, (_, index) => `Player ${index + 1}`);
+    const result = generateAmericanFormatTournament({
+      players,
+      courts: 2,
+      pointsPerMatch: 24,
+    });
+
+    expect(result.validation.isValid).toBe(true);
+    expect(result.rounds).toHaveLength(10);
+    result.rounds.forEach((round) => expect(round.matches).toHaveLength(2));
+
+    const matchCounts = new Map(players.map((player) => [player, 0]));
+    result.rounds.forEach((round) => {
+      round.matches.forEach((match) => {
+        [...match.team1, ...match.team2].forEach((player) => {
+          matchCounts.set(player, matchCounts.get(player)! + 1);
+        });
+      });
+    });
+
+    expect(new Set(matchCounts.values())).toEqual(new Set([8]));
+    expect(result.validation.warnings).not.toContain('Players have unequal game counts');
   });
 
   it('allows unavoidable repeated partnerships as warnings', () => {

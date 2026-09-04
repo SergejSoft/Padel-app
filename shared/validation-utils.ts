@@ -301,8 +301,8 @@ export function validateAmericanFormatSchedule(
   const minMatches = Math.min(...matchCounts);
   const maxMatches = Math.max(...matchCounts);
   
-  if (maxMatches - minMatches > 1) {
-    warnings.push('Unbalanced match distribution between players');
+  if (maxMatches - minMatches > 0) {
+    warnings.push('Players have unequal game counts');
   }
 
   playerMatchCounts.forEach((count, player) => {

@@ -23,6 +23,7 @@ import {
   ExternalLink,
   Loader2,
   Play,
+  RefreshCw,
   Trash2,
   Trophy,
   UserPlus,
@@ -100,6 +101,8 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
   }, [tournament]);
 
   const isRegistrationMode = tournament?.tournamentMode === "registration";
+  const hasSchedule = Array.isArray(tournament?.schedule) && tournament.schedule.length > 0;
+  const hasRecordedScores = Array.isArray(tournament?.finalScores) && tournament.finalScores.length > 0;
 
   const actionMutation = useMutation({
     mutationFn: async ({ action }: { action: "active" | "cancelled" | "archived" }) => {
@@ -121,6 +124,38 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
     },
     onError: (error: Error) => {
       toast({ title: "Action failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const regenerateScheduleMutation = useMutation({
+    mutationFn: async () => {
+      if (!tournament || !hasSchedule || hasRecordedScores) return;
+
+      const schedule = generateAmericanFormat({
+        players: tournament.players,
+        courts: tournament.courtsCount,
+        pointsPerMatch: tournament.pointsPerMatch,
+      });
+      const response = await apiRequest("PUT", `/api/tournaments/${tournament.id}`, {
+        schedule,
+        finalScores: [],
+        results: null,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tournaments"] });
+      toast({
+        title: "Schedule regenerated",
+        description: "Pairings and sit-outs were rebuilt. Registrations were not changed.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Could not regenerate schedule",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -247,8 +282,6 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
       : `/shared/${tournament.urlSlug || tournament.shareId}`
     : "/";
 
-  const hasSchedule = Array.isArray(tournament?.schedule) && tournament!.schedule!.length > 0;
-
   const copyTournamentLink = async () => {
     if (!tournament) return;
     await navigator.clipboard.writeText(`${getPublicAppUrl()}${publicPath}`);
@@ -322,6 +355,39 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
                 <Download className="mr-2 h-4 w-4" />
                 Download PDF
               </Button>
+            )}
+            {hasSchedule && !isRegistrationMode && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={hasRecordedScores || regenerateScheduleMutation.isPending}
+                    title={hasRecordedScores ? "Scores already recorded" : "Generate new pairings and sit-outs"}
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Regenerate schedule
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Regenerate the match schedule?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will replace the current round-by-round pairings and sit-outs.
+                      The number of rounds may change to give every player an equal number
+                      of games. All registrations remain untouched.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep current schedule</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => regenerateScheduleMutation.mutate()}
+                    >
+                      Regenerate schedule
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
             {tournament.leaderboardId && (
               <Button
