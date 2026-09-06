@@ -137,13 +137,32 @@ export function ScoreSlider({
     if (saveTimer.current) clearTimeout(saveTimer.current);
   }, []);
 
+  // Value being dragged that has not been committed yet. Radix only fires
+  // onValueCommit when the thumb ends somewhere other than where it started,
+  // so an unscored game dragged out and back to the 12–12 centre, or a
+  // saved score dragged away and back, would otherwise never be saved.
+  const uncommittedTeam2 = useRef<number | null>(null);
+
   const handleDrag = (values: number[]) => {
+    uncommittedTeam2.current = values[0];
     setTeam2Score(values[0]);
     setSaveState("dirty");
   };
 
   const handleRelease = (values: number[]) => {
+    uncommittedTeam2.current = null;
     scheduleSave(values[0], 0);
+  };
+
+  // Runs before Radix's own pointer-up handling; defer so that a regular
+  // commit (value changed) wins and this only saves when Radix stayed silent.
+  const handlePointerEnd = () => {
+    setTimeout(() => {
+      const pending = uncommittedTeam2.current;
+      if (pending === null) return;
+      uncommittedTeam2.current = null;
+      scheduleSave(pending, 0);
+    }, 0);
   };
 
   const nudge = (delta: number) => {
@@ -241,6 +260,8 @@ export function ScoreSlider({
           value={[team2Score]}
           onValueChange={handleDrag}
           onValueCommit={handleRelease}
+          onPointerUp={handlePointerEnd}
+          onPointerCancel={handlePointerEnd}
           aria-label={`Score split between ${team1Label} and ${team2Label}`}
         >
           <SliderPrimitive.Track className={cn("relative w-full grow rounded-full bg-gray-200", emphasis ? "h-3 sm:h-4" : muted ? "h-2" : "h-2.5 sm:h-3")}>
