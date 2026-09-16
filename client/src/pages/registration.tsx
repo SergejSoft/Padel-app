@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Users, Calendar, MapPin, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Users, Calendar, MapPin, Clock, CheckCircle, XCircle, Ticket } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { apiRequest } from '@/lib/queryClient';
@@ -186,7 +186,7 @@ export default function RegistrationPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+            <div className={`grid grid-cols-1 gap-4 text-center ${registrationInfo.price ? "sm:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-3"}`}>
               <div className="flex items-center justify-center space-x-2">
                 <Calendar className="h-5 w-5 text-blue-600" />
                 <span className="font-medium">{registrationInfo.date}</span>
@@ -199,6 +199,15 @@ export default function RegistrationPage() {
                 <MapPin className="h-5 w-5 text-blue-600" />
                 <span className="font-medium">{registrationInfo.location}</span>
               </div>
+              {registrationInfo.price && (
+                <div className="flex items-center justify-center space-x-2" data-testid="registration-price">
+                  <Ticket className="h-5 w-5 text-blue-600" />
+                  <span className="font-medium">
+                    {formatPrice(registrationInfo.price, registrationInfo.currency)}
+                    <span className="text-muted-foreground font-normal"> per player</span>
+                  </span>
+                </div>
+              )}
             </div>
             
             <div className="flex justify-center">
@@ -212,11 +221,6 @@ export default function RegistrationPage() {
                 <Badge variant="outline" className="text-sm px-4 py-2">
                   {registrationInfo.pointsPerMatch} points per match
                 </Badge>
-                {registrationInfo.price && (
-                  <Badge variant="outline" className="text-sm px-4 py-2">
-                    Entry {formatPrice(registrationInfo.price, registrationInfo.currency)}
-                  </Badge>
-                )}
               </div>
             </div>
           </CardContent>
