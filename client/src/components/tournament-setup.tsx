@@ -113,7 +113,7 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
                   name="time"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Time (Optional)</FormLabel>
+                      <FormLabel>Start Time</FormLabel>
                       <FormControl>
                         <Input
                           type="time"
