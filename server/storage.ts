@@ -408,6 +408,11 @@ export class DatabaseStorage implements IStorage {
     if (tournamentData.date) updateData.date = tournamentData.date;
     if (tournamentData.time) updateData.time = tournamentData.time;
     if (tournamentData.location) updateData.location = tournamentData.location;
+    // An empty string clears the price (free tournament); undefined leaves it alone
+    if (tournamentData.price !== undefined) {
+      updateData.price = tournamentData.price === "" ? null : tournamentData.price;
+    }
+    if (tournamentData.currency) updateData.currency = tournamentData.currency;
     if (tournamentData.playersCount !== undefined) updateData.playersCount = tournamentData.playersCount;
     if (tournamentData.courtsCount !== undefined) updateData.courtsCount = tournamentData.courtsCount;
     if (tournamentData.pointsPerMatch !== undefined) updateData.pointsPerMatch = tournamentData.pointsPerMatch;

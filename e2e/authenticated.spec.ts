@@ -135,6 +135,13 @@ test("organizer can run a complete registration and scoring flow", async ({ page
     expect(registrationResponse.ok()).toBe(true);
     const { registrationId } = await registrationResponse.json();
 
+    // The organizer adds an entry price afterwards from Manage; it must reach the public page
+    const priceResponse = await page.request.put(`/api/tournaments/${tournamentId}`, {
+      data: { price: "15", currency: "EUR" },
+    });
+    expect(priceResponse.ok()).toBe(true);
+    expect(await priceResponse.json()).toMatchObject({ price: "15", currency: "EUR" });
+
     const publicContext = await browser.newContext({
       baseURL: testInfo.project.use.baseURL as string,
       storageState: { cookies: [], origins: [] },
@@ -143,6 +150,7 @@ test("organizer can run a complete registration and scoring flow", async ({ page
     await publicPage.goto(`/register/${registrationId}`);
     await expect(publicPage.getByText(`RELEASE-QA E2E ${unique}`, { exact: true })).toBeVisible();
     await expect(publicPage.getByText("24 points per match")).toBeVisible();
+    await expect(publicPage.getByTestId("registration-price")).toContainText("€15");
     await expect(publicPage.getByRole("button", { name: "Join Tournament" })).toBeVisible();
 
     const unsignedRegistration = await publicContext.request.post(
