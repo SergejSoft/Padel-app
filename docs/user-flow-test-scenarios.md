@@ -10,7 +10,7 @@ The four personas now map to explicit app roles and journeys:
 
 | Requested persona | Reality in the code |
 |---|---|
-| Admin | `users.role = 'admin'`. Dashboard shows **all** tournaments ("Admin Dashboard" / "All Tournaments"). |
+| Admin | `users.role = 'admin'`. Dashboard shows **all** tournaments ("Admin Dashboard" / "All tournaments"). |
 | Organiser who also plays | Starts as `player`, uses **Become an organiser**, then registers themselves through their own public registration link. The account keeps its linked player registrations after the upgrade. |
 | Player who is not an organiser | `users.role = 'player'` (the default for every new sign-up). Sees **My Padel**, their linked joined tournaments, and no creation controls. Anonymous joining remains supported. |
 | Organiser who is not playing | `users.role = 'organizer'`, never registers themselves as a participant. |
@@ -80,7 +80,7 @@ flowchart TB
 ```mermaid
 flowchart TD
     A1["Open / in signed-out browser\n→ Landing page shown"] --> A2["/login → Clerk sign-in\nas admin"]
-    A2 --> A3["Dashboard loads:\nheader reads 'Admin Dashboard',\nsection 'All Tournaments'"]
+    A2 --> A3["Dashboard loads:\nheader reads 'Admin Dashboard',\nsection 'All tournaments'"]
     A3 --> A4{"Tournaments from OTHER\norganisers visible?"}
     A4 -->|"yes — expected"| A5["Open another organiser's tournament:\nedit / manage / share controls work"]
     A4 -->|no| FAIL1["FAIL: admin scope broken"]
@@ -98,7 +98,7 @@ flowchart TD
 |---|---|---|
 | A1 | Visit `/` signed out | Landing page, no dashboard data leaks |
 | A2 | Sign in via Clerk as admin | Redirect to dashboard |
-| A3 | Inspect dashboard header | "Admin Dashboard", "All Tournaments" — tournaments owned by other users listed |
+| A3 | Inspect dashboard header | "Admin Dashboard", "All tournaments" — tournaments owned by other users listed |
 | A5 | Edit / share another organiser's tournament | Allowed (admin override) — verify API does not return 403 |
 | A6–A7 | Create + publish `QA-ADMIN-1` | Share link `/shared/…` and registration link `/register/…` shown |
 | A8 | Open share link in incognito | Public preview renders; no edit/delete/score controls |
@@ -116,7 +116,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     B1["/login → fresh sign-in"] --> B1A["My Padel → Become an organiser\n→ confirm immediate upgrade"]
-    B1A --> B2["Dashboard: 'Tournament Dashboard',\n'Your Tournaments' (own only)"]
+    B1A --> B2["Dashboard: 'Tournament Dashboard',\n'Your tournaments' (own only)"]
     B2 --> B3["Create event 'QA-ORGPLAYER-1'\n(e.g. 8 players, 2 courts)"]
     B3 --> B4["Publish: registration OPEN,\ncopy /register/… link"]
     B4 --> B5["CRITICAL: open own /shared/… link\n→ event preview shows registration link"]
@@ -178,7 +178,7 @@ flowchart TD
     D3 --> D4["Join via /register/… form:\nname/email prefilled from account"]
     D4 --> D5["Back on My Padel:\njoined event appears and links\nto preview, scores, leaderboard"]
     D5 --> D6["Attempt organiser API calls on that\ntournament (edit/score/delete)\n→ 403 Access denied"]
-    D6 --> D7["Become an organiser → confirm:\nOrganizer Dashboard appears;\njoined-event link remains associated"]
+    D6 --> D7["Become an organiser → confirm:\nOrganizer Dashboard appears;\njoined event is listed under 'Playing in'"]
     D7 --> D8["My account: UserButton →\nmanage account → Sign out"]
 ```
 

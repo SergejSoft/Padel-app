@@ -14,6 +14,7 @@ import { FinalsLeaderboard } from "@/components/finals-leaderboard";
 import { Footer } from "@/components/footer";
 import type { Round, Tournament } from "@shared/schema";
 import { getSchedulePlayers, getSittingOutPlayers } from "@shared/schedule-utils";
+import { isBeforeToday, parseCalendarDate } from "@shared/tournament-lifecycle";
 import { useState, useEffect } from "react";
 import { useAuth as useClerkAuth } from "@/lib/auth";
 import { useAuth } from "@/hooks/useAuth";
@@ -100,7 +101,7 @@ export default function SharedTournament() {
 
   const getTournamentStatus = (tournament: Tournament) => {
     if (tournament.status === 'cancelled') return 'cancelled';
-    if (tournament.date && new Date(tournament.date) < new Date()) return 'past';
+    if (isBeforeToday(tournament.date)) return 'past';
     return 'active';
   };
 
@@ -225,7 +226,7 @@ export default function SharedTournament() {
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <span>
-                  {new Date(tournament.date).toLocaleDateString('en-US', { 
+                  {parseCalendarDate(tournament.date).toLocaleDateString('en-US', { 
                     weekday: 'long', 
                     year: 'numeric', 
                     month: 'long', 

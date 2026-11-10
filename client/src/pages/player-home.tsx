@@ -1,19 +1,14 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserButton, useClerk } from "@/lib/auth";
-import { Link } from "wouter";
 import {
   Calendar,
-  ExternalLink,
   Loader2,
-  MapPin,
   ShieldCheck,
-  Trophy,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -27,111 +22,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Footer } from "@/components/footer";
+import { JoinedTournamentCard } from "@/components/joined-tournament-card";
+import { TournamentSection } from "@/components/tournament-section";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { compareNewestFirst, groupTournaments } from "@shared/tournament-lifecycle";
 import type { JoinedTournamentSummary, User } from "@shared/schema";
 
-type TournamentGroup = {
-  title: string;
-  description: string;
-  tournaments: JoinedTournamentSummary[];
-};
-
-function getGroups(tournaments: JoinedTournamentSummary[]): TournamentGroup[] {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const upcoming: JoinedTournamentSummary[] = [];
-  const active: JoinedTournamentSummary[] = [];
-  const completed: JoinedTournamentSummary[] = [];
-
-  for (const tournament of tournaments) {
-    if (
-      tournament.status === "completed"
-      || tournament.status === "cancelled"
-      || tournament.status === "archived"
-    ) {
-      completed.push(tournament);
-    } else if (tournament.date && new Date(tournament.date) >= today) {
-      upcoming.push(tournament);
-    } else {
-      active.push(tournament);
-    }
-  }
-
-  return [
-    {
-      title: "Upcoming",
-      description: "Tournaments that are scheduled for the future",
-      tournaments: upcoming,
-    },
-    {
-      title: "Active and past",
-      description: "Current tournaments and events awaiting completion",
-      tournaments: active,
-    },
-    {
-      title: "History",
-      description: "Your tournament history",
-      tournaments: completed,
-    },
-  ].filter((group) => group.tournaments.length > 0);
-}
-
-function TournamentCard({ tournament }: { tournament: JoinedTournamentSummary }) {
-  const publicIdentifier = tournament.urlSlug || tournament.shareId;
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle className="text-lg">{tournament.name}</CardTitle>
-            <CardDescription className="mt-1">
-              {tournament.date || "Date to be confirmed"}
-              {tournament.time ? ` at ${tournament.time}` : ""}
-            </CardDescription>
-          </div>
-          <Badge variant={tournament.status === "cancelled" ? "destructive" : "secondary"}>
-            {tournament.status}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {tournament.location && (
-          <p className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-            <MapPin className="h-4 w-4" />
-            {tournament.location}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          {publicIdentifier && (
-            <Button asChild size="sm">
-              <Link href={`/shared/${publicIdentifier}`}>
-                View tournament
-                <ExternalLink className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          )}
-          {publicIdentifier && (
-            <Button asChild size="sm" variant="outline">
-              <Link href={`/shared/${publicIdentifier}/scores`}>Live scores</Link>
-            </Button>
-          )}
-          {tournament.leaderboardId && (
-            <Button asChild size="sm" variant="outline">
-              <Link href={`/leaderboard/${tournament.leaderboardId}`}>
-                <Trophy className="mr-2 h-4 w-4" />
-                Leaderboard
-              </Link>
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+const renderCard = (tournament: JoinedTournamentSummary) => <JoinedTournamentCard tournament={tournament} />;
+const getKey = (tournament: JoinedTournamentSummary) => tournament.id;
 
 export default function PlayerHome() {
   const { user } = useAuth();
@@ -189,7 +89,9 @@ export default function PlayerHome() {
     },
   });
 
-  const groups = getGroups(tournaments);
+  const groups = groupTournaments(tournaments);
+  const [nextUp, ...laterUpcoming] = groups.upcoming;
+  const history = [...groups.finished, ...groups.archived].sort(compareNewestFirst);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -235,7 +137,7 @@ export default function PlayerHome() {
                 We could not load your tournaments. Please refresh and try again.
               </CardContent>
             </Card>
-          ) : groups.length === 0 ? (
+          ) : tournaments.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
@@ -248,17 +150,43 @@ export default function PlayerHome() {
             </Card>
           ) : (
             <div className="space-y-8">
-              {groups.map((group) => (
-                <section key={group.title}>
-                  <h3 className="font-semibold">{group.title}</h3>
-                  <p className="mb-3 text-sm text-muted-foreground">{group.description}</p>
-                  <div className="grid gap-4 lg:grid-cols-2">
-                    {group.tournaments.map((tournament) => (
-                      <TournamentCard key={tournament.id} tournament={tournament} />
-                    ))}
-                  </div>
+              {nextUp && (
+                <section aria-labelledby="player-next-up-title">
+                  <h3 id="player-next-up-title" className="mb-3 text-lg font-semibold">Next up</h3>
+                  <JoinedTournamentCard tournament={nextUp} featured />
                 </section>
-              ))}
+              )}
+              <TournamentSection
+                id="player-upcoming"
+                title="Upcoming"
+                description="Tournaments you joined, soonest first"
+                items={laterUpcoming}
+                getKey={getKey}
+                renderItem={renderCard}
+                headingLevel={3}
+                listClassName="grid gap-4 space-y-0 lg:grid-cols-2"
+              />
+              <TournamentSection
+                id="player-awaiting-results"
+                title="Awaiting results"
+                description="The date has passed and final results are not published yet"
+                items={groups.needsResults}
+                getKey={getKey}
+                renderItem={renderCard}
+                headingLevel={3}
+                listClassName="grid gap-4 space-y-0 lg:grid-cols-2"
+              />
+              <TournamentSection
+                id="player-history"
+                title="History"
+                description="Completed, cancelled and archived tournaments"
+                items={history}
+                getKey={getKey}
+                renderItem={renderCard}
+                headingLevel={3}
+                initialLimit={6}
+                listClassName="grid gap-4 space-y-0 lg:grid-cols-2"
+              />
             </div>
           )}
         </section>

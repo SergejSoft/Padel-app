@@ -244,6 +244,88 @@ test("organizer can run a complete registration and scoring flow", async ({ page
   }
 });
 
+test("organizer dashboard groups tournaments into lifecycle sections", async ({ page }) => {
+  const tag = `SECTIONS-QA ${Date.now()}`;
+  const names = {
+    today: `${tag} today`,
+    upcoming: `${tag} upcoming`,
+    past: `${tag} past`,
+    archived: `${tag} archived`,
+  };
+  const tournamentIds: number[] = [];
+
+  const createTournament = async (name: string, date: string) => {
+    const response = await page.request.post("/api/tournaments", {
+      data: {
+        name,
+        date,
+        time: "10:00",
+        location: "E2E Court",
+        playersCount: 8,
+        courtsCount: 2,
+        pointsPerMatch: 16,
+        players: [],
+        schedule: [],
+        tournamentMode: "registration",
+      },
+    });
+    expect(response.ok()).toBe(true);
+    const tournament = await response.json();
+    tournamentIds.push(tournament.id);
+    return tournament.id as number;
+  };
+
+  try {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: /Tournament Dashboard|Admin Dashboard/ })).toBeVisible();
+
+    // The browser's local calendar day, which is what the dashboard compares against
+    const today = await page.evaluate(() => {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    });
+    await createTournament(names.today, today);
+    await createTournament(names.upcoming, "2030-05-01");
+    await createTournament(names.past, "2020-01-15");
+    const archivedId = await createTournament(names.archived, "2020-02-01");
+    expect((await page.request.patch(`/api/tournaments/${archivedId}/archive`)).ok()).toBe(true);
+
+    await page.reload();
+
+    const row = (name: string) => page.getByRole("button", { name: `Edit tournament ${name}` });
+    const section = (name: string) => page.getByRole("region", { name, exact: true });
+
+    // A same-day tournament is upcoming, never "past"
+    await expect(row(names.today)).toBeVisible();
+    await expect(section("Needs results").getByRole("button", { name: `Edit tournament ${names.today}` })).toHaveCount(0);
+    await expect(row(names.today)).toContainText("Today");
+
+    const pastRow = section("Needs results").getByRole("button", { name: `Edit tournament ${names.past}` });
+    await expect(pastRow).toBeVisible();
+    await expect(pastRow).toContainText("No schedule yet");
+
+    // Archived stays collapsed until opened
+    await expect(section("Archived")).toBeVisible();
+    await expect(row(names.archived)).toHaveCount(0);
+
+    // Searching narrows every section and opens Archived
+    await page.getByRole("searchbox", { name: "Search tournaments" }).fill(tag);
+    await expect(section("Next up").getByRole("button", { name: `Edit tournament ${names.today}` })).toBeVisible();
+    await expect(section("Upcoming").getByRole("button", { name: `Edit tournament ${names.upcoming}` })).toBeVisible();
+    await expect(section("Upcoming").getByRole("button")).toHaveCount(1);
+    await expect(section("Archived").getByRole("button", { name: `Edit tournament ${names.archived}` })).toBeVisible();
+
+    await page.getByRole("searchbox", { name: "Search tournaments" }).fill("");
+    await expect(row(names.archived)).toHaveCount(0);
+    await section("Archived").getByRole("button", { name: /Archived/ }).click();
+    await expect(row(names.archived)).toBeVisible();
+  } finally {
+    for (const id of tournamentIds) {
+      await removeFixtureTournament(page, id);
+    }
+  }
+});
+
 test("organizer sets up a tournament by courts first and players second", async ({ page }) => {
   const tournamentName = `CAMP-QA E2E ${Date.now()}`;
   let tournamentId: number | undefined;

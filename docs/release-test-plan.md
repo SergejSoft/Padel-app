@@ -33,7 +33,7 @@ cross-account, concurrency, migrated-data, or responsive-layout verification.
 
 Expected:
 
-- Nine migrated tournaments are visible.
+- Nine migrated tournaments are visible across the dashboard sections (expand Archived to see archived ones).
 - Edit, registration management, scoring, sharing, cancellation, and deletion controls are available.
 - No tournament appears ownerless.
 
@@ -233,6 +233,18 @@ Expected: controls remain usable, team names are readable, and no horizontal ove
 Submit the final available registration place from two browsers at nearly the same time.
 
 Expected: the tournament never exceeds its configured capacity.
+
+### P5. Dashboard sections
+
+Open the organizer dashboard with a mix of today's, future, past, completed, cancelled, and archived tournaments, plus one tournament from another organizer that you joined as a player.
+
+Expected:
+
+- The soonest upcoming tournament is shown under **Next up**; a tournament dated today shows **Today**, never "Past".
+- **Upcoming** is soonest first; **Needs results** lists past tournaments that were never completed ("No schedule yet" or "Scores not saved").
+- **Playing in** shows the joined tournament; **Completed** shows completed and cancelled ones, five at a time.
+- **Archived** stays collapsed until opened; searching by name or location filters every section and opens Archived.
+- The stat cards jump to their section. On My Padel, players see Next up, Upcoming, Awaiting results, and History.
 
 ## Post-test cleanup
 
