@@ -226,7 +226,7 @@ export default function Dashboard() {
                             </Badge>
                           )}
                           <Badge variant="outline" className="text-xs">
-                            {tournament.courtsCount} Courts
+                            {tournament.courtsCount} {tournament.courtsCount === 1 ? 'Court' : 'Courts'}
                           </Badge>
                           <Badge variant="outline" className="text-xs">
                             {tournament.pointsPerMatch} Points

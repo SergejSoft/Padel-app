@@ -11,8 +11,9 @@ export const TOURNAMENT_CONFIG = {
   
   // Court configuration
   DEFAULT_COURTS: 2,
-  MIN_COURTS: 2,
+  MIN_COURTS: 1,
   MAX_COURTS: 5,
+  PLAYERS_PER_COURT: 4,
   
   // Scoring configuration
   POINTS_PER_MATCH_OPTIONS: [16, 24, 32] as const,

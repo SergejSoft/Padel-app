@@ -14,6 +14,46 @@ import type {
 import { validateAmericanFormatConfig, validateAmericanFormatSchedule } from './validation-utils.js';
 import { TOURNAMENT_CONFIG } from './tournament-config.js';
 
+const MAX_ROUNDS = 12;
+
+export interface AmericanFormatPlan {
+  /** Courts in use each round; never more than the players can fill. */
+  readonly activeCourts: number;
+  readonly playingPerRound: number;
+  readonly restingPerRound: number;
+  readonly rounds: number;
+  readonly minGamesPerPlayer: number;
+  readonly maxGamesPerPlayer: number;
+}
+
+/**
+ * Describes the schedule the generator will build for a player and court
+ * count, without generating it.
+ */
+export function planAmericanFormat(playerCount: number, courts: number): AmericanFormatPlan {
+  const perCourt = TOURNAMENT_CONFIG.PLAYERS_PER_COURT;
+  const activeCourts = Math.max(0, Math.min(Math.floor(playerCount / perCourt), courts));
+  const playingPerRound = activeCourts * perCourt;
+  const rounds = activeCourts > 0
+    ? chooseFairRoundCount(
+        playerCount,
+        playingPerRound,
+        Math.min(playerCount - 1, MAX_ROUNDS),
+        MAX_ROUNDS,
+      )
+    : 0;
+  const playerSlots = rounds * playingPerRound;
+
+  return {
+    activeCourts,
+    playingPerRound,
+    restingPerRound: Math.max(0, playerCount - playingPerRound),
+    rounds,
+    minGamesPerPlayer: playerCount > 0 ? Math.floor(playerSlots / playerCount) : 0,
+    maxGamesPerPlayer: playerCount > 0 ? Math.ceil(playerSlots / playerCount) : 0,
+  };
+}
+
 /**
  * Generates American format tournament schedule with strict rule adherence
  */
@@ -114,19 +154,11 @@ function generateOptimal8PlayerFormat(config: AmericanFormatConfig): AmericanFor
  */
 function generateGeneralAmericanFormat(config: AmericanFormatConfig): AmericanFormatResult {
   const { players, courts } = config;
-  const playerCount = players.length;
-  const activePlayerCount = Math.min(
-    Math.floor(playerCount / 4) * 4,
-    courts * 4,
-  );
-  const activeCourts = activePlayerCount / 4;
-  const targetRounds = Math.min(playerCount - 1, 12);
-  const optimalRounds = chooseFairRoundCount(
-    playerCount,
-    activePlayerCount,
-    targetRounds,
-    12,
-  );
+  const {
+    activeCourts,
+    playingPerRound: activePlayerCount,
+    rounds: optimalRounds,
+  } = planAmericanFormat(players.length, courts);
 
   const rounds: ImmutableMatch[][] = [];
   const partnershipHistory = new Map<string, Set<string>>();

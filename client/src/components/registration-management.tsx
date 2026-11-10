@@ -47,6 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { getPublicAppUrl } from '@/lib/public-url';
 import type { Tournament, RegisteredParticipant } from '@shared/schema';
+import { planAmericanFormat } from '@shared/american-format-generator';
 
 interface RegistrationManagementProps {
   tournament: Tournament;
@@ -254,6 +255,7 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
 
   const maxParticipants = tournament.maxParticipants || tournament.playersCount;
   const isFull = participants.length >= maxParticipants;
+  const schedulePlan = planAmericanFormat(participants.length, tournament.courtsCount);
 
   if (!isRegistrationMode && !tournament.registrationId) {
     return (
@@ -457,9 +459,11 @@ export default function RegistrationManagement({ tournament }: RegistrationManag
                       <div className="space-y-2">
                         <p>
                           This creates the round-by-round schedule for the {participants.length} registered
-                          players on {tournament.courtsCount} {tournament.courtsCount === 1 ? 'court' : 'courts'}
-                          {participants.length > tournament.courtsCount * 4 &&
-                            `, with ${participants.length - tournament.courtsCount * 4} sitting out each round`}.
+                          players on {schedulePlan.activeCourts} {schedulePlan.activeCourts === 1 ? 'court' : 'courts'}
+                          {schedulePlan.restingPerRound > 0 &&
+                            `, with ${schedulePlan.restingPerRound} sitting out each round`}.
+                          {schedulePlan.activeCourts < tournament.courtsCount &&
+                            ` ${tournament.courtsCount - schedulePlan.activeCourts} of the ${tournament.courtsCount} courts won't be needed.`}
                         </p>
                         <p>
                           Registration closes for new sign-ups. All existing registrations stay stored, and

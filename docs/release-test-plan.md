@@ -128,7 +128,13 @@ Expected:
 
 ### T5. Court selector and validation
 
-Verify court values 2, 3, 4, and 5 can be selected. Verify fewer than 4 or more than 20 players and courts outside 2–5 are rejected.
+Verify court values 1–5 can be selected and that picking a court count sets players to courts × 4. Verify the −/+ buttons stop at 4 and 20 and that typed values outside 4–20 are rejected.
+
+The lineup summary under the players field must match the generated schedule:
+
+- 7 players, 1 court: 4 play and 3 rest each round; 7 rounds, 4 games per player.
+- 7 players, 2 courts: only 1 of 2 courts can be used; 4 play and 3 rest.
+- 13 players, 3 courts: 12 play and 1 rests; 12 rounds, 11–12 games per player.
 
 ## P0 — Registration management
 

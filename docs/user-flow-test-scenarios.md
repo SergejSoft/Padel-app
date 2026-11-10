@@ -194,7 +194,7 @@ The important design insight: **being signed in must give a player zero extra po
 ```mermaid
 flowchart TD
     E1["/login → sign in\n(upgrade first if player)"] --> E2["Dashboard: only OWN tournaments"]
-    E2 --> E3["CREATE: wizard → 'QA-ORG-1'\nvalidate limits: 4–20 players, 2–5 courts"]
+    E2 --> E3["CREATE: wizard → 'QA-ORG-1'\nvalidate limits: 4–20 players, 1–5 courts"]
     E3 --> E4["PUBLISH: registration OPEN\nshareId + registrationId exist"]
     E4 --> E5["SHARE: copy buttons for\n/shared/… and /register/…\nclipboard content correct"]
     E5 --> E6["Players join via link\n(other browsers — see Scenario C)"]

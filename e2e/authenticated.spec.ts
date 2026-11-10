@@ -243,3 +243,75 @@ test("organizer can run a complete registration and scoring flow", async ({ page
     }
   }
 });
+
+test("organizer sets up a tournament by courts first and players second", async ({ page }) => {
+  const tournamentName = `CAMP-QA E2E ${Date.now()}`;
+  let tournamentId: number | undefined;
+
+  try {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: /Tournament Dashboard|Admin Dashboard/ })).toBeVisible();
+    await page.evaluate(() => localStorage.removeItem("tournament_wizard_state"));
+    await page.goto("/tournament");
+
+    const court = (count: number) =>
+      page.getByRole("radio", { name: `${count} ${count === 1 ? "court" : "courts"}`, exact: true });
+    const players = page.getByLabel("Players", { exact: true });
+    const addPlayer = page.getByRole("button", { name: "Add a player" });
+    const removePlayer = page.getByRole("button", { name: "Remove a player" });
+    const lineup = page.getByTestId("lineup-summary");
+
+    await court(1).click();
+    await expect(players).toHaveValue("4");
+    await expect(removePlayer).toBeDisabled();
+    for (let index = 0; index < 3; index++) await addPlayer.click();
+    await expect(players).toHaveValue("7");
+    await expect(lineup).toContainText("4 play each round and 3 rest");
+    await expect(lineup).toContainText("7 rounds · 4 games per player");
+
+    await court(3).click();
+    await expect(players).toHaveValue("12");
+    await addPlayer.click();
+    await expect(lineup).toContainText("12 play each round and 1 rests");
+    await expect(lineup).toContainText("12 rounds · 11–12 games per player");
+
+    await court(5).click();
+    await expect(players).toHaveValue("20");
+    await expect(addPlayer).toBeDisabled();
+
+    await court(2).click();
+    await removePlayer.click();
+    await expect(players).toHaveValue("7");
+    await expect(lineup).toContainText("Only 1 of 2 courts can be used");
+
+    await page.getByLabel("Tournament Name").fill(tournamentName);
+    await page.getByLabel("Tournament Date").fill("2030-07-01");
+    await page.getByLabel("Start Time").fill("10:00");
+    await page.getByLabel("Tournament Location").fill("E2E Camp");
+    await page.getByRole("button", { name: "Continue" }).click();
+    await page.getByRole("button", { name: "Create Tournament" }).click();
+    await expect(page.getByRole("heading", { name: "Tournament Created!" })).toBeVisible();
+
+    const tournaments = await (await page.request.get("/api/tournaments")).json();
+    const created = tournaments.find((t: any) => t.name === tournamentName);
+    expect(created).toMatchObject({ playersCount: 7, courtsCount: 2, maxParticipants: 7 });
+    tournamentId = created.id;
+
+    for (let index = 1; index <= 7; index++) {
+      const response = await page.request.post(`/api/tournaments/${tournamentId}/participants`, {
+        data: { name: `Camp Player ${index}` },
+      });
+      expect(response.ok()).toBe(true);
+    }
+
+    const convertResponse = await page.request.post(`/api/tournaments/${tournamentId}/convert`);
+    expect(convertResponse.ok()).toBe(true);
+    const converted = await convertResponse.json();
+    expect(converted.schedule).toHaveLength(7);
+    expect(converted.schedule.every((round: any) => round.matches.length === 1)).toBe(true);
+  } finally {
+    if (tournamentId) {
+      await removeFixtureTournament(page, tournamentId);
+    }
+  }
+});

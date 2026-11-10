@@ -74,7 +74,7 @@ function generateSchedulePDF(config: PDFConfig): jsPDF {
   
   yPosition += 4;
   pdf.text(
-    `${playersCount} Players • ${courtsCount} Courts${pointsPerMatch ? ` • ${pointsPerMatch} Points/Match` : ''}`,
+    `${playersCount} Players • ${courtsCount} ${courtsCount === 1 ? 'Court' : 'Courts'}${pointsPerMatch ? ` • ${pointsPerMatch} Points/Match` : ''}`,
     pageWidth / 2,
     yPosition,
     { align: 'center' },
@@ -233,7 +233,7 @@ function generateScorecardPDF(pdf: jsPDF, config: PDFConfig): void {
     yPosition += 5;
   }
   
-  pdf.text(`${playersCount} Players • ${courtsCount} Courts`, pageWidth / 2, yPosition, { align: 'center' });
+  pdf.text(`${playersCount} Players • ${courtsCount} ${courtsCount === 1 ? 'Court' : 'Courts'}`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 10;
 
   const players = [...roster].sort();
@@ -324,7 +324,7 @@ export function generatePDFPreviewHTML(config: PDFConfig): string {
         <h1 style="font-size: 24px; font-weight: bold; margin: 0; color: #000;">${tournamentName}</h1>
         <p style="font-size: 14px; color: #666; margin: 5px 0;">Americano Format Tournament Schedule</p>
         <p style="font-size: 12px; color: #666; margin: 5px 0;">${tournamentDate ? new Date(tournamentDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Date TBD'} • ${tournamentLocation || 'Location TBD'}</p>
-        <p style="font-size: 12px; color: #666; margin: 5px 0;">${playersCount} Players • ${courtsCount} Courts${pointsPerMatch ? ` • ${pointsPerMatch} Points/Match` : ''}</p>
+        <p style="font-size: 12px; color: #666; margin: 5px 0;">${playersCount} Players • ${courtsCount} ${courtsCount === 1 ? 'Court' : 'Courts'}${pointsPerMatch ? ` • ${pointsPerMatch} Points/Match` : ''}</p>
       </div>
 
       <!-- Tournament Schedule Table -->

@@ -14,9 +14,33 @@ import {
 } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Minus, Plus } from "lucide-react";
 import { validateTournamentConfig } from "@/lib/american-format";
 import { tournamentSetupSchema, type TournamentSetup } from "@shared/schema";
 import { TOURNAMENT_CONFIG } from "@shared/tournament-config";
+import { planAmericanFormat, type AmericanFormatPlan } from "@shared/american-format-generator";
+
+const courtOptions = Array.from(
+  { length: TOURNAMENT_CONFIG.MAX_COURTS - TOURNAMENT_CONFIG.MIN_COURTS + 1 },
+  (_, index) => TOURNAMENT_CONFIG.MIN_COURTS + index,
+);
+
+function describeLineup(playersCount: number, courtsCount: number, plan: AmericanFormatPlan): string {
+  const unusedCourts = plan.activeCourts < courtsCount
+    ? `Only ${plan.activeCourts} of ${courtsCount} courts can be used, as each court needs ${TOURNAMENT_CONFIG.PLAYERS_PER_COURT} players. `
+    : "";
+  const resting = plan.restingPerRound === 0
+    ? `All ${playersCount} players play every round.`
+    : `${plan.playingPerRound} play each round and ${plan.restingPerRound} ${plan.restingPerRound === 1 ? "rests" : "rest"}, taking turns.`;
+  return unusedCourts + resting;
+}
+
+function formatGamesPerPlayer(plan: AmericanFormatPlan): string {
+  return plan.minGamesPerPlayer === plan.maxGamesPerPlayer
+    ? String(plan.minGamesPerPlayer)
+    : `${plan.minGamesPerPlayer}–${plan.maxGamesPerPlayer}`;
+}
 
 interface TournamentSetupProps {
   onComplete: (setup: TournamentSetup) => void;
@@ -41,8 +65,9 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
       location: initialData?.location || "",
       price: initialData?.price || "",
       currency: initialData?.currency || "EUR",
-      playersCount: initialData?.playersCount || 8,
-      courtsCount: initialData?.courtsCount || 2,
+      playersCount: initialData?.playersCount
+        || TOURNAMENT_CONFIG.DEFAULT_COURTS * TOURNAMENT_CONFIG.PLAYERS_PER_COURT,
+      courtsCount: initialData?.courtsCount || TOURNAMENT_CONFIG.DEFAULT_COURTS,
       pointsPerMatch: initialData?.pointsPerMatch || TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH,
     },
   });
@@ -60,6 +85,7 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
   };
 
   const watchedValues = form.watch();
+  const plan = planAmericanFormat(watchedValues.playersCount, watchedValues.courtsCount);
 
   return (
     <CardContent className="p-8">
@@ -193,18 +219,39 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
 
               <FormField
                 control={form.control}
-                name="playersCount"
+                name="courtsCount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Number of Players</FormLabel>
+                    <FormLabel>Courts available</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        min={TOURNAMENT_CONFIG.MIN_PLAYERS}
-                        max={TOURNAMENT_CONFIG.MAX_PLAYERS}
-                        value={field.value}
-                        onChange={(event) => field.onChange(Number(event.target.value))}
-                      />
+                      <ToggleGroup
+                        type="single"
+                        variant="outline"
+                        className="grid grid-cols-5 gap-2"
+                        value={String(field.value)}
+                        onValueChange={(value) => {
+                          // Single toggle groups report "" when the active item is clicked again
+                          if (!value) return;
+                          const courts = Number(value);
+                          field.onChange(courts);
+                          form.setValue(
+                            "playersCount",
+                            courts * TOURNAMENT_CONFIG.PLAYERS_PER_COURT,
+                            { shouldValidate: true },
+                          );
+                        }}
+                      >
+                        {courtOptions.map((courtCount) => (
+                          <ToggleGroupItem
+                            key={courtCount}
+                            value={String(courtCount)}
+                            aria-label={`${courtCount} ${courtCount === 1 ? "court" : "courts"}`}
+                            className="h-11 text-base data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                          >
+                            {courtCount}
+                          </ToggleGroupItem>
+                        ))}
+                      </ToggleGroup>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -213,31 +260,62 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
 
               <FormField
                 control={form.control}
-                name="courtsCount"
+                name="playersCount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Number of Courts</FormLabel>
-                    <Select
-                      value={String(field.value)}
-                      onValueChange={(value) => field.onChange(Number(value))}
-                    >
+                    <FormLabel>Players</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label="Remove a player"
+                        disabled={field.value <= TOURNAMENT_CONFIG.MIN_PLAYERS}
+                        onClick={() => field.onChange(field.value - 1)}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select courts" />
-                        </SelectTrigger>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min={TOURNAMENT_CONFIG.MIN_PLAYERS}
+                          max={TOURNAMENT_CONFIG.MAX_PLAYERS}
+                          className="h-11 w-20 text-center text-base"
+                          value={field.value}
+                          onChange={(event) => field.onChange(Number(event.target.value))}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {[2, 3, 4, 5].map((courtCount) => (
-                          <SelectItem key={courtCount} value={String(courtCount)}>
-                            {courtCount} courts
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label="Add a player"
+                        disabled={field.value >= TOURNAMENT_CONFIG.MAX_PLAYERS}
+                        onClick={() => field.onChange(field.value + 1)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {plan.activeCourts > 0 && (
+                <div
+                  className="rounded-md border border-border bg-background p-4 text-sm"
+                  aria-live="polite"
+                  data-testid="lineup-summary"
+                >
+                  <p className="font-medium text-foreground">
+                    {describeLineup(watchedValues.playersCount, watchedValues.courtsCount, plan)}
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    {plan.rounds} rounds · {formatGamesPerPlayer(plan)} games per player
+                  </p>
+                </div>
+              )}
 
               <FormField
                 control={form.control}
@@ -280,8 +358,7 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
                 </p>
                 <div className="text-xs text-muted-foreground">
                   • Each match totals {watchedValues.pointsPerMatch ?? TOURNAMENT_CONFIG.DEFAULT_POINTS_PER_MATCH} points<br/>
-                  • Every player accumulates their team's points<br/>
-                  • ~90 minutes total duration including warm-up
+                  • Every player accumulates their team's points
                 </div>
               </div>
 
@@ -290,7 +367,7 @@ export function TournamentSetup({ onComplete, onBack, initialData }: TournamentS
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                 disabled={!!validationError || !form.formState.isValid}
               >
-                Continue to Players
+                Continue
               </Button>
             </form>
           </Form>

@@ -1,6 +1,6 @@
 # Padel Americano
 
-A React and Express application for organizing Americano padel tournaments. Organizers can choose 2–5 courts, share a public registration link, manage participants, generate a fair schedule, enter scores, and publish a leaderboard.
+A React and Express application for organizing Americano padel tournaments. Organizers pick the courts available (1–5) and the number of players (4–20), share a public registration link, manage participants, generate a fair schedule, enter scores, and publish a leaderboard.
 
 ## Architecture
 

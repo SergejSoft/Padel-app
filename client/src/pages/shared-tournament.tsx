@@ -247,7 +247,7 @@ export default function SharedTournament() {
             </div>
             <div className="flex items-center gap-2">
               <Target className="h-4 w-4" />
-              <span>{tournament.courtsCount} Courts</span>
+              <span>{tournament.courtsCount} {tournament.courtsCount === 1 ? 'Court' : 'Courts'}</span>
             </div>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4" />

@@ -264,7 +264,7 @@ export function ScheduleDisplay({ tournamentSetup, players, onBack, onReset }: S
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-foreground mb-2">Tournament Schedule</h2>
         <p className="text-muted-foreground">
-          Americano Format • {tournamentSetup.playersCount} Players • {tournamentSetup.courtsCount} Courts
+          Americano Format • {tournamentSetup.playersCount} Players • {tournamentSetup.courtsCount} {tournamentSetup.courtsCount === 1 ? 'Court' : 'Courts'}
         </p>
       </div>
 
