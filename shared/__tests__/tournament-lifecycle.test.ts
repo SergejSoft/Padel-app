@@ -2,11 +2,13 @@ import { describe, it, expect } from 'vitest';
 import {
   daysUntil,
   describeCountdown,
+  describeMissingResults,
   getTournamentPhase,
   groupTournaments,
   isBeforeToday,
   localDateString,
   parseCalendarDate,
+  scoreProgress,
 } from '../tournament-lifecycle';
 
 const TODAY = '2026-11-10';
@@ -143,5 +145,39 @@ describe('groupTournaments', () => {
     const copy = list.map((t) => ({ ...t }));
     groupTournaments(list, TODAY);
     expect(list).toEqual(copy);
+  });
+});
+
+describe('describeMissingResults', () => {
+  // Same shape as a 7-player, 1-court schedule: one match per round.
+  const schedule = Array.from({ length: 7 }, (_, index) => ({
+    round: index + 1,
+    matches: [{ court: 1, round: index + 1, gameNumber: index + 1, status: 'pending' }],
+  }));
+  const scores = (gameNumbers: number[]) =>
+    gameNumbers.map((gameNumber) => ({ gameNumber, team1Score: 7, team2Score: 9 }));
+
+  it('does not claim scores are missing when every game is scored', () => {
+    const tournament = { schedule, finalScores: scores([1, 2, 3, 4, 5, 6, 7]) };
+    expect(scoreProgress(tournament)).toEqual({ scored: 7, total: 7 });
+    expect(describeMissingResults(tournament)).toBe('Ready to complete');
+  });
+
+  it('counts partially scored tournaments', () => {
+    expect(describeMissingResults({ schedule, finalScores: scores([1, 2, 3]) })).toBe('3 of 7 scores saved');
+  });
+
+  it('says scores are not saved only when none are', () => {
+    expect(describeMissingResults({ schedule, finalScores: [] })).toBe('Scores not saved');
+    expect(describeMissingResults({ schedule, finalScores: null })).toBe('Scores not saved');
+  });
+
+  it('ignores scores for games that are not in the schedule', () => {
+    expect(scoreProgress({ schedule, finalScores: scores([1, 1, 8, 9]) })).toEqual({ scored: 1, total: 7 });
+  });
+
+  it('reports a missing schedule', () => {
+    expect(describeMissingResults({ schedule: [], finalScores: [] })).toBe('No schedule yet');
+    expect(describeMissingResults({ schedule: null })).toBe('No schedule yet');
   });
 });

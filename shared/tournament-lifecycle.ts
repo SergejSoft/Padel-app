@@ -87,6 +87,39 @@ export function getTournamentPhase(
   return "needs-results";
 }
 
+export interface ScoreProgressTournament {
+  schedule?: readonly { matches?: readonly { gameNumber?: number }[] }[] | null;
+  finalScores?: readonly { gameNumber?: number }[] | null;
+}
+
+/** Scheduled games and how many of them have a saved score. */
+export function scoreProgress(tournament: ScoreProgressTournament): { scored: number; total: number } {
+  const gameNumbers = new Set<number>();
+  for (const round of tournament.schedule ?? []) {
+    for (const match of round.matches ?? []) {
+      if (typeof match.gameNumber === "number") gameNumbers.add(match.gameNumber);
+    }
+  }
+  const scored = new Set(
+    (tournament.finalScores ?? [])
+      .map((score) => score.gameNumber)
+      .filter((gameNumber): gameNumber is number => gameNumber !== undefined && gameNumbers.has(gameNumber)),
+  );
+  return { scored: scored.size, total: gameNumbers.size };
+}
+
+/**
+ * Why a past tournament still needs results. A tournament stays in this
+ * phase until it is marked complete, even when every score is saved.
+ */
+export function describeMissingResults(tournament: ScoreProgressTournament): string {
+  const { scored, total } = scoreProgress(tournament);
+  if (total === 0) return "No schedule yet";
+  if (scored === 0) return "Scores not saved";
+  if (scored < total) return `${scored} of ${total} scores saved`;
+  return "Ready to complete";
+}
+
 export function compareSoonestFirst(a: LifecycleTournament, b: LifecycleTournament): number {
   const dayA = calendarDay(a.date);
   const dayB = calendarDay(b.date);
