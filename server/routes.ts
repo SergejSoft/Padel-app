@@ -7,6 +7,7 @@ import { z } from "zod";
 import { rateLimit } from "express-rate-limit";
 import { isRegisteredParticipant } from "./participant-query.js";
 import { TOURNAMENT_CONFIG } from "../shared/tournament-config.js";
+import { calculateFinalResults, completionBlocker, scheduleWithScores } from "../shared/final-results.js";
 import { getLocalUserProfile, isLocalAuthEnabled } from "./localAuth.js";
 
 const registrationRateLimit = rateLimit({
@@ -522,26 +523,30 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Complete tournament and generate final leaderboard (requires owner or admin)
+  // Complete tournament and generate final leaderboard (requires owner or admin).
+  // Results are computed from the stored schedule and scores, not taken from the client.
   app.post("/api/tournaments/:id/complete", isAuthenticated, isOwnerOrAdmin(async (req) => {
     const id = parseInt(req.params.id);
     return await storage.getTournamentManagerIds(id);
   }), async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { finalResults } = req.body;
-      
-      if (!finalResults || !Array.isArray(finalResults)) {
-        return res.status(400).json({ error: "Final results array is required" });
+      const tournament = await storage.getTournament(id);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
       }
 
-      const updatedTournament = await storage.completeTournament(id, finalResults);
-      
+      const blocker = completionBlocker(tournament);
+      if (blocker) {
+        return res.status(400).json({ error: blocker });
+      }
+
+      const updatedTournament = await storage.completeTournament(id, calculateFinalResults(tournament));
       if (!updatedTournament) {
         return res.status(404).json({ error: "Tournament not found" });
       }
-      
-      res.json(updatedTournament);
+
+      res.json(toPublicTournament(updatedTournament));
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -571,34 +576,6 @@ export async function registerRoutes(app: Express): Promise<void> {
       });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
-    }
-  });
-
-  // Save tournament results
-  app.patch("/api/tournaments/:id/results", isOwnerOrAdmin(async (req) => {
-    return storage.getTournamentManagerIds(parseInt(req.params.id));
-  }), async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ error: "Invalid tournament ID" });
-      }
-
-      const { results, schedule } = req.body;
-      
-      if (!results || !schedule) {
-        return res.status(400).json({ error: "Results and schedule are required" });
-      }
-
-      const tournament = await storage.updateTournamentResults(id, results, schedule);
-      
-      if (!tournament) {
-        return res.status(404).json({ error: "Tournament not found" });
-      }
-
-      res.json(tournament);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
     }
   });
 
@@ -632,6 +609,7 @@ export async function registerRoutes(app: Express): Promise<void> {
         pointsPerMatch: tournament.pointsPerMatch,
         results: tournament.results,
         finalScores: publicTournament.finalScores,
+        rounds: scheduleWithScores(tournament),
         completedAt: tournament.completedAt,
         status: tournament.status
       });
