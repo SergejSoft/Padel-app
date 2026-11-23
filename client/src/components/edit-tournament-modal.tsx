@@ -20,6 +20,7 @@ import {
   Archive,
   Ban,
   CalendarDays,
+  CheckCircle2,
   Copy,
   CopyPlus,
   Download,
@@ -38,6 +39,8 @@ import { generateAmericanFormat } from "@/lib/american-format";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import RegistrationManagement from "@/components/registration-management";
 import { DuplicateTournamentDialog } from "@/components/duplicate-tournament-dialog";
+import { useCompleteTournament } from "@/hooks/use-complete-tournament";
+import { completionBlocker } from "@shared/final-results";
 import {
   Select,
   SelectContent,
@@ -111,6 +114,8 @@ export function EditTournamentModal({ tournament, isOpen, onClose, onDuplicated 
   const isRegistrationMode = tournament?.tournamentMode === "registration";
   const hasSchedule = Array.isArray(tournament?.schedule) && tournament.schedule.length > 0;
   const hasRecordedScores = Array.isArray(tournament?.finalScores) && tournament.finalScores.length > 0;
+  const completeMutation = useCompleteTournament();
+  const completeBlocker = tournament ? completionBlocker(tournament as any) : null;
 
   const actionMutation = useMutation({
     mutationFn: async ({ action }: { action: "active" | "cancelled" | "archived" }) => {
@@ -461,6 +466,17 @@ export function EditTournamentModal({ tournament, isOpen, onClose, onDuplicated 
               <CopyPlus className="mr-2 h-4 w-4" />
               Duplicate
             </Button>
+            {tournament.status === "active" && hasSchedule && (
+              <Button
+                type="button"
+                disabled={!!completeBlocker || completeMutation.isPending}
+                title={completeBlocker ?? "Save the final results and create the leaderboard link"}
+                onClick={() => completeMutation.mutate(tournament.id)}
+              >
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+                Mark complete
+              </Button>
+            )}
             {tournament.leaderboardId && (
               <Button
                 type="button"

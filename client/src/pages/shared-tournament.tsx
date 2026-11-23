@@ -11,6 +11,7 @@ import { ScoreSlider } from "@/components/score-slider";
 import { RoundSection, deriveRoundStatuses, roundCardStyles } from "@/components/round-section";
 import { useRoundFocus } from "@/hooks/use-round-focus";
 import { FinalsLeaderboard } from "@/components/finals-leaderboard";
+import { useCompleteTournament } from "@/hooks/use-complete-tournament";
 import { Footer } from "@/components/footer";
 import type { Round, Tournament } from "@shared/schema";
 import { getSchedulePlayers, getSittingOutPlayers } from "@shared/schedule-utils";
@@ -32,6 +33,7 @@ export default function SharedTournament() {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const { user, isLoading: userLoading } = useAuth();
   const { isLoaded: authLoaded } = useClerkAuth();
+  const completeMutation = useCompleteTournament(() => setShowLeaderboard(false));
 
   // Wait for Clerk so the request carries the session token; otherwise a
   // signed-in player would be treated as anonymous and asked to sign in.
@@ -555,6 +557,10 @@ export default function SharedTournament() {
         tournamentName={tournament.name}
         gamesScored={scoredGames}
         totalGames={totalGames}
+        canSaveResults={
+          canEditScores() && allGamesHaveScores() && tournament.status === 'active' && !completeMutation.isPending
+        }
+        onSaveResults={() => completeMutation.mutate(tournament.id)}
       />
     </div>
   );

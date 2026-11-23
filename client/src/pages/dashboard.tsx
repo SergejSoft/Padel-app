@@ -267,7 +267,7 @@ export default function Dashboard() {
             <TournamentSection
               id="needs-results"
               title="Needs results"
-              description="The date has passed but the tournament isn't marked complete. Enter any missing scores and save the final results, or archive it if it didn't happen."
+              description="The date has passed but the tournament isn't marked complete. Enter any missing scores, then open Manage and choose Mark complete, or archive it if it didn't happen."
               items={groups.needsResults}
               getKey={(tournament) => tournament.id}
               renderItem={renderRow}

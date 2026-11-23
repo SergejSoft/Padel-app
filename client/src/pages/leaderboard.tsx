@@ -22,6 +22,8 @@ interface LeaderboardData {
   pointsPerMatch: number;
   results: PlayerStats[];
   finalScores: any[];
+  /** Schedule with each match's saved score attached. */
+  rounds?: any[];
   completedAt: string;
   status: string;
 }
@@ -48,7 +50,7 @@ export default function Leaderboard() {
       playersCount: leaderboardData.results.length,
       courtsCount: leaderboardData.courtsCount,
       pointsPerMatch: leaderboardData.pointsPerMatch,
-      rounds: leaderboardData.finalScores || [],
+      rounds: leaderboardData.rounds ?? [],
     });
 
     pdf.save(`${leaderboardData.tournamentName.replace(/\s+/g, '_')}_final_results.pdf`);

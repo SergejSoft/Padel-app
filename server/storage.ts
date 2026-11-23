@@ -43,7 +43,6 @@ export interface IStorage {
   claimCoOrganizerByEmail(user: User): Promise<User>;
   updateTournament(id: number, tournament: Partial<InsertTournament>): Promise<Tournament | undefined>;
   updateTournamentStatus(id: number, status: string): Promise<Tournament | undefined>;
-  updateTournamentResults(id: number, results: any, schedule: any): Promise<Tournament | undefined>;
   updateTournamentScores(id: number, gameNumber: number, team1Score: number, team2Score: number, updatedBy: string): Promise<Tournament | undefined>;
   clearTournamentScore(id: number, gameNumber: number): Promise<Tournament | undefined>;
   clearAllTournamentScores(id: number): Promise<Tournament | undefined>;
@@ -483,30 +482,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(tournaments).where(eq(tournaments.id, id));
   }
 
-  async updateTournamentResults(id: number, results: any, schedule: any): Promise<Tournament | undefined> {
-    try {
-      // Generate leaderboard ID if not exists
-      const leaderboardId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      
-      const [tournament] = await db
-        .update(tournaments)
-        .set({ 
-          results: results as any,
-          finalScores: schedule as any,
-          schedule: schedule as any,
-          status: 'completed',
-          leaderboardId: leaderboardId,
-          completedAt: new Date()
-        })
-        .where(eq(tournaments.id, id))
-        .returning();
-      return tournament || undefined;
-    } catch (error) {
-      console.error('Storage error in updateTournamentResults:', error);
-      throw error;
-    }
-  }
-
   async getTournamentByLeaderboardId(leaderboardId: string): Promise<Tournament | undefined> {
     try {
       const [tournament] = await db.select().from(tournaments).where(eq(tournaments.leaderboardId, leaderboardId));
@@ -617,13 +592,15 @@ export class DatabaseStorage implements IStorage {
     return updatedTournament || undefined;
   }
 
+  /** Marks a tournament completed. Never touches the schedule or saved scores. */
   async completeTournament(id: number, finalResults: any[]): Promise<Tournament | undefined> {
     const [updatedTournament] = await db
       .update(tournaments)
-      .set({ 
+      .set({
         results: finalResults,
-        status: 'completed',
-        completedAt: new Date()
+        status: TOURNAMENT_CONFIG.STATUS.COMPLETED,
+        completedAt: new Date(),
+        leaderboardId: sql`coalesce(${tournaments.leaderboardId}, ${nanoid(16)})`,
       })
       .where(eq(tournaments.id, id))
       .returning();
