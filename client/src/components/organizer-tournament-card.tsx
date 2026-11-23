@@ -4,7 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { TournamentPhaseBadge } from "@/components/tournament-phase-badge";
 import { formatTournamentDate } from "@/lib/tournament-dates";
 import { cn } from "@/lib/utils";
-import { describeCountdown, getTournamentPhase, type TournamentPhase } from "@shared/tournament-lifecycle";
+import { describeCountdown, describeMissingResults, getTournamentPhase, type TournamentPhase } from "@shared/tournament-lifecycle";
 import type { Tournament } from "@shared/schema";
 
 interface OrganizerTournamentCardProps {
@@ -15,7 +15,7 @@ interface OrganizerTournamentCardProps {
 
 function phaseLabel(tournament: Tournament, phase: TournamentPhase): string | undefined {
   if (phase !== "needs-results") return undefined;
-  return tournament.schedule?.length ? "Scores not saved" : "No schedule yet";
+  return describeMissingResults(tournament);
 }
 
 function registrationCounts(tournament: Tournament) {
