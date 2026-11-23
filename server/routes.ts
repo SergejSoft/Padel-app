@@ -17,6 +17,14 @@ const registrationRateLimit = rateLimit({
   message: { error: "Too many registration attempts. Please wait a minute and try again." },
 });
 
+const duplicateTournamentSchema = z.object({
+  name: z.string()
+    .trim()
+    .min(TOURNAMENT_CONFIG.VALIDATION.MIN_TOURNAMENT_NAME_LENGTH, "Tournament name is required")
+    .max(TOURNAMENT_CONFIG.VALIDATION.MAX_TOURNAMENT_NAME_LENGTH, "Tournament name too long"),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD").optional(),
+});
+
 function toPublicTournament(tournament: any) {
   const {
     organizerId: _organizerId,
@@ -287,6 +295,28 @@ export async function registerRoutes(app: Express): Promise<void> {
       
       res.json(tournament);
     } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Duplicate tournament into a new one with a fresh schedule (owner or admin only)
+  app.post("/api/tournaments/:id/duplicate", isAuthenticated, isOwnerOrAdmin(async (req: any) => {
+    return await storage.getTournamentManagerIds(parseInt(req.params.id));
+  }), async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { name, date } = duplicateTournamentSchema.parse(req.body);
+      const tournament = await storage.duplicateTournament(id, { name, date });
+
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+
+      res.json(tournament);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: error.issues?.[0]?.message ?? "Invalid tournament" });
+      }
       res.status(400).json({ error: error.message });
     }
   });

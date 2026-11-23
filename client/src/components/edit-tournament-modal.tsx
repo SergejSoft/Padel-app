@@ -21,6 +21,7 @@ import {
   Ban,
   CalendarDays,
   Copy,
+  CopyPlus,
   Download,
   Loader2,
   Play,
@@ -36,6 +37,7 @@ import { getPublicAppUrl } from "@/lib/public-url";
 import { generateAmericanFormat } from "@/lib/american-format";
 import { generateTournamentPDF } from "@/lib/pdf-generator";
 import RegistrationManagement from "@/components/registration-management";
+import { DuplicateTournamentDialog } from "@/components/duplicate-tournament-dialog";
 import {
   Select,
   SelectContent,
@@ -50,6 +52,8 @@ interface EditTournamentModalProps {
   tournament: Tournament | null;
   isOpen: boolean;
   onClose: () => void;
+  /** Called with the new tournament after a successful duplicate. */
+  onDuplicated?: (tournament: Tournament) => void;
 }
 
 // One row in the players editor. Registration-mode rows keep the participant id
@@ -69,7 +73,7 @@ function playersFromTournament(tournament: Tournament): EditablePlayer[] {
   return (tournament.players || []).map(name => ({ name }));
 }
 
-export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournamentModalProps) {
+export function EditTournamentModal({ tournament, isOpen, onClose, onDuplicated }: EditTournamentModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
@@ -86,6 +90,7 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
   const [players, setPlayers] = useState<EditablePlayer[]>(
     tournament ? playersFromTournament(tournament) : []
   );
+  const [isDuplicateOpen, setIsDuplicateOpen] = useState(false);
 
   // Reset form when tournament changes
   useEffect(() => {
@@ -452,6 +457,10 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
                 </AlertDialogContent>
               </AlertDialog>
             )}
+            <Button type="button" variant="outline" onClick={() => setIsDuplicateOpen(true)}>
+              <CopyPlus className="mr-2 h-4 w-4" />
+              Duplicate
+            </Button>
             {tournament.leaderboardId && (
               <Button
                 type="button"
@@ -708,6 +717,12 @@ export function EditTournamentModal({ tournament, isOpen, onClose }: EditTournam
         </section>
         )}
       </DialogContent>
+      <DuplicateTournamentDialog
+        tournament={tournament}
+        isOpen={isDuplicateOpen}
+        onClose={() => setIsDuplicateOpen(false)}
+        onDuplicated={onDuplicated}
+      />
     </Dialog>
   );
 }
