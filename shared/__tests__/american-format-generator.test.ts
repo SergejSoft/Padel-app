@@ -21,6 +21,26 @@ function countGames(rounds: ReturnType<typeof generateAmericanFormatTournament>[
 
 type Rounds = ReturnType<typeof generateAmericanFormatTournament>['rounds'];
 
+const generatedSchedules = new Map<string, ReturnType<typeof generateAmericanFormatTournament>>();
+
+/** Generates each player/court combination once; the loops below share them. */
+function scheduleFor(playerCount: number, courts: number) {
+  const key = `${playerCount}/${courts}`;
+  if (!generatedSchedules.has(key)) {
+    const players = Array.from({ length: playerCount }, (_, index) => `P${index + 1}`);
+    generatedSchedules.set(key, generateAmericanFormatTournament({ players, courts, pointsPerMatch: 16 }));
+  }
+  return generatedSchedules.get(key)!;
+}
+
+function forEachSupportedSetup(check: (playerCount: number, courts: number, label: string) => void) {
+  for (let playerCount = TOURNAMENT_CONFIG.MIN_PLAYERS; playerCount <= TOURNAMENT_CONFIG.MAX_PLAYERS; playerCount++) {
+    for (let courts = TOURNAMENT_CONFIG.MIN_COURTS; courts <= TOURNAMENT_CONFIG.MAX_COURTS; courts++) {
+      check(playerCount, courts, `${playerCount} players / ${courts} courts`);
+    }
+  }
+}
+
 const pairKey = (a: string, b: string) => [a, b].sort().join(' + ');
 
 function pairCounts(rounds: Rounds) {
@@ -299,11 +319,7 @@ describe('generateAmericanFormatTournament', () => {
     for (let playerCount = TOURNAMENT_CONFIG.MIN_PLAYERS; playerCount <= TOURNAMENT_CONFIG.MAX_PLAYERS; playerCount++) {
       for (let courts = TOURNAMENT_CONFIG.MIN_COURTS; courts <= TOURNAMENT_CONFIG.MAX_COURTS; courts++) {
         const players = Array.from({ length: playerCount }, (_, index) => `P${index + 1}`);
-        const result = generateAmericanFormatTournament({
-          players,
-          courts,
-          pointsPerMatch: 16,
-        });
+        const result = scheduleFor(playerCount, courts);
 
         expect(result.validation.isValid, `${playerCount} players / ${courts} courts`).toBe(true);
 
@@ -320,10 +336,10 @@ describe('generateAmericanFormatTournament', () => {
         });
 
         const counts = [...matchCounts.values()];
-        expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
+        expect(new Set(counts).size, `${playerCount} players / ${courts} courts`).toBe(1);
       }
     }
-   }, 30_000);
+  }, 60_000);
 });
 
 describe('planAmericanFormat', () => {
@@ -333,17 +349,19 @@ describe('planAmericanFormat', () => {
         const label = `${playerCount} players / ${courts} courts`;
         const players = Array.from({ length: playerCount }, (_, index) => `P${index + 1}`);
         const plan = planAmericanFormat(playerCount, courts);
-        const { rounds } = generateAmericanFormatTournament({ players, courts, pointsPerMatch: 16 });
+        const { rounds } = scheduleFor(playerCount, courts);
         const counts = countGames(rounds, players);
 
         expect(rounds.length, label).toBe(plan.rounds);
+        expect(plan.minGamesPerPlayer, label).toBe(plan.maxGamesPerPlayer);
+        expect((plan.rounds * plan.playingPerRound) % playerCount, label).toBe(0);
         rounds.forEach((round) => expect(round.matches.length, label).toBe(plan.activeCourts));
         expect(plan.playingPerRound + plan.restingPerRound, label).toBe(playerCount);
         expect(Math.min(...counts), label).toBe(plan.minGamesPerPlayer);
         expect(Math.max(...counts), label).toBe(plan.maxGamesPerPlayer);
       }
     }
-   }, 30_000);
+  }, 60_000);
 
   it('only counts the courts the players can fill', () => {
     expect(planAmericanFormat(7, 2)).toMatchObject({
@@ -358,38 +376,47 @@ describe('planAmericanFormat', () => {
       activeCourts: 3,
       playingPerRound: 12,
       restingPerRound: 1,
-      rounds: 12,
-      minGamesPerPlayer: 11,
+      rounds: 13,
+      minGamesPerPlayer: 12,
       maxGamesPerPlayer: 12,
+    });
+  });
+
+  it.each([
+    { playerCount: 13, courts: 1, rounds: 13, games: 4 },
+    { playerCount: 13, courts: 2, rounds: 13, games: 8 },
+    { playerCount: 15, courts: 1, rounds: 15, games: 4 },
+    { playerCount: 15, courts: 2, rounds: 15, games: 8 },
+    { playerCount: 17, courts: 4, rounds: 17, games: 16 },
+    { playerCount: 19, courts: 4, rounds: 19, games: 16 },
+  ])('goes past 12 rounds when $playerCount players on $courts courts need it for equal games', ({ playerCount, courts, rounds, games }) => {
+    expect(planAmericanFormat(playerCount, courts)).toMatchObject({
+      rounds,
+      minGamesPerPlayer: games,
+      maxGamesPerPlayer: games,
     });
   });
 });
 
 describe('partner rotation', () => {
-  it('never repeats a partner and keeps games equal for 4 to 16 players', () => {
-    for (let playerCount = 4; playerCount <= 16; playerCount++) {
-      for (let courts = 1; courts <= Math.floor(playerCount / 4); courts++) {
-        const label = `${playerCount} players / ${courts} courts`;
-        const players = Array.from({ length: playerCount }, (_, index) => `P${index + 1}`);
-        const plan = planAmericanFormat(playerCount, courts);
-        const { rounds, validation } = generateAmericanFormatTournament({ players, courts, pointsPerMatch: 16 });
-        const games = countGames(rounds, players);
+  it('never repeats a partner and gives everyone the same games for 4 to 20 players on 1 to 5 courts', () => {
+    forEachSupportedSetup((playerCount, courts, label) => {
+      const players = Array.from({ length: playerCount }, (_, index) => `P${index + 1}`);
+      const plan = planAmericanFormat(playerCount, courts);
+      const { rounds, validation } = scheduleFor(playerCount, courts);
+      const games = countGames(rounds, players);
 
-        expect(validation.isValid, label).toBe(true);
-        if (plan.minGamesPerPlayer === plan.maxGamesPerPlayer) {
-          expect(new Set(games), label).toEqual(new Set([plan.minGamesPerPlayer]));
-        } else {
-          expect(Math.max(...games) - Math.min(...games), label).toBe(1);
-        }
+      expect(validation.isValid, label).toBe(true);
+      expect(new Set(games), label).toEqual(new Set([plan.minGamesPerPlayer]));
+      expect(validation.warnings, label).not.toContain('Players have unequal game counts');
 
-        // Each player needs fewer partners than there are other players, so
-        // every one of these schedules can avoid repeats entirely.
-        expect(plan.maxGamesPerPlayer, label).toBeLessThanOrEqual(playerCount - 1);
-        expect(Math.max(...pairCounts(rounds).partners.values()), label).toBe(1);
-        expect(validation.warnings.some((warning) => warning.includes('Repeated partnership')), label).toBe(false);
-      }
-    }
-  }, 30_000);
+      // Each player needs fewer partners than there are other players, so
+      // every one of these schedules can avoid repeats entirely.
+      expect(plan.maxGamesPerPlayer, label).toBeLessThanOrEqual(playerCount - 1);
+      expect(Math.max(...pairCounts(rounds).partners.values()), label).toBe(1);
+      expect(validation.warnings.some((warning) => warning.includes('Repeated partnership')), label).toBe(false);
+    });
+  }, 60_000);
 
   it('gives 7 players the best possible single-court schedule', () => {
     const players = ['Sergio', 'Emilio', 'Alejandro', 'Gartenflus', 'Filipino', 'Marek', 'Antonio'];
