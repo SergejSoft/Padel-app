@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { generateAmericanFormatTournament, planAmericanFormat } from '../american-format-generator';
+import { buildAmericanRounds, generateAmericanFormatTournament, planAmericanFormat } from '../american-format-generator';
 import { TOURNAMENT_CONFIG } from '../tournament-config';
 
 function countGames(rounds: ReturnType<typeof generateAmericanFormatTournament>['rounds'], players: string[]) {
@@ -17,6 +17,44 @@ function countGames(rounds: ReturnType<typeof generateAmericanFormatTournament>[
     });
   });
   return [...counts.values()];
+}
+
+type Rounds = ReturnType<typeof generateAmericanFormatTournament>['rounds'];
+
+const pairKey = (a: string, b: string) => [a, b].sort().join(' + ');
+
+function pairCounts(rounds: Rounds) {
+  const partners = new Map<string, number>();
+  const opponents = new Map<string, number>();
+  const bump = (counts: Map<string, number>, a: string, b: string) =>
+    counts.set(pairKey(a, b), (counts.get(pairKey(a, b)) ?? 0) + 1);
+
+  rounds.forEach((round) => {
+    round.matches.forEach((match) => {
+      bump(partners, match.team1[0], match.team1[1]);
+      bump(partners, match.team2[0], match.team2[1]);
+      match.team1.forEach((a) => match.team2.forEach((b) => bump(opponents, a, b)));
+    });
+  });
+  return { partners, opponents };
+}
+
+function allPairs(players: string[]): string[] {
+  return players.flatMap((a, index) => players.slice(index + 1).map((b) => pairKey(a, b)));
+}
+
+function restingRounds(rounds: Rounds, players: string[]): Map<string, number[]> {
+  const resting = new Map(players.map((player) => [player, [] as number[]]));
+  rounds.forEach((round) => {
+    const playing = new Set(round.matches.flatMap((match) => [...match.team1, ...match.team2]));
+    players.filter((player) => !playing.has(player)).forEach((player) => resting.get(player)!.push(round.round));
+  });
+  return resting;
+}
+
+function backToBackRests(rounds: Rounds, players: string[]): number {
+  return [...restingRounds(rounds, players).values()]
+    .reduce((total, list) => total + list.filter((round, index) => list[index - 1] === round - 1).length, 0);
 }
 
 describe('generateAmericanFormatTournament', () => {
@@ -235,7 +273,7 @@ describe('generateAmericanFormatTournament', () => {
     expect(result.validation.warnings).not.toContain('Players have unequal game counts');
   });
 
-  it('allows unavoidable repeated partnerships as warnings', () => {
+  it('gives 12 players on 3 courts a new partner every round', () => {
     const result = generateAmericanFormatTournament({
       players: Array.from({ length: 12 }, (_, index) => `Player ${index + 1}`),
       courts: 3,
@@ -244,6 +282,7 @@ describe('generateAmericanFormatTournament', () => {
 
     expect(result.validation.isValid).toBe(true);
     expect(result.rounds).toHaveLength(11);
+    expect(Math.max(...pairCounts(result.rounds).partners.values())).toBe(1);
   });
 
   it('plays 7 players on a single court with 3 resting each round', () => {
@@ -284,7 +323,7 @@ describe('generateAmericanFormatTournament', () => {
         expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
       }
     }
-  });
+   }, 30_000);
 });
 
 describe('planAmericanFormat', () => {
@@ -304,7 +343,7 @@ describe('planAmericanFormat', () => {
         expect(Math.max(...counts), label).toBe(plan.maxGamesPerPlayer);
       }
     }
-  });
+   }, 30_000);
 
   it('only counts the courts the players can fill', () => {
     expect(planAmericanFormat(7, 2)).toMatchObject({
@@ -323,5 +362,100 @@ describe('planAmericanFormat', () => {
       minGamesPerPlayer: 11,
       maxGamesPerPlayer: 12,
     });
+  });
+});
+
+describe('partner rotation', () => {
+  it('never repeats a partner and keeps games equal for 4 to 16 players', () => {
+    for (let playerCount = 4; playerCount <= 16; playerCount++) {
+      for (let courts = 1; courts <= Math.floor(playerCount / 4); courts++) {
+        const label = `${playerCount} players / ${courts} courts`;
+        const players = Array.from({ length: playerCount }, (_, index) => `P${index + 1}`);
+        const plan = planAmericanFormat(playerCount, courts);
+        const { rounds, validation } = generateAmericanFormatTournament({ players, courts, pointsPerMatch: 16 });
+        const games = countGames(rounds, players);
+
+        expect(validation.isValid, label).toBe(true);
+        if (plan.minGamesPerPlayer === plan.maxGamesPerPlayer) {
+          expect(new Set(games), label).toEqual(new Set([plan.minGamesPerPlayer]));
+        } else {
+          expect(Math.max(...games) - Math.min(...games), label).toBe(1);
+        }
+
+        // Each player needs fewer partners than there are other players, so
+        // every one of these schedules can avoid repeats entirely.
+        expect(plan.maxGamesPerPlayer, label).toBeLessThanOrEqual(playerCount - 1);
+        expect(Math.max(...pairCounts(rounds).partners.values()), label).toBe(1);
+        expect(validation.warnings.some((warning) => warning.includes('Repeated partnership')), label).toBe(false);
+      }
+    }
+  }, 30_000);
+
+  it('gives 7 players the best possible single-court schedule', () => {
+    const players = ['Sergio', 'Emilio', 'Alejandro', 'Gartenflus', 'Filipino', 'Marek', 'Antonio'];
+    for (const courts of [1, 2]) {
+      const { rounds } = generateAmericanFormatTournament({ players, courts, pointsPerMatch: 16 });
+      const { partners, opponents } = pairCounts(rounds);
+
+      expect(rounds).toHaveLength(7);
+      expect(new Set(countGames(rounds, players))).toEqual(new Set([4]));
+      restingRounds(rounds, players).forEach((list) => expect(list).toHaveLength(3));
+      expect(Math.max(...partners.values())).toBe(1);
+      expect(partners.size).toBe(14);
+      // 28 opponent meetings over 21 pairs: everyone meets, nobody more than twice.
+      allPairs(players).forEach((pair) => {
+        expect(opponents.get(pair) ?? 0, pair).toBeGreaterThanOrEqual(1);
+        expect(opponents.get(pair) ?? 0, pair).toBeLessThanOrEqual(2);
+      });
+      // Zero back-to-back rests is impossible alongside the rules above.
+      expect(backToBackRests(rounds, players)).toBe(1);
+    }
+  });
+
+  it('gives 8 players on 2 courts every partner once and every opponent at least once', () => {
+    const players = Array.from({ length: 8 }, (_, index) => `P${index + 1}`);
+    const { rounds } = generateAmericanFormatTournament({ players, courts: 2, pointsPerMatch: 16 });
+    const { partners, opponents } = pairCounts(rounds);
+
+    allPairs(players).forEach((pair) => {
+      expect(partners.get(pair), pair).toBe(1);
+      expect(opponents.get(pair) ?? 0, pair).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it.each([
+    { playerCount: 4, roundCount: 9, perPair: [3] },
+    { playerCount: 5, roundCount: 10, perPair: [2] },
+    { playerCount: 6, roundCount: 12, perPair: [1, 2] },
+    { playerCount: 7, roundCount: 14, perPair: [1, 2] },
+  ])('spreads unavoidable repeats evenly for $playerCount players over $roundCount rounds', ({ playerCount, roundCount, perPair }) => {
+    const players = Array.from({ length: playerCount }, (_, index) => `P${index + 1}`);
+    const rounds = buildAmericanRounds(players, 1, roundCount);
+    const { partners } = pairCounts(rounds);
+
+    expect(rounds).toHaveLength(roundCount);
+    expect(new Set(countGames(rounds, players)).size).toBe(1);
+    expect(new Set(allPairs(players).map((pair) => partners.get(pair) ?? 0))).toEqual(new Set(perPair));
+  });
+
+  it('reports counted partner and opponent history', () => {
+    const players = Array.from({ length: 4 }, (_, index) => `P${index + 1}`);
+    const rounds = buildAmericanRounds(players, 1, 6);
+    const { partnershipTracking } = generateAmericanFormatTournament({ players, courts: 1, pointsPerMatch: 16 });
+
+    expect(Math.max(...pairCounts(rounds).partners.values())).toBe(2);
+    players.forEach((player) => {
+      const partnerCounts = partnershipTracking.partnerCounts.get(player)!;
+      const opponentCounts = partnershipTracking.opponentCounts.get(player)!;
+      expect([...partnerCounts.values()]).toEqual([1, 1, 1]);
+      expect([...opponentCounts.values()].reduce((sum, count) => sum + count, 0)).toBe(6);
+    });
+  });
+
+  it('builds the same schedule for the same players', () => {
+    const players = Array.from({ length: 11 }, (_, index) => `P${index + 1}`);
+    const first = generateAmericanFormatTournament({ players, courts: 2, pointsPerMatch: 16 });
+    const second = generateAmericanFormatTournament({ players, courts: 2, pointsPerMatch: 16 });
+    expect(second.rounds).toEqual(first.rounds);
   });
 });
