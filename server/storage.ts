@@ -15,6 +15,7 @@ import { and, asc, desc, eq, gt, gte, isNotNull, isNull, or, sql } from "drizzle
 import { TOURNAMENT_CONFIG, type RegistrationStatus } from "../shared/tournament-config.js";
 import { generateAmericanFormatTournament } from "../shared/american-format-generator.js";
 import type { AmericanFormatConfig } from "../shared/tournament-types.js";
+import { buildDuplicateTournament, type DuplicateTournamentOptions } from "../shared/tournament-duplicate.js";
 import { nanoid } from "nanoid";
 import { buildParticipantRegistrationPredicate } from "./participant-query.js";
 
@@ -32,6 +33,7 @@ export interface IStorage {
   getTournamentByShareId(shareId: string): Promise<Tournament | undefined>;
   getTournamentByUrlSlug(urlSlug: string): Promise<Tournament | undefined>;
   createTournament(tournament: InsertTournament): Promise<Tournament>;
+  duplicateTournament(sourceId: number, options: DuplicateTournamentOptions): Promise<Tournament | undefined>;
   generateShareId(tournamentId: number): Promise<string>;
   generateUrlSlug(tournamentName: string): Promise<string>;
   getAllTournaments(): Promise<Tournament[]>;
@@ -97,6 +99,13 @@ export class DatabaseStorage implements IStorage {
       } as typeof tournaments.$inferInsert)
       .returning();
     return tournament;
+  }
+
+  /** Inserts a new tournament built from the source; the source row is only read. */
+  async duplicateTournament(sourceId: number, options: DuplicateTournamentOptions): Promise<Tournament | undefined> {
+    const source = await this.getTournament(sourceId);
+    if (!source) return undefined;
+    return this.createTournament(buildDuplicateTournament(source, options));
   }
 
   async generateShareId(tournamentId: number): Promise<string> {

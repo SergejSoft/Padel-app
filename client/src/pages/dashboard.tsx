@@ -314,6 +314,7 @@ export default function Dashboard() {
           tournament={currentEditingTournament}
           isOpen={!!editingTournament}
           onClose={() => setEditingTournament(null)}
+          onDuplicated={setEditingTournament}
         />
 
         </div>
