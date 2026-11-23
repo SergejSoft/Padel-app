@@ -14,6 +14,7 @@ import type {
 import { validateAmericanFormatConfig, validateAmericanFormatSchedule } from './validation-utils.js';
 import { TOURNAMENT_CONFIG } from './tournament-config.js';
 
+/** Preferred upper limit; exceeded only when equal games need more rounds. */
 const MAX_ROUNDS = 12;
 
 export interface AmericanFormatPlan {
@@ -493,7 +494,10 @@ function greatestCommonDivisor(left: number, right: number): number {
 /**
  * Picks a round count that gives every player the same number of games when
  * some players must sit out. Equal distribution requires the total number of
- * player-slots (rounds * activePlayerCount) to divide evenly by playerCount.
+ * player-slots (rounds * activePlayerCount) to divide evenly by playerCount,
+ * so rounds must be a multiple of playerCount / gcd(playerCount, active).
+ * When the smallest such multiple exceeds maxRounds it is used anyway:
+ * equal games take priority over a shorter tournament.
  */
 function chooseFairRoundCount(
   playerCount: number,
@@ -504,7 +508,7 @@ function chooseFairRoundCount(
   if (activePlayerCount === playerCount) return targetRounds;
 
   const period = playerCount / greatestCommonDivisor(playerCount, activePlayerCount);
-  if (period > maxRounds) return targetRounds;
+  if (period > maxRounds) return period;
 
   const candidates: number[] = [];
   for (let rounds = period; rounds <= maxRounds; rounds += period) {
